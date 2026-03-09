@@ -1,4 +1,4 @@
-// Cloudflare Functions - 完整修复版
+// Cloudflare Functions - 完整版（含管理功能）
 export async function onRequestPost(context) {
   return handleRequest(context);
 }
@@ -24,7 +24,7 @@ async function handleRequest(context) {
   };
 
   try {
-    // 1. 登录/注册
+    // 1. 登录/注册（学生）
     if (path === '/api/auth/login') {
       const body = await request.json().catch(() => ({}));
       const { nickname, realName, gender } = body;
@@ -70,7 +70,6 @@ async function handleRequest(context) {
       
       await KV.put(checkinKey, JSON.stringify(checkin));
       
-      // 同时记录到用户的打卡历史
       const historyKey = `history_`;
       const existing = await KV.get(historyKey);
       const history = existing ? JSON.parse(existing) : [];
@@ -98,11 +97,9 @@ async function handleRequest(context) {
         timestamp: Date.now()
       };
       
-      // 使用递增ID
       const scoreId = `typing_`;
       await KV.put(scoreId, JSON.stringify(result));
       
-      // 更新用户打字历史
       const historyKey = `typinghistory_`;
       const existing = await KV.get(historyKey);
       const history = existing ? JSON.parse(existing) : [];
@@ -114,7 +111,6 @@ async function handleRequest(context) {
     
     // 4. 查询今日打卡状态
     if (path === '/api/checkin/status') {
-      const url = new URL(request.url);
       const userId = url.searchParams.get('userId');
       
       if (!userId) {
@@ -133,13 +129,12 @@ async function handleRequest(context) {
       return jsonResponse({ success: true, hasCheckedIn: false });
     }
     
-    // 5. 排行榜（支持GET和POST）
+    // 5. 排行榜
     if (path === '/api/rank/typing') {
       try {
         const list = await KV.list({ prefix: 'typing_' });
         const scores = [];
         
-        // 获取所有分数记录，限制最多1000条
         const keys = list.keys || [];
         
         for (const key of keys) {
@@ -148,7 +143,6 @@ async function handleRequest(context) {
             if (data) {
               const score = JSON.parse(data);
               if (score.userId) {
-                // 获取用户信息
                 const userData = await KV.get(score.userId);
                 const user = userData ? JSON.parse(userData) : null;
                 scores.push({
@@ -158,15 +152,10 @@ async function handleRequest(context) {
                 });
               }
             }
-          } catch (e) {
-            // 跳过解析失败的记录
-          }
+          } catch (e) {}
         }
         
-        // 按WPM降序排列
         scores.sort((a, b) => (b.wpm || 0) - (a.wpm || 0));
-        
-        // 取前20名
         const top20 = scores.slice(0, 20);
         
         return jsonResponse({ 
@@ -175,7 +164,6 @@ async function handleRequest(context) {
           total: scores.length
         });
       } catch (err) {
-        console.error('Rank error:', err);
         return jsonResponse({ error: '读取排行榜失败: ' + err.message }, 500);
       }
     }
@@ -185,7 +173,7 @@ async function handleRequest(context) {
       const body = await request.json().catch(() => ({}));
       const { password } = body;
       
-      // 简单密码验证（实际应该加密存储）
+      // 默认密码：teacher123（实际应该使用环境变量存储）
       if (password === 'teacher123') {
         return jsonResponse({ 
           success: true, 
@@ -207,11 +195,16 @@ async function handleRequest(context) {
           if (key.name.startsWith('stu_')) {
             const data = await KV.get(key.name);
             if (data) {
-              const user = JSON.parse(data);
-              students.push(user);
+              try {
+                const user = JSON.parse(data);
+                students.push(user);
+              } catch (e) {}
             }
           }
         }
+        
+        // 按注册时间倒序
+        students.sort((a, b) => (b.created || 0) - (a.created || 0));
         
         return jsonResponse({ success: true, students });
       } catch (err) {
@@ -222,7 +215,6 @@ async function handleRequest(context) {
     return jsonResponse({ error: 'API endpoint not found: ' + path }, 404);
     
   } catch (err) {
-    console.error('API Error:', err);
     return jsonResponse({ error: '服务器错误: ' + err.message }, 500);
   }
 }
