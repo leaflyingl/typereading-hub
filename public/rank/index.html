@@ -30,4 +30,207 @@
             padding: 8px 16px;
             background: rgba(255,255,255,0.2);
             border-radius: 8px;
-            transition: background
+            transition: background 0.3s;
+        }
+        .header-right a:hover { background: rgba(255,255,255,0.3); }
+        .container { max-width: 800px; margin: 0 auto; }
+        .loading { 
+            text-align: center; 
+            padding: 60px; 
+            color: #999;
+            font-size: 18px;
+        }
+        .empty { 
+            text-align: center; 
+            padding: 60px; 
+            color: #999;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .empty-icon { font-size: 64px; margin-bottom: 20px; }
+        .rank-list { 
+            background: white; 
+            border-radius: 16px; 
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .rank-item { 
+            display: flex; 
+            padding: 20px; 
+            border-bottom: 1px solid #f0f0f0; 
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .rank-item:hover { background: #f8f9fa; }
+        .rank-item:last-child { border-bottom: none; }
+        .rank-num { 
+            width: 60px; 
+            font-size: 28px; 
+            font-weight: bold; 
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        .rank-num.top1 { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .rank-num.top2 { color: #C0C0C0; }
+        .rank-num.top3 { color: #CD7F32; }
+        .user-info { flex: 1; padding: 0 20px; }
+        .user-name { font-size: 18px; font-weight: bold; color: #333; }
+        .user-realname { 
+            font-size: 14px; 
+            color: #999; 
+            margin-top: 4px;
+        }
+        .score { text-align: right; }
+        .score-wpm { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+        .score-acc { 
+            color: #28a745; 
+            font-size: 14px; 
+            margin-top: 5px;
+        }
+        .score-time {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .refresh-btn {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        .error-box {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h2>🏆 打字排行榜</h2>
+            <small>实时更新前20名</small>
+        </div>
+        <div class="header-right">
+            <a href="/">🏠 首页</a>
+            <a href="/typing/">⌨️ 练习</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="loading" class="loading">加载中...</div>
+        <div id="rankList" style="display: none;"></div>
+    </div>
+    
+    <button class="refresh-btn" onclick="loadRank()">🔄 刷新榜单</button>
+
+    <script>
+        async function loadRank() {
+            const loadingEl = document.getElementById('loading');
+            const listEl = document.getElementById('rankList');
+            
+            loadingEl.style.display = 'block';
+            loadingEl.textContent = '加载中...';
+            listEl.style.display = 'none';
+            
+            try {
+                const res = await fetch('/api/rank/typing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await res.json();
+                loadingEl.style.display = 'none';
+                
+                if (!data.success) {
+                    listEl.innerHTML = '<div class="error-box">加载失败：' + (data.error || '未知错误') + '</div>';
+                    listEl.style.display = 'block';
+                    return;
+                }
+                
+                if (!data.rank || data.rank.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">📭</div>
+                            <h3>暂无数据</h3>
+                            <p>还没有同学提交成绩，快来成为第一个吧！</p>
+                            <br>
+                            <a href="/typing/" style="color: #667eea;">去练习打字 →</a>
+                        </div>
+                    `;
+                    listEl.style.display = 'block';
+                    return;
+                }
+                
+                // 渲染排行榜
+                let html = '<div class="rank-list">';
+                
+                data.rank.forEach((item, index) => {
+                    const rank = index + 1;
+                    const rankClass = rank === 1 ? 'top1' : rank === 2 ? 'top2' : rank === 3 ? 'top3' : '';
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+                    
+                    const date = item.timestamp ? new Date(item.timestamp).toLocaleString('zh-CN') : '';
+                    
+                    html += `
+                        <div class="rank-item">
+                            <div class="rank-num ${rankClass}">${medal}</div>
+                            <div class="user-info">
+                                <div class="user-name">${escapeHtml(item.nickname || '匿名用户')}</div>
+                                ${item.realName ? '<div class="user-realname">真实姓名：' + escapeHtml(item.realName) + '</div>' : ''}
+                            </div>
+                            <div class="score">
+                                <div class="score-wpm">${item.wpm || 0}</div>
+                                <div class="score-acc">准确率 ${item.accuracy || 0}%</div>
+                                <div class="score-time">${date}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                listEl.innerHTML = html;
+                listEl.style.display = 'block';
+                
+            } catch (err) {
+                loadingEl.style.display = 'none';
+                listEl.innerHTML = '<div class="error-box">网络错误：' + err.message + '</div>';
+                listEl.style.display = 'block';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 页面加载时获取数据
+        loadRank();
+        
+        // 每30秒自动刷新
+        setInterval(loadRank, 30000);
+    </script>
+</body>
+</html>
