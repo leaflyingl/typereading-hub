@@ -1,1 +1,15 @@
+{
+  "name": "typereading-hub",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "hexo generate"
+  },
+  "dependencies": {
+    "hexo": "^6.3.0",
+    "hexo-cli": "^4.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
 
