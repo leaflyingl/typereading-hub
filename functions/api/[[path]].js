@@ -1,330 +1,310 @@
-export async function onRequestPost(context) {
-  return handleRequest(context);
-}
+// Cloudflare Pages Function - TypeReading Hub API
+// 路径: functions/api/[[path]].js
 
-export async function onRequestGet(context) {
-  return handleRequest(context);
-}
-
-async function handleRequest(context) {
-  const { request, env } = context;
-  const url = new URL(request.url);
-  const path = url.pathname;
-  const KV = env.TYPEREADING_KV;
+export async function onRequest(context) {
+  const { request, env, params } = context;
+  const path = params.path?.[0] || '';
   
-  const jsonResponse = (data, status = 200) => {
-    return new Response(JSON.stringify(data), {
-      status,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
+  // 处理 CORS
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
     });
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
   };
 
+  const jsonResponse = (data, status = 200) => 
+    new Response(JSON.stringify(data), { status, headers });
+
   try {
-    // 1. 学生注册（带密码）
-    if (path === '/api/auth/register') {
-      const body = await request.json().catch(() => ({}));
+    const body = request.method === 'POST' ? await request.json() : {};
+
+    // ========== 学生认证相关 ==========
+    
+    // 学生注册
+    if (path === 'auth/register') {
       const { nickname, password, realName, gender } = body;
       
-      if (!nickname || nickname.length < 2) {
-        return jsonResponse({ error: '昵称至少2个字符' }, 400);
-      }
-      if (!password || password.length < 4) {
-        return jsonResponse({ error: '密码至少4位' }, 400);
+      if (!nickname) {
+        return jsonResponse({ success: false, message: '请输入昵称' });
       }
       
-      // 检查昵称是否已存在
-      const list = await KV.list();
-      for (const key of list.keys || []) {
-        if (key.name.startsWith('stu_')) {
-          const userData = await KV.get(key.name);
-          if (userData) {
-            const user = JSON.parse(userData);
-            if (user.nickname === nickname) {
-              return jsonResponse({ error: '该昵称已被注册' }, 400);
-            }
-          }
-        }
+      // 检查用户是否已存在
+      const existingUser = await env.TYPEREADING_KV.get(`user::${nickname}`);
+      if (existingUser) {
+        return jsonResponse({ success: false, message: '该昵称已被注册' });
       }
       
-      const userId = 'stu_' + Date.now().toString(36);
-      const user = { 
-        userId, 
-        nickname, 
-        password, // 实际应该加密
+      const user = {
+        nickname,
+        password: password || '', // 允许空密码（兼容旧版）
         realName: realName || '',
         gender: gender || '',
-        role: 'student', 
-        created: Date.now(),
-        lastLogin: Date.now()
+        createdAt: new Date().toISOString(),
       };
-      await KV.put(userId, JSON.stringify(user));
       
-      return jsonResponse({ success: true, user: { ...user, password: undefined }, isNew: true });
+      await env.TYPEREADING_KV.put(`user::${nickname}`, JSON.stringify(user));
+      
+      return jsonResponse({ 
+        success: true, 
+        message: '注册成功',
+        user: { nickname, realName, gender }
+      });
     }
-    
-    // 2. 学生登录（昵称+密码）
-    if (path === '/api/auth/login') {
-      const body = await request.json().catch(() => ({}));
-      const { nickname, password, realName, gender } = body;
+
+    // 学生登录
+    if (path === 'auth/login') {
+      const { nickname, password } = body;
       
-      // 查找用户
-      let user = null;
-      let userKey = null;
-      
-      const list = await KV.list();
-      for (const key of list.keys || []) {
-        if (key.name.startsWith('stu_')) {
-          const userData = await KV.get(key.name);
-          if (userData) {
-            const u = JSON.parse(userData);
-            if (u.nickname === nickname) {
-              user = u;
-              userKey = key.name;
-              break;
-            }
-          }
-        }
+      if (!nickname) {
+        return jsonResponse({ success: false, message: '请输入昵称' });
       }
       
-      // 如果用户不存在，自动注册（兼容旧版）
-      if (!user) {
-        if (!password) {
-          // 旧版无密码注册
-          if (!nickname || nickname.length < 2) {
-            return jsonResponse({ error: '昵称至少2个字符' }, 400);
-          }
-          
-          const userId = 'stu_' + Date.now().toString(36);
-          user = { 
-            userId, 
-            nickname, 
-            realName: realName || '',
-            gender: gender || '',
-            password: '',
-            role: 'student', 
-            created: Date.now(),
-            lastLogin: Date.now()
-          };
-          await KV.put(userId, JSON.stringify(user));
-          
-          return jsonResponse({ success: true, user, isNew: true });
-        } else {
-          return jsonResponse({ error: '用户不存在，请先注册' }, 404);
-        }
-      }
-      
-      // 验证密码（如果设置了密码）
-      if (user.password && user.password !== password) {
-        return jsonResponse({ error: '密码错误' }, 401);
-      }
-      
-      // 更新登录时间
-      user.lastLogin = Date.now();
-      // 如果提供了真实姓名和性别，更新信息
-      if (realName) user.realName = realName;
-      if (gender) user.gender = gender;
-      
-      await KV.put(userKey || user.userId, JSON.stringify(user));
-      
-      // 返回用户信息（不含密码）
-      const { password: pwd, ...userWithoutPassword } = user;
-      return jsonResponse({ success: true, user: userWithoutPassword, isNew: false });
-    }
-    
-    // 3. 更新用户信息（补充真实姓名和性别）
-    if (path === '/api/user/update') {
-      const body = await request.json().catch(() => ({}));
-      const { userId, realName, gender } = body;
-      
-      if (!userId) {
-        return jsonResponse({ error: '需要用户ID' }, 400);
-      }
-      
-      const userData = await KV.get(userId);
+      const userData = await env.TYPEREADING_KV.get(`user::${nickname}`);
       if (!userData) {
-        return jsonResponse({ error: '用户不存在' }, 404);
+        return jsonResponse({ success: false, message: '用户不存在' });
       }
       
       const user = JSON.parse(userData);
-      if (realName !== undefined) user.realName = realName;
-      if (gender !== undefined) user.gender = gender;
       
-      await KV.put(userId, JSON.stringify(user));
-      
-      const { password, ...userWithoutPassword } = user;
-      return jsonResponse({ success: true, user: userWithoutPassword });
-    }
-    
-    // 4. 阅读打卡
-    if (path === '/api/checkin/reading') {
-      const body = await request.json().catch(() => ({}));
-      const { userId, articleId, duration, wordsRead } = body;
-      
-      if (!userId) {
-        return jsonResponse({ error: '用户ID必填' }, 400);
+      // 检查密码（兼容无密码的旧用户）
+      if (user.password && user.password !== (password || '')) {
+        return jsonResponse({ success: false, message: '密码错误' });
       }
       
+      return jsonResponse({
+        success: true,
+        message: '登录成功',
+        user: {
+          nickname: user.nickname,
+          realName: user.realName,
+          gender: user.gender,
+        }
+      });
+    }
+
+    // 更新用户信息
+    if (path === 'user/update') {
+      const { nickname, realName, gender } = body;
+      
+      const userData = await env.TYPEREADING_KV.get(`user::${nickname}`);
+      if (!userData) {
+        return jsonResponse({ success: false, message: '用户不存在' });
+      }
+      
+      const user = JSON.parse(userData);
+      user.realName = realName || user.realName;
+      user.gender = gender || user.gender;
+      user.updatedAt = new Date().toISOString();
+      
+      await env.TYPEREADING_KV.put(`user::${nickname}`, JSON.stringify(user));
+      
+      return jsonResponse({
+        success: true,
+        message: '更新成功',
+        user: {
+          nickname: user.nickname,
+          realName: user.realName,
+          gender: user.gender,
+        }
+      });
+    }
+
+    // ========== 阅读打卡相关 ==========
+    
+    // 提交阅读打卡
+    if (path === 'checkin/reading') {
+      const { nickname } = body;
       const today = new Date().toISOString().split('T')[0];
-      const checkinKey = `checkin_`;
-      const checkin = {
-        userId, 
-        articleId: articleId || 'default', 
-        duration: duration || 0, 
-        wordsRead: wordsRead || 0,
+      const key = `checkin::${nickname}::${today}`;
+      
+      const record = {
+        nickname,
         date: today,
-        timestamp: Date.now()
+        type: 'reading',
+        createdAt: new Date().toISOString(),
       };
       
-      await KV.put(checkinKey, JSON.stringify(checkin));
+      await env.TYPEREADING_KV.put(key, JSON.stringify(record));
       
-      const historyKey = `history_`;
-      const existing = await KV.get(historyKey);
-      const history = existing ? JSON.parse(existing) : [];
-      history.push(checkin);
-      await KV.put(historyKey, JSON.stringify(history));
-      
-      return jsonResponse({ success: true, checkin });
+      return jsonResponse({ success: true, message: '打卡成功' });
     }
-    
-    // 5. 打字成绩提交
-    if (path === '/api/typing/result') {
-      const body = await request.json().catch(() => ({}));
-      const { userId, wpm, accuracy, courseName, textId } = body;
-      
-      if (!userId) {
-        return jsonResponse({ error: '用户ID必填' }, 400);
-      }
-      
-      const result = {
-        userId, 
-        wpm: wpm || 0, 
-        accuracy: accuracy || 0, 
-        courseName: courseName || 'default',
-        textId: textId || '',
-        timestamp: Date.now()
-      };
-      
-      const scoreId = `typing_`;
-      await KV.put(scoreId, JSON.stringify(result));
-      
-      const historyKey = `typinghistory_`;
-      const existing = await KV.get(historyKey);
-      const history = existing ? JSON.parse(existing) : [];
-      history.push(result);
-      await KV.put(historyKey, JSON.stringify(history));
-      
-      return jsonResponse({ success: true, result, attemptNumber: history.length });
-    }
-    
-    // 6. 查询今日打卡状态
-    if (path === '/api/checkin/status') {
-      const userId = url.searchParams.get('userId');
-      
-      if (!userId) {
-        return jsonResponse({ error: '需要userId' }, 400);
-      }
-      
+
+    // 查询今日打卡状态
+    if (path === 'checkin/status') {
+      const { nickname } = body;
       const today = new Date().toISOString().split('T')[0];
-      const checkinKey = `checkin_`;
-      const data = await KV.get(checkinKey);
+      const key = `checkin::${nickname}::${today}`;
       
-      if (data) {
-        const checkin = JSON.parse(data);
-        return jsonResponse({ success: true, hasCheckedIn: true, checkin });
-      }
+      const data = await env.TYPEREADING_KV.get(key);
       
-      return jsonResponse({ success: true, hasCheckedIn: false });
+      return jsonResponse({
+        success: true,
+        checkedIn: !!data,
+      });
     }
+
+    // ========== 打字练习相关 ==========
     
-    // 7. 排行榜
-    if (path === '/api/rank/typing') {
-      try {
-        const list = await KV.list({ prefix: 'typing_' });
-        const scores = [];
-        
-        const keys = list.keys || [];
-        
-        for (const key of keys) {
-          try {
-            const data = await KV.get(key.name);
-            if (data) {
-              const score = JSON.parse(data);
-              if (score.userId) {
-                const userData = await KV.get(score.userId);
-                const user = userData ? JSON.parse(userData) : null;
-                scores.push({
-                  ...score,
-                  nickname: user?.nickname || '匿名用户',
-                  realName: user?.realName || ''
-                });
-              }
-            }
-          } catch (e) {}
+    // 提交打字成绩
+    if (path === 'typing/result') {
+      const { nickname, wpm, accuracy, duration, text } = body;
+      
+      const record = {
+        nickname,
+        wpm,
+        accuracy,
+        duration,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+      
+      // 使用 timestamp 作为唯一 key
+      const key = `typing::${nickname}::${Date.now()}`;
+      await env.TYPEREADING_KV.put(key, JSON.stringify(record));
+      
+      return jsonResponse({ success: true, message: '成绩已保存' });
+    }
+
+    // 获取打字排行榜
+    if (path === 'rank/typing') {
+      const { limit = 20 } = body;
+      
+      // 获取所有打字记录
+      const list = await env.TYPEREADING_KV.list({ prefix: 'typing::' });
+      const records = [];
+      
+      for (const key of list.keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          records.push(JSON.parse(data));
         }
-        
-        scores.sort((a, b) => (b.wpm || 0) - (a.wpm || 0));
-        const top20 = scores.slice(0, 20);
-        
-        return jsonResponse({ 
-          success: true, 
-          rank: top20,
-          total: scores.length
-        });
-      } catch (err) {
-        return jsonResponse({ error: '读取排行榜失败: ' + err.message }, 500);
       }
+      
+      // 按 WPM 排序，取每个用户的最佳成绩
+      const userBest = {};
+      records.forEach(r => {
+        if (!userBest[r.nickname] || r.wpm > userBest[r.nickname].wpm) {
+          userBest[r.nickname] = r;
+        }
+      });
+      
+      const sorted = Object.values(userBest)
+        .sort((a, b) => b.wpm - a.wpm)
+        .slice(0, limit);
+      
+      return jsonResponse({ success: true, rank: sorted });
     }
+
+    // ========== 教师管理相关 ==========
     
-    // 8. 教师登录验证
-    if (path === '/api/admin/login') {
-      const body = await request.json().catch(() => ({}));
+    // 教师登录验证
+    if (path === 'admin/login') {
       const { password } = body;
+      const TEACHER_PASSWORD = 'teacher123'; // 可从环境变量读取
       
-      if (password === 'teacher123') {
-        return jsonResponse({ 
-          success: true, 
-          token: 'admin_' + Date.now(),
-          role: 'admin'
-        });
-      }
-      
-      return jsonResponse({ error: '密码错误' }, 401);
-    }
-    
-    // 9. 获取所有学生列表（教师用）
-    if (path === '/api/admin/students') {
-      try {
-        const list = await KV.list();
-        const students = [];
-        
-        for (const key of list.keys || []) {
-          if (key.name.startsWith('stu_')) {
-            const data = await KV.get(key.name);
-            if (data) {
-              try {
-                const user = JSON.parse(data);
-                // 不返回密码
-                const { password, ...userWithoutPassword } = user;
-                students.push(userWithoutPassword);
-              } catch (e) {}
-            }
-          }
-        }
-        
-        students.sort((a, b) => (b.created || 0) - (a.created || 0));
-        
-        return jsonResponse({ success: true, students });
-      } catch (err) {
-        return jsonResponse({ error: err.message }, 500);
+      if (password === TEACHER_PASSWORD) {
+        return jsonResponse({ success: true, message: '登录成功' });
+      } else {
+        return jsonResponse({ success: false, message: '密码错误' });
       }
     }
 
-    return jsonResponse({ error: 'API endpoint not found: ' + path }, 404);
+    // 获取所有学生列表
+    if (path === 'admin/students') {
+      const list = await env.TYPEREADING_KV.list({ prefix: 'user::' });
+      const students = [];
+      
+      for (const key of list.keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const user = JSON.parse(data);
+          students.push({
+            nickname: user.nickname,
+            realName: user.realName || '',
+            gender: user.gender || '',
+            createdAt: user.createdAt,
+          });
+        }
+      }
+      
+      return jsonResponse({ success: true, students });
+    }
+
+    // ============================================
+    // 【新增】获取学生详细学习记录
+    // ============================================
+    if (path === 'admin/student-records') {
+      const { nickname } = body;
+      
+      if (!nickname) {
+        return jsonResponse({ success: false, message: '缺少昵称参数' });
+      }
+      
+      const records = [];
+      
+      // 1. 查询阅读打卡记录（最近30天）
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const key = `checkin::${nickname}::${dateStr}`;
+        
+        const data = await env.TYPEREADING_KV.get(key);
+        if (data) {
+          records.push({
+            date: dateStr,
+            type: '阅读打卡',
+            detail: '已完成'
+          });
+        }
+      }
+      
+      // 2. 查询打字练习记录
+      const typingList = await env.TYPEREADING_KV.list({ prefix: `typing::${nickname}::` });
+      for (const key of typingList.keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const record = JSON.parse(data);
+          records.push({
+            date: record.createdAt,
+            type: '打字练习',
+            detail: ` WPM / %`
+          });
+        }
+      }
+      
+      // 按时间倒序排列
+      records.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 只返回最近50条
+      const recentRecords = records.slice(0, 50);
+      
+      return jsonResponse({ 
+        success: true, 
+        records: recentRecords,
+        total: records.length
+      });
+    }
+    // ============================================
+
+    // 404 - 未匹配的接口
+    return jsonResponse({ success: false, message: 'API 接口不存在: ' + path }, 404);
     
-  } catch (err) {
-    return jsonResponse({ error: '服务器错误: ' + err.message }, 500);
+  } catch (error) {
+    console.error('API Error:', error);
+    return jsonResponse({ 
+      success: false, 
+      message: '服务器错误: ' + error.message 
+    }, 500);
   }
 }

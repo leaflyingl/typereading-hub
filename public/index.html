@@ -3,124 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TypeReading Hub - 英语阅读与打字练习平台</title>
+    <title>TypeReading Hub - 首页</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            color: #333;
         }
-        .container { 
-            max-width: 900px; 
-            margin: 0 auto; 
-            padding: 60px 20px; 
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
         }
-        .header { text-align: center; color: white; margin-bottom: 50px; }
-        h1 { font-size: 3em; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
-        .subtitle { font-size: 1.3em; opacity: 0.9; }
-        .menu { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
-            gap: 25px; 
-            margin-top: 40px;
+        header {
+            background: rgba(255,255,255,0.95);
+            padding: 20px 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .menu-item { 
-            display: block; 
-            padding: 40px 30px; 
-            background: white; 
-            border-radius: 16px; 
-            text-decoration: none; 
-            color: #333; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
-            transition: all 0.3s ease; 
+        .logo { font-size: 24px; font-weight: bold; color: #667eea; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        
+        .welcome-section {
+            background: rgba(255,255,255,0.95);
+            padding: 40px;
+            border-radius: 16px;
             text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .menu-item:hover { 
-            transform: translateY(-8px); 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
+        .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
         }
-        .icon { font-size: 3.5em; margin-bottom: 20px; display: block; }
-        .menu-item h3 { margin-bottom: 12px; color: #667eea; font-size: 1.4em; }
-        .menu-item p { color: #666; font-size: 1em; line-height: 1.5; }
-        .features { 
-            background: rgba(255,255,255,0.95); 
-            padding: 40px; 
-            border-radius: 16px; 
-            margin-bottom: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        .features h2 { 
-            color: #333; 
-            margin-bottom: 25px; 
+        .feature-card {
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 16px;
             text-align: center;
-            font-size: 1.8em;
+            transition: transform 0.3s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .feature-list { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 20px;
-            list-style: none;
+        .feature-card:hover { transform: translateY(-5px); }
+        .feature-icon { font-size: 48px; margin-bottom: 15px; }
+        .feature-card h3 { font-size: 20px; margin-bottom: 10px; }
+        .feature-card p { color: #666; margin-bottom: 20px; }
+        
+        .guest-section { text-align: center; padding: 80px 20px; }
+        .guest-section h1 { font-size: 48px; color: white; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .guest-section p { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 40px; }
+        .guest-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+        .guest-buttons .btn { padding: 15px 40px; font-size: 16px; }
+        
+        .footer-settings {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
         }
-        .feature-list li { 
-            padding: 15px; 
-            background: #f8f9fa; 
-            border-radius: 10px;
-            color: #555;
-            font-size: 1.05em;
+        .settings-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
         }
-        @media (max-width: 600px) {
-            h1 { font-size: 2em; }
-            .menu-item { padding: 30px 20px; }
+        .settings-btn:hover { transform: rotate(90deg); background: white; }
+        
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📚 TypeReading Hub</h1>
-            <p class="subtitle">英语阅读与打字练习平台</p>
-        </div>
-        
-        <div class="features">
-            <h2>平台功能</h2>
-            <ul class="feature-list">
-                <li>✅ 学生注册登录 - 简单快捷</li>
-                <li>📖 阅读打卡 - 记录学习进度</li>
-                <li>⌨️ 打字练习 - 提升打字速度</li>
-                <li>🏆 实时排行榜 - 查看排名</li>
-            </ul>
-        </div>
-        
-        <div class="menu">
-            <a href="/register/" class="menu-item">
-                <span class="icon">🎓</span>
-                <h3>学生登录</h3>
-                <p>注册或登录开始学习</p>
-            </a>
-            <a href="/reading/" class="menu-item">
-                <span class="icon">📖</span>
-                <h3>阅读打卡</h3>
-                <p>每日阅读任务打卡</p>
-            </a>
-            <a href="/typing/" class="menu-item">
-                <span class="icon">⌨️</span>
-                <h3>打字练习</h3>
-                <p>盲打速度与准确率训练</p>
-            </a>
-            <a href="/rank/" class="menu-item">
-                <span class="icon">🏆</span>
-                <h3>排行榜</h3>
-                <p>查看打字成绩排名</p>
-            </a>
-        </div>
+    <div id="app">
+        <!-- 内容将由 JavaScript 动态插入 -->
     </div>
-<!-- 在 </body> 前添加 -->
-<div style="text-align: center; margin-top: 40px; opacity: 0.6;">
-    <a href="/admin/" style="color: #999; font-size: 12px; text-decoration: none;">⚙️ 管理入口</a>
-</div>
-<div style="text-align: center; margin-top: 40px; opacity: 0.3;">
-    <a href="/admin/" style="color: #999; font-size: 12px; text-decoration: none;">⚙️</a>
-</div>
+    
+    <!-- 教师入口 -->
+    <div class="footer-settings">
+        <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
+    </div>
+
+    <script>
+        // 检查登录状态
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        const app = document.getElementById('app');
+        
+        if (!currentUser) {
+            // 未登录 - 显示访客界面
+            app.innerHTML = `
+                <div class="container">
+                    <div class="guest-section">
+                        <h1>📚 TypeReading Hub</h1>
+                        <p>英语阅读 + 打字练习，让学习更高效</p>
+                        <div class="guest-buttons">
+                            <a href="/register/" class="btn btn-primary">🎓 学生登录 / 注册</a>
+                            <a href="/rank/" class="btn" style="background: rgba(255,255,255,0.9); color: #667eea;">🏆 查看排行榜</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // 已登录 - 显示学生主界面
+            const nickname = currentUser.nickname || '同学';
+            const needComplete = !currentUser.realName || !currentUser.gender;
+            
+            app.innerHTML = `
+                <div class="container">
+                    <header>
+                        <div class="logo">📚 TypeReading Hub</div>
+                        <div class="user-info">
+                            <span>👋 欢迎，${nickname}</span>
+                            <button class="btn btn-secondary" onclick="logout()">退出登录</button>
+                        </div>
+                    </header>
+                    
+                    ${needComplete ? `
+                    <div class="alert">
+                        <span>⚠️</span>
+                        <span>请完善您的真实姓名和性别信息，以便老师进行班级分组</span>
+                        <a href="/register/" style="color: #856404; margin-left: auto; text-decoration: underline;">去完善</a>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="welcome-section">
+                        <h1>开始今天的学习吧！</h1>
+                        <p>坚持阅读和打字练习，提升英语能力</p>
+                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                            <a href="/reading/" class="btn btn-primary">📖 阅读打卡</a>
+                            <a href="/typing/" class="btn btn-primary">⌨️ 打字练习</a>
+                            <a href="/rank/" class="btn btn-secondary">🏆 排行榜</a>
+                        </div>
+                    </div>
+                    
+                    <div class="features">
+                        <div class="feature-card">
+                            <div class="feature-icon">📖</div>
+                            <h3>每日阅读</h3>
+                            <p>精选英语文章，提升阅读理解能力</p>
+                            <a href="/reading/" class="btn btn-primary">开始阅读</a>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">⌨️</div>
+                            <h3>打字练习</h3>
+                            <p>英文打字训练，提高输入速度和准确率</p>
+                            <a href="/typing/" class="btn btn-primary">开始打字</a>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🏆</div>
+                            <h3>排行榜</h3>
+                            <p>查看成绩排名，与同学一较高下</p>
+                            <a href="/rank/" class="btn btn-primary">查看排名</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+    </script>
 </body>
 </html>
