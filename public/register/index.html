@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生登录 - TypeReading Hub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #f5f7fa; 
+            padding: 40px 20px; 
+        }
+        .nav { 
+            max-width: 450px; 
+            margin: 0 auto 30px; 
+            text-align: center;
+        }
+        .nav a { color: #667eea; text-decoration: none; font-size: 1.1em; }
+        .nav a:hover { text-decoration: underline; }
+        .container { max-width: 450px; margin: 0 auto; }
+        .card { 
+            background: white; 
+            padding: 50px 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1); 
+        }
+        h2 { text-align: center; color: #333; margin-bottom: 10px; font-size: 1.8em; }
+        .subtitle { text-align: center; color: #999; margin-bottom: 35px; font-size: 1em; }
+        input { 
+            width: 100%; 
+            padding: 16px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            margin-bottom: 20px; 
+            transition: border-color 0.3s;
+        }
+        input:focus { outline: none; border-color: #667eea; }
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); 
+        }
+        button:disabled { 
+            background: #ccc; 
+            cursor: not-allowed; 
+            transform: none;
+            box-shadow: none;
+        }
+        .message { 
+            margin-top: 20px; 
+            padding: 15px; 
+            border-radius: 10px; 
+            text-align: center; 
+            font-size: 0.95em;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .user-info { 
+            margin-top: 30px; 
+            padding: 25px; 
+            background: linear-gradient(135deg, #e7f3ff 0%, #f0e6ff 100%); 
+            border-radius: 12px; 
+            display: none; 
+            text-align: center;
+        }
+        .user-info h3 { color: #667eea; margin-bottom: 15px; }
+        .user-info p { color: #666; margin: 8px 0; }
+        .user-info code { 
+            background: white; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.9em; 
+            color: #333;
+        }
+        .links { 
+            margin-top: 30px; 
+            text-align: center;
+            display: none;
+        }
+        .links a { 
+            display: inline-block;
+            margin: 8px; 
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none; 
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .links a:hover { background: #5a67d8; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/">← 返回首页</a>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+            <h2>🎓 学生登录</h2>
+            <p class="subtitle">输入昵称即可开始学习</p>
+            
+            <input type="text" id="nickname" placeholder="请输入昵称（至少2个字符）" maxlength="20">
+            <button onclick="login()" id="loginBtn">进入学习</button>
+            
+            <div id="message"></div>
+            
+            <div id="userInfo" class="user-info">
+                <h3>欢迎！</h3>
+                <p><strong id="userName"></strong></p>
+                <p>用户ID：<code id="userId"></code></p>
+            </div>
+        </div>
+        
+        <div class="links" id="links">
+            <a href="/reading/">📖 开始阅读</a>
+            <a href="/typing/">⌨️ 打字练习</a>
+            <a href="/rank/">🏆 排行榜</a>
+        </div>
+    </div>
+
+    <script>
+        // 检查登录状态
+        const savedUser = localStorage.getItem('typereading_user');
+        if (savedUser) {
+            const user = JSON.parse(savedUser);
+            showUserInfo(user);
+        }
+
+        async function login() {
+            const nickname = document.getElementById('nickname').value.trim();
+            const msgDiv = document.getElementById('message');
+            const btn = document.getElementById('loginBtn');
+            
+            if (nickname.length < 2) {
+                msgDiv.innerHTML = '<div class="message error">昵称至少2个字符</div>';
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('typereading_user', JSON.stringify(data.user));
+                    msgDiv.innerHTML = '<div class="message success">登录成功！</div>';
+                    showUserInfo(data.user);
+                } else {
+                    msgDiv.innerHTML = '<div class="message error">' + (data.error || '登录失败') + '</div>';
+                    btn.disabled = false;
+                    btn.textContent = '进入学习';
+                }
+            } catch (err) {
+                msgDiv.innerHTML = '<div class="message error">网络错误，请检查连接后重试</div>';
+                btn.disabled = false;
+                btn.textContent = '进入学习';
+            }
+        }
+
+        function showUserInfo(user) {
+            document.getElementById('userName').textContent = user.nickname;
+            document.getElementById('userId').textContent = user.userId;
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('nickname').style.display = 'none';
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('links').style.display = 'block';
+        }
+        
+        // 回车登录
+        document.getElementById('nickname').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TypeReading Hub - 英语阅读与打字练习平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 60px 20px; 
+        }
+        .header { text-align: center; color: white; margin-bottom: 50px; }
+        h1 { font-size: 3em; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .subtitle { font-size: 1.3em; opacity: 0.9; }
+        .menu { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 25px; 
+            margin-top: 40px;
+        }
+        .menu-item { 
+            display: block; 
+            padding: 40px 30px; 
+            background: white; 
+            border-radius: 16px; 
+            text-decoration: none; 
+            color: #333; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            transition: all 0.3s ease; 
+            text-align: center;
+        }
+        .menu-item:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        }
+        .icon { font-size: 3.5em; margin-bottom: 20px; display: block; }
+        .menu-item h3 { margin-bottom: 12px; color: #667eea; font-size: 1.4em; }
+        .menu-item p { color: #666; font-size: 1em; line-height: 1.5; }
+        .features { 
+            background: rgba(255,255,255,0.95); 
+            padding: 40px; 
+            border-radius: 16px; 
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .features h2 { 
+            color: #333; 
+            margin-bottom: 25px; 
+            text-align: center;
+            font-size: 1.8em;
+        }
+        .feature-list { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px;
+            list-style: none;
+        }
+        .feature-list li { 
+            padding: 15px; 
+            background: #f8f9fa; 
+            border-radius: 10px;
+            color: #555;
+            font-size: 1.05em;
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 2em; }
+            .menu-item { padding: 30px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 TypeReading Hub</h1>
+            <p class="subtitle">英语阅读与打字练习平台</p>
+        </div>
+        
+        <div class="features">
+            <h2>平台功能</h2>
+            <ul class="feature-list">
+                <li>✅ 学生注册登录 - 简单快捷</li>
+                <li>📖 阅读打卡 - 记录学习进度</li>
+                <li>⌨️ 打字练习 - 提升打字速度</li>
+                <li>🏆 实时排行榜 - 查看排名</li>
+            </ul>
+        </div>
+        
+        <div class="menu">
+            <a href="/register/" class="menu-item">
+                <span class="icon">🎓</span>
+                <h3>学生登录</h3>
+                <p>注册或登录开始学习</p>
+            </a>
+            <a href="/reading/" class="menu-item">
+                <span class="icon">📖</span>
+                <h3>阅读打卡</h3>
+                <p>每日阅读任务打卡</p>
+            </a>
+            <a href="/typing/" class="menu-item">
+                <span class="icon">⌨️</span>
+                <h3>打字练习</h3>
+                <p>盲打速度与准确率训练</p>
+            </a>
+            <a href="/rank/" class="menu-item">
+                <span class="icon">🏆</span>
+                <h3>排行榜</h3>
+                <p>查看打字成绩排名</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
