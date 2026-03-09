@@ -1,86 +1,90 @@
-export async function onRequest(context) {
-  const { request, env, params } = context;
-  const route = params.path || '';
-
-  const cors = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+export default async function onRequestPost(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
+  const KV = env.TYPEREADING_KV;
+  
+  // 统一响应格式
+  const jsonResponse = (data, status = 200) => {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    });
   };
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: cors });
-  }
-
   try {
-    // 登录/注册
-    if (route === 'auth/login') {
+    // 1. 登录/注册
+    if (path === '/api/auth/login') {
       const { nickname } = await request.json();
-      const userId = await env.TYPEREADING_KV.get(`nickname:`);
-      
-      if (userId) {
-        const user = JSON.parse(await env.TYPEREADING_KV.get(`user:`));
-        return json({ success: true, user }, cors);
+      if (!nickname || nickname.length < 2) {
+        return jsonResponse({ error: '昵称至少2个字符' }, 400);
       }
       
-      // 新用户注册
-      const id = `stu_${Date.now()}`;
-      const user = {
-        userId: id,
-        nickname,
-        role: 'student',
-        createdAt: new Date().toISOString()
+      const userId = 'stu_' + Date.now().toString(36);
+      const user = { userId, nickname, role: 'student', created: Date.now() };
+      await KV.put(userId, JSON.stringify(user));
+      
+      return jsonResponse({ success: true, user, isNew: true });
+    }
+    
+    // 2. 阅读打卡
+    if (path === '/api/checkin/reading') {
+      const { userId, articleId, duration, wordsRead } = await request.json();
+      const checkin = {
+        userId, articleId, duration, wordsRead,
+        date: new Date().toISOString().split('T')[0],
+        timestamp: Date.now()
       };
+      const key = `checkin_${userId}_${Date.now()}`;
+      await KV.put(key, JSON.stringify(checkin));
       
-      await env.TYPEREADING_KV.put(`user:${id}`, JSON.stringify(user));
-      await env.TYPEREADING_KV.put(`nickname:${nickname}`, id);
+      return jsonResponse({ success: true, checkin });
+    }
+    
+    // 3. 打字成绩提交
+    if (path === '/api/typing/result') {
+      const { userId, wpm, accuracy, courseName } = await request.json();
+      const result = {
+        userId, wpm, accuracy, courseName,
+        date: new Date().toISOString().split('T')[0],
+        timestamp: Date.now()
+      };
+      const key = `typing_${userId}_${Date.now()}`;
+      await KV.put(key, JSON.stringify(result));
       
-      return json({ success: true, user, isNew: true }, cors);
+      return jsonResponse({ success: true, result });
     }
-
-    // 阅读打卡
-    if (route === 'checkin/reading') {
-      const { userId, notes } = await request.json();
-      const date = new Date().toISOString().slice(0, 10);
-      await env.TYPEREADING_KV.put(
-        `reading:${userId}:${date}`,
-        JSON.stringify({ userId, date, notes, createdAt: new Date().toISOString() })
-      );
-      return json({ success: true }, cors);
-    }
-
-    // 打字成绩
-    if (route === 'typing/result') {
-      const { userId, wpm, accuracy } = await request.json();
-      const date = new Date().toISOString().slice(0, 10);
-      await env.TYPEREADING_KV.put(
-        `typing:${userId}:${date}`,
-        JSON.stringify({ userId, date, wpm, accuracy, createdAt: new Date().toISOString() })
-      );
-      return json({ success: true }, cors);
-    }
-
-    // 排行榜
-    if (route === 'rank/typing') {
-      const list = await env.TYPEREADING_KV.list({ prefix: 'typing:' });
+    
+    // 4. 打字排行榜
+    if (path === '/api/rank/typing') {
+      const { results } = await env.TYPEREADING_KV.list({ prefix: 'typing_' });
       const scores = [];
-      for (const k of list.keys) {
-        const data = JSON.parse(await env.TYPEREADING_KV.get(k.name));
-        scores.push(data);
+      for (const key of results) {
+        const data = await KV.get(key.name);
+        if (data) scores.push(JSON.parse(data));
       }
       scores.sort((a, b) => b.wpm - a.wpm);
-      return json(scores.slice(0, 10), cors);
+      return jsonResponse({ success: true, rank: scores.slice(0, 20) });
     }
 
-    return json({ error: 'Not Found' }, cors, 404);
-  } catch (e) {
-    return json({ error: e.message }, cors, 500);
+    return jsonResponse({ error: 'Not Found' }, 404);
+    
+  } catch (err) {
+    return jsonResponse({ error: err.message }, 500);
   }
 }
 
-function json(data, cors, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...cors, 'Content-Type': 'application/json' }
+// 同时支持 GET 请求
+export async function onRequestGet(context) {
+  const { request } = context;
+  const url = new URL(request.url);
+  
+  if (url.pathname === '/api/rank/typing') {
+    return onRequestPost(context);
+  }
+  
+  return new Response(JSON.stringify({ status: 'API is running' }), {
+    headers: { 'Content-Type': 'application/json' }
   });
 }
