@@ -80,17 +80,44 @@ export async function onRequest(context) {
       return json({ success: false, message: "密码错误" });
     }
 
-    /* ========================= 获取所有学生 ========================== */
+    /* ========================= 获取所有学生（修改） ========================== */
     if (path === "admin/students") {
+      // 先获取所有阅读记录和打字记录
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const readingRecords = [];
+      for (const key of readingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) readingRecords.push(JSON.parse(data));
+      }
+
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const typingRecords = [];
+      for (const key of typingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) typingRecords.push(JSON.parse(data));
+      }
+
+      // 获取学生列表并附加统计数据
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
       const students = [];
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) students.push(JSON.parse(data));
+        if (data) {
+          const user = JSON.parse(data);
+          // 计算该学生的统计数据
+          user.totalReadingWords = readingRecords
+            .filter(r => r.nickname === user.nickname)
+            .reduce((sum, r) => sum + (r.wordCount || 0), 0);
+          user.totalTypingCount = typingRecords
+            .filter(r => r.nickname === user.nickname)
+            .length;
+          students.push(user);
+        }
       }
       students.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       return json({ success: true, students });
     }
+
 
     /* ========================= 更新学生信息 ========================== */
     if (path === "admin/student/update") {
