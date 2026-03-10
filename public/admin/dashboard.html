@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -48,16 +48,6 @@
             text-align: center;
         }
         .stat-box h3 { font-size: 36px; color: #667eea; margin-bottom: 5px; }
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        }
-        .card h2 { font-size: 18px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; }
         .tabs {
             display: flex;
             gap: 10px;
@@ -67,12 +57,147 @@
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .tab { padding: 12px 24px; border: none; background: transparent; cursor: pointer; border-radius: 6px; }
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+        }
         .tab.active { background: #667eea; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .btn-small { padding: 6px 14px; font-size: 12px; border: none; border-radius: 6px; cursor: pointer; background: #667eea; color: white; }
-        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; background: #d1ecf1; color: #0c5460; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .card h2 { font-size: 18px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .filter-bar input, .filter-bar select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .filter-bar button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .btn-small {
+            padding: 6px 14px;
+            font-size: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+        }
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .class-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+        }
+        .class-card h4 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .class-card .count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        .student-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .student-tag {
+            background: #f0f0f0;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        .edit-btn {
+            background: #28a745;
+            margin-left: 10px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            padding: 30px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #555; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
     </style>
 </head>
 <body>
@@ -87,134 +212,57 @@
     <div class="container">
         <div class="stats-grid">
             <div class="stat-box">
-                <h3 id="totalStudents">-</h3>
+                <h3 id="totalStudents">0</h3>
                 <p>总学生数</p>
             </div>
             <div class="stat-box">
-                <h3 id="completedInfo">-</h3>
+                <h3 id="completedInfo">0</h3>
                 <p>已完善信息</p>
             </div>
             <div class="stat-box">
-                <h3 id="totalClasses">-</h3>
+                <h3 id="totalClasses">0</h3>
                 <p>班级数量</p>
             </div>
             <div class="stat-box">
-                <h3>-</h3>
-                <p>今日打卡</p>
+                <h3 id="typingCount">0</h3>
+                <p>练习次数</p>
             </div>
         </div>
         
         <div class="tabs">
             <button class="tab active" onclick="switchTab('students', this)">👥 学生管理</button>
+            <button class="tab" onclick="switchTab('classes', this)">🏫 班级管理</button>
             <button class="tab" onclick="switchTab('ranking', this)">🏆 排行榜</button>
         </div>
         
+        <!-- 学生管理 -->
         <div id="students-tab" class="tab-content active">
             <div class="card">
                 <h2>学生列表</h2>
-                <div id="studentsTable"><p style="color:#888;">正在加载...</p></div>
+                <div class="filter-bar">
+                    <input type="text" id="searchInput" placeholder="搜索昵称或姓名..." onkeyup="filterStudents()">
+                    <select id="classFilter" onchange="filterStudents()">
+                        <option value="">全部班级</option>
+                    </select>
+                    <button onclick="loadStudents()">🔄 刷新</button>
+                </div>
+                <div id="studentsTable">
+                    <div class="empty-state">正在加载...</div>
+                </div>
             </div>
         </div>
         
-        <div id="ranking-tab" class="tab-content">
+        <!-- 班级管理 -->
+        <div id="classes-tab" class="tab-content">
             <div class="card">
-                <h2>打字排行榜</h2>
-                <div id="rankingTable"><p style="color:#888;">正在加载...</p></div>
+                <h2>班级管理 
+                    <button class="btn-small edit-btn" onclick="openClassModal()">+ 添加班级</button>
+                </h2>
+                <div id="classesGrid">
+                    <div class="empty-state">正在加载...</div>
+                </div>
             </div>
         </div>
-    </div>
-
-    <script>
-        // 检查登录
-        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
-            location.href = '/admin/';
-        }
-
-        let allStudents = [];
-
-        window.onload = function() {
-            loadStudents();
-            loadRanking();
-        };
-
-        function switchTab(tab, btn) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tab + '-tab').classList.add('active');
-        }
-
-        async function loadStudents() {
-            try {
-                const res = await fetch('/api/admin/students', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({})
-                });
-                const data = await res.json();
-                
-                if (data.success && data.students) {
-                    allStudents = data.students;
-                    document.getElementById('totalStudents').textContent = allStudents.length;
-                    const completed = allStudents.filter(s => s.realName && s.gender).length;
-                    document.getElementById('completedInfo').textContent = completed;
-                    
-                    // 计算班级数
-                    const classes = new Set();
-                    allStudents.forEach(s => {
-                        if (s.realName) {
-                            const match = s.realName.match(/^([一二三四五六七八九十\d]+班)/);
-                            if (match) classes.add(match[1]);
-                        }
-                    });
-                    document.getElementById('totalClasses').textContent = classes.size;
-
-                    // 渲染表格
-                    let html = '<table><tr><th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th></tr>';
-                    allStudents.forEach(s => {
-                        const className = s.realName ? (s.realName.match(/^([一二三四五六七八九十\d]+班)/)?.[1] || '未分班') : '未分班';
-                        const gender = s.gender || '<span style="color:#999;">未设置</span>';
-                        html += `<tr><td><strong></strong></td><td></td><td></td><td><span class="badge"></span></td></tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('studentsTable').innerHTML = html;
-                } else {
-                    document.getElementById('studentsTable').innerHTML = '<p>暂无学生数据</p>';
-                }
-            } catch(e) {
-                document.getElementById('studentsTable').innerHTML = '<p style="color:red;">加载失败</p>';
-            }
-        }
-
-        async function loadRanking() {
-            try {
-                const res = await fetch('/api/rank/typing', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({limit: 20})
-                });
-                const data = await res.json();
-                
-                if (data.success && data.rank?.length > 0) {
-                    let html = '<table><tr><th>排名</th><th>昵称</th><th>WPM</th><th>准确率</th></tr>';
-                    data.rank.forEach((r, i) => {
-                        const medal = ['🥇','🥈','🥉'][i] || (i+1);
-                        html += `<tr><td style="font-size:20px;"></td><td><strong></strong></td><td style="color:#667eea;font-weight:bold;"></td><td>%</td></tr>`;
-                    });
-                    html += '</table>';
-                    document.getElementById('rankingTable').innerHTML = html;
-                } else {
-                    document.getElementById('rankingTable').innerHTML = '<p>暂无排行数据</p>';
-                }
-            } catch(e) {
-                document.getElementById('rankingTable').innerHTML = '<p style="color:red;">加载失败</p>';
-            }
-        }
-
-        function logout() {
-            sessionStorage.removeItem('adminLoggedIn');
-            location.href = '/admin/';
-        }
-    </script>
-</body>
-</html>
+        
+        <!-- 排行榜 -->
+        <div id="rank
