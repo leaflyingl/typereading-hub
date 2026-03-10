@@ -88,6 +88,7 @@
             gap: 15px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            align-items: center;
         }
         .filter-bar input, .filter-bar select {
             padding: 10px 15px;
@@ -102,6 +103,9 @@
             border: none;
             border-radius: 8px;
             cursor: pointer;
+        }
+        .filter-bar .btn-secondary {
+            background: #6c757d;
         }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
@@ -125,27 +129,52 @@
             margin-right: 5px;
         }
         .btn-edit { background: #28a745; color: white; }
+        .btn-assign { background: #667eea; color: white; }
         .empty-state {
             text-align: center;
             padding: 60px;
             color: #999;
         }
         .error { color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px; }
-        .class-group {
+        
+        /* 班级管理样式 */
+        .class-section {
             margin-bottom: 30px;
         }
         .class-header {
-            background: #667eea;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px 8px 0 0;
-            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
         }
-        .class-content {
+        .class-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .class-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+        }
+        .class-card h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .student-tag {
+            display: inline-block;
             background: white;
-            border-radius: 0 0 8px 8px;
-            overflow: hidden;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 3px;
+            font-size: 13px;
+            border: 1px solid #dee2e6;
         }
+        
+        /* 弹窗样式 */
         .modal {
             display: none;
             position: fixed;
@@ -162,6 +191,8 @@
             border-radius: 12px;
             width: 90%;
             max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         .modal-content h3 { margin-bottom: 20px; }
         .modal-content input, .modal-content select {
@@ -180,6 +211,27 @@
         }
         .btn-save { background: #667eea; color: white; }
         .btn-cancel { background: #f0f0f0; color: #333; }
+        
+        .student-select-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .student-select-item {
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .student-select-item:hover {
+            background: #f0f0f0;
+        }
+        .student-select-item.selected {
+            background: #667eea;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -212,20 +264,22 @@
         </div>
         
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('students', this)">👥 学生管理</button>
-            <button class="tab" onclick="switchTab('classes', this)">📚 班级管理</button>
+            <button class="tab active" onclick="switchTab('students', this)">👥 学生列表</button>
+            <button class="tab" onclick="switchTab('classes', this)">📚 班级列表</button>
             <button class="tab" onclick="switchTab('ranking', this)">🏆 排行榜</button>
         </div>
         
-        <!-- 学生管理 -->
+        <!-- 学生列表 -->
         <div id="students-tab" class="tab-content active">
             <div class="card">
-                <h2>学生列表</h2>
+                <h2>学生管理</h2>
                 <div class="filter-bar">
                     <select id="filterGroup" onchange="filterStudents()">
                         <option value="all">全部学生</option>
                         <option value="withRealName">✅ 已填真实姓名</option>
                         <option value="withoutRealName">⚠️ 未填真实姓名</option>
+                        <option value="assigned">📋 已分班</option>
+                        <option value="unassigned">📋 未分班</option>
                     </select>
                     <input type="text" id="searchInput" placeholder="搜索昵称或姓名..." onkeyup="filterStudents()">
                     <button onclick="loadStudents()">🔄 刷新</button>
@@ -236,10 +290,13 @@
             </div>
         </div>
         
-        <!-- 班级管理 -->
+        <!-- 班级列表 -->
         <div id="classes-tab" class="tab-content">
             <div class="card">
-                <h2>班级分组（按真实姓名前两个字自动提取）</h2>
+                <div class="class-header">
+                    <h2>班级管理</h2>
+                    <button class="btn" onclick="openCreateClassModal()">➕ 创建班级</button>
+                </div>
                 <div id="classesContainer">
                     <p>正在加载班级数据...</p>
                 </div>
@@ -268,10 +325,42 @@
                 <option value="male">男</option>
                 <option value="female">女</option>
             </select>
-            <input type="text" id="editClassName" placeholder="班级（如：一班）">
+            <select id="editClassName">
+                <option value="">选择班级（可选）</option>
+            </select>
             <div>
                 <button class="btn-save" onclick="saveStudent()">保存</button>
-                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-cancel" onclick="closeModal('editModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建班级弹窗 -->
+    <div id="createClassModal" class="modal">
+        <div class="modal-content">
+            <h3>创建新班级</h3>
+            <input type="text" id="newClassName" placeholder="班级名称（如：一班、二年级三班）">
+            <div>
+                <button class="btn-save" onclick="createClass()">创建</button>
+                <button class="btn-cancel" onclick="closeModal('createClassModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分班弹窗 -->
+    <div id="assignModal" class="modal">
+        <div class="modal-content">
+            <h3>批量分班</h3>
+            <p>选择要分配到该班级的学生：</p>
+            <div class="student-select-list" id="studentSelectList">
+                <!-- 动态生成 -->
+            </div>
+            <select id="targetClassName">
+                <option value="">选择目标班级</option>
+            </select>
+            <div>
+                <button class="btn-save" onclick="assignStudents()">确认分班</button>
+                <button class="btn-cancel" onclick="closeModal('assignModal')">取消</button>
             </div>
         </div>
     </div>
@@ -283,20 +372,21 @@
         }
 
         let allStudents = [];
+        let allClasses = [];
         let editingStudent = null;
+        let selectedStudents = new Set();
 
         window.onload = function() {
             loadStudents();
+            loadClasses();
             loadRanking();
         };
 
         function switchTab(tab, btn) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
             btn.classList.add('active');
             document.getElementById(tab + '-tab').classList.add('active');
-            
-            if (tab === 'classes') renderClasses();
         }
 
         async function loadStudents() {
@@ -339,19 +429,21 @@
                     '<span class="badge badge-success">✅ 已设置</span>' : 
                     '<span class="badge badge-warning">未设置</span>';
                 const gender = s.gender === 'male' ? '男' : (s.gender === 'female' ? '女' : '-');
-                const realName = s.realName ? s.realName : '<span style="color:#999">未填写</span>';
-                const className = s.className || extractClass(s.realName) || '<span style="color:#999">未分班</span>';
+                const realName = s.realName ? escapeHtml(s.realName) : '<span style="color:#999">未填写</span>';
+                const className = s.className ? escapeHtml(s.className) : '<span style="color:#999">未分班</span>';
                 const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
                 
-                // 修复：使用字符串拼接而不是模板字符串
                 html += '<tr>' +
                     '<td><strong>' + escapeHtml(s.nickname) + '</strong></td>' +
-                    '<td>' + (s.realName ? escapeHtml(s.realName) : '<span style="color:#999">未填写</span>') + '</td>' +
+                    '<td>' + realName + '</td>' +
                     '<td>' + gender + '</td>' +
-                    '<td><span class="badge badge-info">' + escapeHtml(className) + '</span></td>' +
+                    '<td>' + className + '</td>' +
                     '<td>' + hasPassword + '</td>' +
                     '<td>' + dateStr + '</td>' +
-                    '<td><button class="btn-small btn-edit" onclick="openEditModal(\'' + escapeHtml(s.nickname) + '\')">编辑</button></td>' +
+                    '<td>' +
+                        '<button class="btn-small btn-edit" onclick="openEditModal(\'' + escapeHtml(s.nickname) + '\')">编辑</button>' +
+                        (s.realName ? '<button class="btn-small btn-assign" onclick="openAssignModal(\'' + escapeHtml(s.nickname) + '\')">分班</button>' : '') +
+                    '</td>' +
                 '</tr>';
             });
             
@@ -369,12 +461,6 @@
                 .replace(/'/g, '&#039;');
         }
 
-        function extractClass(realName) {
-            if (!realName) return '';
-            const match = realName.match(/^([一二三四五六七八九十\d]+班)/);
-            return match ? match[1] : '';
-        }
-
         function filterStudents() {
             const group = document.getElementById('filterGroup').value;
             const search = document.getElementById('searchInput').value.toLowerCase();
@@ -386,6 +472,10 @@
                 filtered = filtered.filter(function(s) { return s.realName && s.realName.trim() !== ''; });
             } else if (group === 'withoutRealName') {
                 filtered = filtered.filter(function(s) { return !s.realName || s.realName.trim() === ''; });
+            } else if (group === 'assigned') {
+                filtered = filtered.filter(function(s) { return s.className && s.className.trim() !== ''; });
+            } else if (group === 'unassigned') {
+                filtered = filtered.filter(function(s) { return !s.className || s.className.trim() === ''; });
             }
             
             // 按搜索词筛选
@@ -404,57 +494,111 @@
             const withRealName = allStudents.filter(function(s) { return s.realName && s.realName.trim() !== ''; }).length;
             document.getElementById('withRealName').textContent = withRealName;
             document.getElementById('withoutRealName').textContent = allStudents.length - withRealName;
-            
-            // 统计班级数量
-            const classes = new Set();
-            allStudents.forEach(function(s) {
-                const cls = s.className || extractClass(s.realName);
-                if (cls) classes.add(cls);
-            });
-            document.getElementById('classCount').textContent = classes.size;
+            document.getElementById('classCount').textContent = allClasses.length;
+        }
+
+        // ========== 班级管理 ==========
+        async function loadClasses() {
+            try {
+                const response = await fetch('/api/admin/classes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                if (data.success && data.classes) {
+                    allClasses = data.classes;
+                    renderClasses();
+                    updateClassSelects();
+                }
+            } catch (e) {
+                console.error('加载班级失败:', e);
+            }
         }
 
         function renderClasses() {
             const container = document.getElementById('classesContainer');
             
-            // 按班级分组
-            const classGroups = {};
-            allStudents.forEach(function(s) {
-                const cls = s.className || extractClass(s.realName) || '未分班';
-                if (!classGroups[cls]) classGroups[cls] = [];
-                classGroups[cls].push(s);
-            });
-            
-            if (Object.keys(classGroups).length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>暂无班级数据</p></div>';
+            if (allClasses.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>暂无班级，请点击"创建班级"按钮添加</p></div>';
                 return;
             }
             
-            let html = '';
-            for (const className in classGroups) {
-                const students = classGroups[className];
-                html += '<div class="class-group">' +
-                    '<div class="class-header">' + escapeHtml(className) + ' (' + students.length + '人)</div>' +
-                    '<div class="class-content"><table><thead><tr><th>昵称</th><th>真实姓名</th><th>性别</th><th>注册时间</th></tr></thead><tbody>';
-                
-                students.forEach(function(s) {
-                    const gender = s.gender === 'male' ? '男' : (s.gender === 'female' ? '女' : '-');
-                    const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
-                    
-                    html += '<tr>' +
-                        '<td><strong>' + escapeHtml(s.nickname) + '</strong></td>' +
-                        '<td>' + (s.realName ? escapeHtml(s.realName) : '<span style="color:#999">未填写</span>') + '</td>' +
-                        '<td>' + gender + '</td>' +
-                        '<td>' + dateStr + '</td>' +
-                    '</tr>';
+            let html = '<div class="class-list">';
+            
+            allClasses.forEach(function(cls) {
+                // 获取该班级的学生
+                const classStudents = allStudents.filter(function(s) { 
+                    return s.className === cls.name && s.realName; 
                 });
                 
-                html += '</tbody></table></div></div>';
-            }
+                html += '<div class="class-card">' +
+                    '<h3>' + escapeHtml(cls.name) + ' (' + classStudents.length + '人)</h3>' +
+                    '<div>';
+                
+                if (classStudents.length === 0) {
+                    html += '<span style="color:#999;">暂无学生</span>';
+                } else {
+                    classStudents.forEach(function(s) {
+                        html += '<span class="student-tag">' + escapeHtml(s.realName || s.nickname) + '</span>';
+                    });
+                }
+                
+                html += '</div></div>';
+            });
             
+            html += '</div>';
             container.innerHTML = html;
         }
 
+        function updateClassSelects() {
+            // 更新编辑弹窗中的班级选择
+            const editSelect = document.getElementById('editClassName');
+            const assignSelect = document.getElementById('targetClassName');
+            
+            let options = '<option value="">选择班级（可选）</option>';
+            allClasses.forEach(function(cls) {
+                options += '<option value="' + escapeHtml(cls.name) + '">' + escapeHtml(cls.name) + '</option>';
+            });
+            
+            editSelect.innerHTML = options;
+            assignSelect.innerHTML = '<option value="">选择目标班级</option>' + options.replace('（可选）', '');
+        }
+
+        function openCreateClassModal() {
+            document.getElementById('newClassName').value = '';
+            document.getElementById('createClassModal').classList.add('active');
+        }
+
+        async function createClass() {
+            const className = document.getElementById('newClassName').value.trim();
+            if (!className) {
+                alert('请输入班级名称');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/class/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ className })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('班级创建成功');
+                    closeModal('createClassModal');
+                    loadClasses();
+                } else {
+                    alert('创建失败：' + data.message);
+                }
+            } catch (e) {
+                alert('网络错误：' + e.message);
+            }
+        }
+
+        // ========== 编辑学生 ==========
         function openEditModal(nickname) {
             const student = allStudents.find(function(s) { return s.nickname === nickname; });
             if (!student) return;
@@ -463,13 +607,8 @@
             document.getElementById('editNickname').value = student.nickname;
             document.getElementById('editRealName').value = student.realName || '';
             document.getElementById('editGender').value = student.gender || '';
-            document.getElementById('editClassName').value = student.className || extractClass(student.realName) || '';
+            document.getElementById('editClassName').value = student.className || '';
             document.getElementById('editModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('editModal').classList.remove('active');
-            editingStudent = null;
         }
 
         async function saveStudent() {
@@ -477,7 +616,7 @@
             
             const realName = document.getElementById('editRealName').value.trim();
             const gender = document.getElementById('editGender').value;
-            const className = document.getElementById('editClassName').value.trim();
+            const className = document.getElementById('editClassName').value;
             
             try {
                 const response = await fetch('/api/admin/student/update', {
@@ -494,8 +633,9 @@
                 const data = await response.json();
                 if (data.success) {
                     alert('更新成功');
-                    closeModal();
+                    closeModal('editModal');
                     loadStudents();
+                    loadClasses();
                 } else {
                     alert('更新失败：' + data.message);
                 }
@@ -504,6 +644,89 @@
             }
         }
 
+        // ========== 批量分班 ==========
+        function openAssignModal(preSelectedNickname) {
+            selectedStudents.clear();
+            if (preSelectedNickname) {
+                selectedStudents.add(preSelectedNickname);
+            }
+            
+            // 渲染可选学生列表（只显示有真实姓名的未分班学生）
+            const listDiv = document.getElementById('studentSelectList');
+            const availableStudents = allStudents.filter(function(s) { 
+                return s.realName && !s.className; 
+            });
+            
+            if (availableStudents.length === 0) {
+                listDiv.innerHTML = '<p style="color:#999;">暂无可分班的学生（需要填写真实姓名且未分班）</p>';
+            } else {
+                let html = '';
+                availableStudents.forEach(function(s) {
+                    const isSelected = selectedStudents.has(s.nickname) ? 'selected' : '';
+                    html += '<div class="student-select-item ' + isSelected + '" ' +
+                        'onclick="toggleStudent(\'' + escapeHtml(s.nickname) + '\', this)" ' +
+                        'data-nickname="' + escapeHtml(s.nickname) + '">' +
+                        escapeHtml(s.realName) + '（' + escapeHtml(s.nickname) + '）' +
+                    '</div>';
+                });
+                listDiv.innerHTML = html;
+            }
+            
+            document.getElementById('assignModal').classList.add('active');
+        }
+
+        function toggleStudent(nickname, el) {
+            if (selectedStudents.has(nickname)) {
+                selectedStudents.delete(nickname);
+                el.classList.remove('selected');
+            } else {
+                selectedStudents.add(nickname);
+                el.classList.add('selected');
+            }
+        }
+
+        async function assignStudents() {
+            const className = document.getElementById('targetClassName').value;
+            if (!className) {
+                alert('请选择目标班级');
+                return;
+            }
+            
+            if (selectedStudents.size === 0) {
+                alert('请至少选择一名学生');
+                return;
+            }
+            
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const nickname of selectedStudents) {
+                try {
+                    const response = await fetch('/api/admin/student/assign-class', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ nickname, className })
+                    });
+                    
+                    const data = await response.json();
+                    if (data.success) successCount++;
+                    else failCount++;
+                } catch (e) {
+                    failCount++;
+                }
+            }
+            
+            alert('分班完成：成功 ' + successCount + ' 人，失败 ' + failCount + ' 人');
+            closeModal('assignModal');
+            loadStudents();
+            loadClasses();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ========== 排行榜 ==========
         async function loadRanking() {
             try {
                 const response = await fetch('/api/rank/typing', {
@@ -515,25 +738,24 @@
                 const tableDiv = document.getElementById('rankingTable');
                 
                 if (data.success && data.rank && data.rank.length > 0) {
-                    let html = '<table><thead><tr><th>排名</th><th>昵称</th><th>真实姓名</th><th>WPM</th><th>准确率</th><th>时间</th></tr></thead><tbody>';
+                    let html = '<table><thead><tr><th>排名</th><th>昵称</th><th>真实姓名</th><th>班级</th><th>WPM</th><th>准确率</th></tr></thead><tbody>';
                     
                     data.rank.forEach(function(r, i) {
                         const medal = i < 3 ? ['🥇','🥈','🥉'][i] : (i + 1);
-                        const dateStr = r.timestamp ? new Date(r.timestamp).toLocaleString('zh-CN') : '-';
                         html += '<tr>' +
                             '<td style="font-size:20px;">' + medal + '</td>' +
                             '<td><strong>' + escapeHtml(r.nickname) + '</strong></td>' +
                             '<td>' + escapeHtml(r.realName || '-') + '</td>' +
+                            '<td>' + escapeHtml(r.className || '-') + '</td>' +
                             '<td style="color:#667eea;font-weight:bold;">' + r.wpm + '</td>' +
                             '<td>' + r.accuracy + '%</td>' +
-                            '<td>' + dateStr + '</td>' +
                         '</tr>';
                     });
                     
                     html += '</tbody></table>';
                     tableDiv.innerHTML = html;
                 } else {
-                    tableDiv.innerHTML = '<div class="empty-state"><p>暂无排行数据（需要学生填写真实姓名后才会显示）</p></div>';
+                    tableDiv.innerHTML = '<div class="empty-state"><p>暂无排行数据（需要学生填写真实姓名并完成打字练习）</p></div>';
                 }
             } catch (error) {
                 document.getElementById('rankingTable').innerHTML = '<div class="error">加载失败</div>';
