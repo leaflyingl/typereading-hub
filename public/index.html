@@ -25,7 +25,8 @@
         }
         .logo { font-size: 28px; font-weight: bold; color: #667eea; }
         .user-status { display: flex; align-items: center; gap: 15px; }
-        .welcome-text { color: #667eea; font-weight: 500; }
+        .welcome-text { color: #667eea; font-weight: 500; cursor: pointer; }
+        .welcome-text:hover { text-decoration: underline; }
         .btn {
             padding: 10px 24px;
             border: none;
@@ -70,7 +71,6 @@
         .feature-card h3 { font-size: 20px; margin-bottom: 10px; color: #333; }
         .feature-card p { color: #666; font-size: 14px; }
         
-        /* 修复：淡化管理入口样式 */
         .admin-link {
             text-align: center;
             margin-top: 40px;
@@ -90,6 +90,31 @@
             border-radius: 8px;
             color: #856404;
             font-size: 14px;
+        }
+
+        /* 滚动通知栏 */
+        .notice-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            max-width: 90%;
+            z-index: 1000;
+        }
+        .notice-content {
+            display: inline-block;
+            animation: scroll 20s linear infinite;
+        }
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
         }
     </style>
 </head>
@@ -131,9 +156,18 @@
             </div>
         </div>
         
-        <!-- 修复：淡化管理入口，只保留图标 -->
         <div class="admin-link">
             <a href="/admin/">⚙️</a>
+        </div>
+
+        <!-- 滚动通知栏 -->
+        <div class="notice-bar">
+            <div class="notice-content">
+                📢 非本班学生不能上排行榜 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 
+                📢 请本班学生在注册或在后台填写真实姓名和性别 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
+                📢 非本班学生不能上排行榜 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
+                📢 请本班学生在注册或在后台填写真实姓名和性别
+            </div>
         </div>
     </div>
 
@@ -150,10 +184,10 @@
             if (currentUserStr) {
                 try {
                     const user = JSON.parse(currentUserStr);
-                    // 修复：正确显示用户名（昵称）
                     const nickname = user.nickname || '同学';
+                    // 点击名字进入用户信息页
                     userStatusDiv.innerHTML = 
-                        '<span class="welcome-text">欢迎，' + escapeHtml(nickname) + '！</span>' +
+                        '<span class="welcome-text" onclick="goTo(\'/profile/\')">欢迎，' + escapeHtml(nickname) + '</span>' +
                         '<button class="btn btn-secondary" onclick="logout()">退出</button>';
                     startBtn.textContent = '进入学习';
                     startBtn.href = '/reading/';
@@ -190,7 +224,7 @@
 
         function goTo(url) {
             const currentUser = localStorage.getItem('currentUser');
-            if (!currentUser && url !== '/register/') {
+            if (!currentUser && url !== '/register/' && url !== '/profile/') {
                 alert('请先登录后再使用此功能');
                 location.href = '/register/';
                 return;
