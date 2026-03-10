@@ -221,17 +221,60 @@ export async function onRequest(context) {
       return json({ success: true, classes });
     }
 
-    /* ========================= 阅读打卡 ========================== */
+        /* ========================= 查询今日打卡状态（新增） ========================== */
+    if (path === "checkin/status") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      
+      let hasCheckedIn = false;
+      let todayRecord = null;
+
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const record = JSON.parse(data);
+        if (record.nickname === nickname && record.date === today) {
+          hasCheckedIn = true;
+          todayRecord = record;
+          break;
+        }
+      }
+
+      return json({ 
+        success: true, 
+        hasCheckedIn,
+        record: todayRecord
+      });
+    }
+
+    /* ========================= 阅读打卡（修改） ========================== */
     if (path === "checkin/reading") {
       const { nickname, articleTitle, wordCount } = await request.json();
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
+      const today = new Date().toISOString().split("T")[0];
+      
+      // 新增：检查今日是否已打卡
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const record = JSON.parse(data);
+          if (record.nickname === nickname && record.date === today) {
+            return json({ success: false, message: "今日已打卡，请勿重复打卡" });
+          }
+        }
+      }
+
       const recordKey = "reading:" + nickname + ":" + Date.now();
       const now = new Date();
-      const dateStr = now.toISOString().split("T")[0];
 
       await env.TYPEREADING_KV.put(
         recordKey,
@@ -239,13 +282,14 @@ export async function onRequest(context) {
           nickname,
           articleTitle: articleTitle || "未命名文章",
           wordCount: Number(wordCount) || 0,
-          date: dateStr,
+          date: today,
           timestamp: now.toISOString()
         })
       );
 
-      return json({ success: true });
+      return json({ success: true, message: "打卡成功" });
     }
+
 
     /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
@@ -386,6 +430,111 @@ export async function onRequest(context) {
       };
 
       return json({ success: true, stats });
+    }
+
+        /* ========================= 保存阅读/打字内容（新增） ========================== */
+    if (path === "admin/content/save") {
+      const { id, type, title, content, wordCount, difficulty, isActive } = await request.json();
+      
+      if (!type || !["reading", "typing"].includes(type)) {
+        return json({ success: false, message: "类型错误" });
+      }
+      if (!title) {
+        return json({ success: false, message: "标题不能为空" });
+      }
+      if (!content) {
+        return json({ success: false, message: "内容不能为空" });
+      }
+
+      const contentId = id || Date.now().toString();
+      const contentKey = "content:" + type + ":" + contentId;
+
+      const contentData = {
+        id: contentId,
+        type,
+        title,
+        content,
+        wordCount: Number(wordCount) || content.length,
+        difficulty: difficulty || "medium",
+        isActive: isActive !== false,
+        updatedAt: new Date().toISOString()
+      };
+
+      await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
+      return json({ success: true, content: contentData });
+    }
+
+    /* ========================= 获取内容列表（新增） ========================== */
+    if (path === "admin/content/list") {
+      const { type } = await request.json();
+      
+      let prefix = "content:";
+      if (type) {
+        prefix = "content:" + type + ":";
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix });
+      const contents = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) contents.push(JSON.parse(data));
+      }
+      contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      return json({ success: true, contents });
+    }
+
+    /* ========================= 删除内容（新增） ========================== */
+    if (path === "admin/content/delete") {
+      const { id, type } = await request.json();
+      if (!id || !type) {
+        return json({ success: false, message: "参数错误" });
+      }
+
+      const contentKey = "content:" + type + ":" + id;
+      await env.TYPEREADING_KV.delete(contentKey);
+      return json({ success: true });
+    }
+
+    /* ========================= 获取今日阅读内容（新增） ========================== */
+    if (path === "content/reading") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:reading:" });
+      const contents = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const content = JSON.parse(data);
+          if (content.isActive) {
+            contents.push(content);
+          }
+        }
+      }
+      
+      const selectedContent = contents.length > 0 
+        ? contents[Math.floor(Math.random() * contents.length)]
+        : null;
+
+      return json({ success: true, content: selectedContent });
+    }
+
+    /* ========================= 获取打字练习内容（新增） ========================== */
+    if (path === "content/typing") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
+      const contents = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const content = JSON.parse(data);
+          if (content.isActive) {
+            contents.push(content);
+          }
+        }
+      }
+      
+      const selectedContent = contents.length > 0 
+        ? contents[Math.floor(Math.random() * contents.length)]
+        : null;
+
+      return json({ success: true, content: selectedContent });
     }
 
     /* ========================= 排行榜 ========================== */
