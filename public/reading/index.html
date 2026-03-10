@@ -6,298 +6,100 @@
     <title>阅读打卡 - TypeReading Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #f5f7fa; 
-            padding: 20px; 
-        }
-        .header { 
-            max-width: 800px; 
-            margin: 0 auto 30px; 
-            padding: 20px; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header-left h2 { margin-bottom: 5px; }
-        .header-left small { opacity: 0.9; }
-        .header-right a { 
-            color: white; 
-            text-decoration: none; 
-            margin-left: 15px;
-            padding: 8px 16px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
-        .header-right a:hover { background: rgba(255,255,255,0.3); }
-        .container { max-width: 800px; margin: 0 auto; }
-        
-        /* 今日已打卡提示 */
-        .checked-in-banner {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
+            min-height: 100vh;
             padding: 20px;
-            border-radius: 12px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             margin-bottom: 20px;
-            display: none;
-            align-items: center;
-            justify-content: space-between;
         }
-        .checked-in-banner.show { display: flex; }
-        .checked-in-banner .icon { font-size: 2em; margin-right: 15px; }
-        .checked-in-info { flex: 1; }
-        .checked-in-info h3 { margin-bottom: 5px; }
-        .checked-in-info p { opacity: 0.9; font-size: 0.9em; }
-        
-        .article-box { 
-            background: white; 
-            border-radius: 16px; 
-            padding: 40px; 
-            margin-bottom: 30px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            line-height: 1.8; 
-            font-size: 18px;
-            min-height: 300px;
+        h1 { color: #333; margin-bottom: 20px; }
+        .article {
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 30px;
         }
-        .article-box h3 { color: #333; margin-bottom: 20px; font-size: 1.5em; }
-        .article-box p { color: #555; margin-bottom: 15px; }
-        .controls { 
-            display: flex; 
-            align-items: center; 
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-        .btn { 
-            padding: 14px 32px; 
-            font-size: 16px; 
-            border: none; 
-            border-radius: 10px; 
-            cursor: pointer; 
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .btn-primary { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-        }
-        .btn-primary:hover:not(:disabled) { 
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        .btn-success { 
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
-            color: white; 
-        }
-        .btn:disabled { 
-            background: #ccc !important; 
-            cursor: not-allowed; 
-            transform: none !important;
-            box-shadow: none !important;
-        }
-        .timer { 
-            font-size: 28px; 
-            color: #667eea; 
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-        }
-        .result { 
-            margin-top: 30px; 
-            padding: 25px; 
-            border-radius: 12px; 
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); 
-            display: none;
-        }
-        .result h3 { color: #155724; margin-bottom: 15px; }
-        .result p { color: #155724; margin: 8px 0; }
-        
-        /* 已完成状态的文章框 */
-        .article-box.completed {
-            background: #f8f9fa;
-        }
-        .article-box.completed::before {
-            content: '✅ 今日已完成阅读';
-            display: block;
-            text-align: center;
-            color: #28a745;
-            font-size: 1.2em;
-            font-weight: bold;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #d4edda;
+        .btn {
+            padding: 12px 30px;
+            border: none;
             border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
         }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 8px; }
+        .status.success { background: #d4edda; color: #155724; }
+        .back { color: #667eea; text-decoration: none; display: inline-block; margin-bottom: 20px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <h2>📚 阅读打卡</h2>
-            <small id="userName">加载中...</small>
-        </div>
-        <div class="header-right">
-            <a href="/">🏠 首页</a>
-            <a href="/typing/">⌨️ 打字</a>
-            <a href="/rank/">🏆 排行</a>
-        </div>
-    </div>
-
     <div class="container">
-        <!-- 今日已打卡提示条 -->
-        <div id="checkedInBanner" class="checked-in-banner">
-            <span class="icon">🎉</span>
-            <div class="checked-in-info">
-                <h3>今日阅读任务已完成！</h3>
-                <p id="checkedInDetail">继续保持，明天再来！</p>
+        <a href="/" class="back">← 返回首页</a>
+        <div class="card">
+            <h1>📖 每日阅读</h1>
+            <div class="article" id="articleContent">
+                <p><strong>The Benefits of Reading</strong></p>
+                <p>Reading is one of the most important skills you can learn. It opens up new worlds and opportunities. When you read regularly, you improve your vocabulary, comprehension, and critical thinking skills.</p>
+                <p>Make reading a daily habit. Even 15 minutes a day can make a big difference in your learning journey.</p>
             </div>
-        </div>
-
-        <div class="article-box" id="articleBox">
-            <h3>今日阅读文章</h3>
-            <div id="articleContent">
-                <p style="color: #999; text-align: center; padding: 40px;">
-                    正在检查今日打卡状态...<br>
-                </p>
-            </div>
-        </div>
-
-        <div class="controls" id="controls">
-            <button class="btn btn-primary" id="startBtn" onclick="startReading()">开始阅读</button>
-            <span class="timer" id="timer" style="display: none;">⏱️ 00:00</span>
-            <button class="btn btn-success" id="checkinBtn" style="display: none;" onclick="submitCheckin()">完成打卡</button>
-        </div>
-
-        <div class="result" id="resultBox">
-            <h3>✅ 打卡成功！</h3>
-            <p id="checkinResult"></p>
+            <button class="btn btn-primary" onclick="doCheckin()" id="checkinBtn">完成阅读打卡</button>
+            <a href="/" class="btn btn-secondary">返回首页</a>
+            <div id="status"></div>
         </div>
     </div>
 
     <script>
-        const user = JSON.parse(localStorage.getItem('typereading_user') || '{}');
-        if (!user.userId) {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (!currentUser) {
             alert('请先登录');
             location.href = '/register/';
         }
-        document.getElementById('userName').textContent = '欢迎，' + (user.nickname || '同学');
-
-        // 示例文章（教师可替换）
-        const article = `The quick brown fox jumps over the lazy dog. This pangram contains every letter of the English alphabet at least once. Pangrams are often used to test fonts, keyboards, and other text-related tools. Students should read this carefully and understand its meaning while practicing their reading speed and comprehension. Regular reading practice helps improve vocabulary and language skills significantly.`;
-
-        let startTime = null;
-        let timerInterval = null;
-        let hasCheckedInToday = false;
-
-        // 页面加载时检查今日打卡状态
-        async function checkTodayStatus() {
+        
+        // 检查今日是否已打卡
+        async function checkStatus() {
             try {
-                const res = await fetch(`/api/checkin/status?userId=${user.userId}`);
+                const res = await fetch('/api/checkin/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nickname: currentUser.nickname})
+                });
                 const data = await res.json();
-                
-                if (data.success && data.hasCheckedIn) {
-                    hasCheckedInToday = true;
-                    showCheckedInState(data.checkin);
-                } else {
-                    showReadingState();
+                if (data.checkedIn) {
+                    document.getElementById('checkinBtn').textContent = '今日已完成';
+                    document.getElementById('checkinBtn').disabled = true;
+                    document.getElementById('status').innerHTML = '<div class="status success">✅ 今日阅读打卡已完成</div>';
                 }
-            } catch (err) {
-                console.error('检查状态失败:', err);
-                showReadingState();
-            }
+            } catch(e) {}
         }
-
-        function showCheckedInState(checkin) {
-            // 显示已打卡横幅
-            const banner = document.getElementById('checkedInBanner');
-            banner.classList.add('show');
-            document.getElementById('checkedInDetail').textContent = 
-                `今日已阅读 ${checkin.duration || 0} 秒，${checkin.wordsRead || 0} 词`;
-            
-            // 文章框显示已完成样式
-            const articleBox = document.getElementById('articleBox');
-            articleBox.classList.add('completed');
-            document.getElementById('articleContent').innerHTML = '<p>' + article + '</p>';
-            
-            // 隐藏控制按钮
-            document.getElementById('controls').style.display = 'none';
-        }
-
-        function showReadingState() {
-            document.getElementById('articleContent').innerHTML = `
-                <p style="color: #999; text-align: center; padding: 40px;">
-                    点击"开始阅读"加载文章<br>
-                    <small>（可由教师自定义每日阅读内容）</small>
-                </p>
-            `;
-        }
-
-        function startReading() {
-            if (hasCheckedInToday) {
-                alert('今日已完成阅读打卡，明天再来吧！');
-                return;
-            }
-            
-            document.getElementById('articleContent').innerHTML = '<p>' + article + '</p>';
-            document.getElementById('startBtn').style.display = 'none';
-            document.getElementById('timer').style.display = 'inline-block';
-            document.getElementById('checkinBtn').style.display = 'inline-block';
-            
-            startTime = Date.now();
-            timerInterval = setInterval(updateTimer, 1000);
-        }
-
-        function updateTimer() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
-            const seconds = (elapsed % 60).toString().padStart(2, '0');
-            document.getElementById('timer').textContent = `⏱️ :`;
-        }
-
-        async function submitCheckin() {
-            if (timerInterval) clearInterval(timerInterval);
-            
-            const duration = Math.floor((Date.now() - startTime) / 1000);
-            const words = article.split(/\s+/).length;
-            
+        
+        async function doCheckin() {
             try {
                 const res = await fetch('/api/checkin/reading', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userId: user.userId,
-                        articleId: 'daily-001',
-                        duration: duration,
-                        wordsRead: words
-                    })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nickname: currentUser.nickname})
                 });
-                
                 const data = await res.json();
-                
                 if (data.success) {
-                    document.getElementById('resultBox').style.display = 'block';
-                    document.getElementById('checkinResult').innerHTML = `
-                        <strong>阅读时长：</strong>分秒<br>
-                        <strong>阅读字数：</strong>词<br>
-                        <strong>平均速度：</strong>词/分钟
-                    `;
+                    document.getElementById('checkinBtn').textContent = '今日已完成';
                     document.getElementById('checkinBtn').disabled = true;
-                    document.getElementById('checkinBtn').textContent = '已打卡';
-                    
-                    // 3秒后刷新页面显示已完成状态
-                    setTimeout(() => {
-                        location.reload();
-                    }, 3000);
+                    document.getElementById('status').innerHTML = '<div class="status success">✅ 打卡成功！</div>';
                 }
-            } catch (err) {
+            } catch(e) {
                 alert('打卡失败，请重试');
             }
         }
-
-        // 页面加载时检查状态
-        checkTodayStatus();
+        
+        checkStatus();
     </script>
 </body>
 </html>
