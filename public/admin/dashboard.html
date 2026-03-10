@@ -65,7 +65,10 @@
             border-radius: 6px;
             font-size: 14px;
         }
-        .tab.active { background: #667eea; color: white; }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .card {
@@ -75,7 +78,12 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.08);
             margin-bottom: 25px;
         }
-        .card h2 { font-size: 18px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
         .filter-bar {
             display: flex;
             gap: 15px;
@@ -97,26 +105,30 @@
             cursor: pointer;
         }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f8f9fa; font-weight: 600; }
+        tr:hover { background: #f8f9fa; }
         .badge {
             display: inline-block;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 12px;
-            background: #d1ecf1;
-            color: #0c5460;
         }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
         .btn-small {
             padding: 6px 14px;
             font-size: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            background: #667eea;
-            color: white;
+            margin-right: 5px;
         }
-        .class-grid {
+        .btn-edit { background: #28a745; color: white; }
+        .btn-view { background: #667eea; color: white; }
+        
+        .class-management {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
@@ -140,26 +152,18 @@
             border-radius: 12px;
             font-size: 14px;
         }
-        .student-tags {
+        .student-list {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         }
         .student-tag {
             background: #f0f0f0;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 16px;
             font-size: 13px;
         }
-        .empty-state {
-            text-align: center;
-            padding: 60px;
-            color: #999;
-        }
-        .edit-btn {
-            background: #28a745;
-            margin-left: 10px;
-        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -190,14 +194,27 @@
             font-size: 24px;
             cursor: pointer;
         }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; color: #555; }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
         .form-group input, .form-group select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 6px;
         }
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        .loading { color: #888; font-style: italic; }
+        .error { color: #dc3545; }
     </style>
 </head>
 <body>
@@ -225,7 +242,7 @@
             </div>
             <div class="stat-box">
                 <h3 id="typingCount">0</h3>
-                <p>练习次数</p>
+                <p>打字记录</p>
             </div>
         </div>
         
@@ -247,7 +264,7 @@
                     <button onclick="loadStudents()">🔄 刷新</button>
                 </div>
                 <div id="studentsTable">
-                    <div class="empty-state">正在加载...</div>
+                    <p class="loading">正在加载学生数据...</p>
                 </div>
             </div>
         </div>
@@ -255,14 +272,409 @@
         <!-- 班级管理 -->
         <div id="classes-tab" class="tab-content">
             <div class="card">
-                <h2>班级管理 
-                    <button class="btn-small edit-btn" onclick="openClassModal()">+ 添加班级</button>
-                </h2>
+                <h2>班级管理</h2>
+                <div class="filter-bar">
+                    <input type="text" id="newClassName" placeholder="输入新班级名称（如：一班）">
+                    <button onclick="createClass()">➕ 创建班级</button>
+                </div>
                 <div id="classesGrid">
-                    <div class="empty-state">正在加载...</div>
+                    <p class="loading">正在加载班级数据...</p>
                 </div>
             </div>
         </div>
         
         <!-- 排行榜 -->
-        <div id="rank
+        <div id="ranking-tab" class="tab-content">
+            <div class="card">
+                <h2>打字排行榜 TOP 20</h2>
+                <div id="rankingTable">
+                    <p class="loading">正在加载排行榜...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑学生弹窗 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ 编辑学生信息</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>昵称</label>
+                <input type="text" id="editNickname" readonly>
+            </div>
+            <div class="form-group">
+                <label>真实姓名</label>
+                <input type="text" id="editRealName" placeholder="输入真实姓名">
+            </div>
+            <div class="form-group">
+                <label>性别</label>
+                <select id="editGender">
+                    <option value="">未设置</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>班级</label>
+                <select id="editClass">
+                    <option value="">未分班</option>
+                </select>
+            </div>
+            <button onclick="saveStudent()" style="width:100%;padding:12px;background:#667eea;color:white;border:none;border-radius:8px;cursor:pointer;">保存</button>
+        </div>
+    </div>
+
+    <script>
+        // 登录检查
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
+            location.href = '/admin/';
+        }
+
+        let allStudents = [];
+        let customClasses = JSON.parse(localStorage.getItem('customClasses') || '[]');
+        let editingStudent = null;
+
+        window.onload = function() {
+            loadStudents();
+            loadRanking();
+        };
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+            if (tab === 'classes') loadClasses();
+        }
+
+        async function loadStudents() {
+            const tableDiv = document.getElementById('studentsTable');
+            tableDiv.innerHTML = '<p class="loading">正在加载学生数据...</p>';
+            
+            try {
+                const response = await fetch('/api/admin/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                
+                if (data.success && data.students) {
+                    allStudents = data.students;
+                    renderStudents(allStudents);
+                    updateStats();
+                    updateClassFilter();
+                } else {
+                    tableDiv.innerHTML = '<p class="error">加载失败：' + (data.message || '无数据') + '</p>';
+                }
+            } catch (error) {
+                tableDiv.innerHTML = '<p class="error">加载失败，请检查网络连接</p>';
+                console.error(error);
+            }
+        }
+
+        function renderStudents(students) {
+            const tableDiv = document.getElementById('studentsTable');
+            if (students.length === 0) {
+                tableDiv.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:20px;">📭</div><p>暂无学生数据</p></div>';
+                return;
+            }
+            
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th>昵称</th>
+                        <th>真实姓名</th>
+                        <th>性别</th>
+                        <th>班级</th>
+                        <th>注册时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            students.forEach(s => {
+                const className = getStudentClass(s);
+                const genderBadge = s.gender 
+                    ? `<span class="badge badge-success"></span>` 
+                    : '<span class="badge badge-warning">未设置</span>';
+                const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
+                
+                html += `<tr>
+                    <td><strong></strong></td>
+                    <td></td>
+                    <td></td>
+                    <td><span class="badge badge-info"></span></td>
+                    <td></td>
+                    <td>
+                        <button class="btn-small btn-edit" onclick="editStudent('')">编辑</button>
+                    </td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            tableDiv.innerHTML = html;
+        }
+
+        function getStudentClass(student) {
+            // 优先从真实姓名提取班级
+            if (student.realName) {
+                const match = student.realName.match(/^([一二三四五六七八九十\d]+班)/);
+                if (match) return match[1];
+            }
+            // 检查是否在自定义班级中
+            for (let cls of customClasses) {
+                if (cls.students && cls.students.includes(student.nickname)) {
+                    return cls.name;
+                }
+            }
+            return '未分班';
+        }
+
+        function filterStudents() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const classFilter = document.getElementById('classFilter').value;
+            
+            let filtered = allStudents.filter(s => {
+                const matchSearch = !search || 
+                    (s.nickname && s.nickname.toLowerCase().includes(search)) ||
+                    (s.realName && s.realName.toLowerCase().includes(search));
+                const matchClass = !classFilter || getStudentClass(s) === classFilter;
+                return matchSearch && matchClass;
+            });
+            renderStudents(filtered);
+        }
+
+        function updateClassFilter() {
+            const classes = new Set();
+            allStudents.forEach(s => {
+                const className = getStudentClass(s);
+                if (className !== '未分班') classes.add(className);
+            });
+            customClasses.forEach(c => classes.add(c.name));
+            
+            let html = '<option value="">全部班级</option>';
+            Array.from(classes).sort().forEach(c => {
+                html += `<option value=""></option>`;
+            });
+            document.getElementById('classFilter').innerHTML = html;
+            document.getElementById('editClass').innerHTML = '<option value="">未分班</option>' + 
+                Array.from(classes).sort().map(c => `<option value=""></option>`).join('');
+        }
+
+        function updateStats() {
+            document.getElementById('totalStudents').textContent = allStudents.length;
+            const completed = allStudents.filter(s => s.realName && s.gender).length;
+            document.getElementById('completedInfo').textContent = completed;
+            
+            const classes = new Set();
+            allStudents.forEach(s => {
+                const className = getStudentClass(s);
+                if (className !== '未分班') classes.add(className);
+            });
+            customClasses.forEach(c => classes.add(c.name));
+            document.getElementById('totalClasses').textContent = classes.size;
+        }
+
+        function editStudent(nickname) {
+            const student = allStudents.find(s => s.nickname === nickname);
+            if (!student) return;
+            
+            editingStudent = student;
+            document.getElementById('editNickname').value = student.nickname;
+            document.getElementById('editRealName').value = student.realName || '';
+            document.getElementById('editGender').value = student.gender || '';
+            document.getElementById('editClass').value = getStudentClass(student);
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        async function saveStudent() {
+            if (!editingStudent) return;
+            
+            const realName = document.getElementById('editRealName').value.trim();
+            const gender = document.getElementById('editGender').value;
+            const className = document.getElementById('editClass').value;
+            
+            // 更新学生信息
+            try {
+                const response = await fetch('/api/user/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nickname: editingStudent.nickname,
+                        realName: realName,
+                        gender: gender
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // 更新本地数据
+                    editingStudent.realName = realName;
+                    editingStudent.gender = gender;
+                    
+                    // 处理班级分配
+                    if (className && className !== '未分班') {
+                        // 从其他班级移除
+                        customClasses.forEach(c => {
+                            if (c.students) {
+                                c.students = c.students.filter(s => s !== editingStudent.nickname);
+                            }
+                        });
+                        // 添加到新班级
+                        let targetClass = customClasses.find(c => c.name === className);
+                        if (!targetClass) {
+                            targetClass = { name: className, students: [] };
+                            customClasses.push(targetClass);
+                        }
+                        if (!targetClass.students) targetClass.students = [];
+                        if (!targetClass.students.includes(editingStudent.nickname)) {
+                            targetClass.students.push(editingStudent.nickname);
+                        }
+                        localStorage.setItem('customClasses', JSON.stringify(customClasses));
+                    }
+                    
+                    closeModal();
+                    renderStudents(allStudents);
+                    updateStats();
+                    alert('保存成功！');
+                } else {
+                    alert('保存失败：' + data.message);
+                }
+            } catch (error) {
+                alert('网络错误');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingStudent = null;
+        }
+
+        function createClass() {
+            const name = document.getElementById('newClassName').value.trim();
+            if (!name) {
+                alert('请输入班级名称');
+                return;
+            }
+            
+            if (customClasses.find(c => c.name === name)) {
+                alert('该班级已存在');
+                return;
+            }
+            
+            customClasses.push({ name: name, students: [] });
+            localStorage.setItem('customClasses', JSON.stringify(customClasses));
+            document.getElementById('newClassName').value = '';
+            loadClasses();
+            updateClassFilter();
+            alert('班级创建成功！');
+        }
+
+        function loadClasses() {
+            const gridDiv = document.getElementById('classesGrid');
+            
+            // 收集所有班级
+            const allClasses = {};
+            
+            // 从学生真实姓名提取的班级
+            allStudents.forEach(s => {
+                const className = getStudentClass(s);
+                if (!allClasses[className]) allClasses[className] = [];
+                allClasses[className].push(s);
+            });
+            
+            // 自定义班级（可能没有学生）
+            customClasses.forEach(c => {
+                if (!allClasses[c.name]) allClasses[c.name] = [];
+                c.students?.forEach(nickname => {
+                    const student = allStudents.find(s => s.nickname === nickname);
+                    if (student && !allClasses[c.name].find(s => s.nickname === nickname)) {
+                        allClasses[c.name].push(student);
+                    }
+                });
+            });
+            
+            const classNames = Object.keys(allClasses).filter(n => n !== '未分班').sort();
+            
+            if (classNames.length === 0) {
+                gridDiv.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:20px;">🏫</div><p>暂无班级数据</p><p style="font-size:14px;color:#999;margin-top:10px;">创建班级或将学生分配到班级</p></div>';
+                return;
+            }
+            
+            let html = '<div class="class-management">';
+            classNames.forEach(className => {
+                const students = allClasses[className];
+                html += `<div class="class-card">
+                    <h4>
+                        🏫 
+                        <span class="count">人</span>
+                    </h4>
+                    <div class="student-list">
+                        " class="student-tag"></span>
+                        `).join('') : '<span style="color:#999;font-size:13px;">暂无学生</span>'}
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            gridDiv.innerHTML = html;
+        }
+
+        async function loadRanking() {
+            try {
+                const response = await fetch('/api/rank/typing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 20 })
+                });
+                const data = await response.json();
+                const tableDiv = document.getElementById('rankingTable');
+                
+                if (data.success && data.rank?.length > 0) {
+                    let html = `<table>
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>昵称</th>
+                                <th>WPM</th>
+                                <th>准确率</th>
+                                <th>用时</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    data.rank.forEach((r, i) => {
+                        const medal = ['🥇','🥈','🥉'][i] || (i+1);
+                        html += `<tr>
+                            <td style="font-size:20px;"></td>
+                            <td><strong></strong></td>
+                            <td style="color:#667eea;font-weight:bold;"></td>
+                            <td>%</td>
+                            <td>s</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table>';
+                    tableDiv.innerHTML = html;
+                } else {
+                    tableDiv.innerHTML = '<div class="empty-state"><div style="font-size:64px;margin-bottom:20px;">🏆</div><p>暂无排行数据</p></div>';
+                }
+            } catch (error) {
+                document.getElementById('rankingTable').innerHTML = '<p class="error">加载失败</p>';
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('adminLoggedIn');
+            location.href = '/admin/';
+        }
+
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+    </script>
+</body>
+</html>
