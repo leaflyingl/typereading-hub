@@ -42,6 +42,7 @@
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 16px;
+            transition: border-color 0.3s;
         }
         .form-group input:focus {
             outline: none;
@@ -56,6 +57,7 @@
             border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
+            transition: background 0.3s;
         }
         .btn-login:hover {
             background: #5568d3;
@@ -77,7 +79,7 @@
 </head>
 <body>
     <div class="login-box">
-        <h1>👨 🏫 教师登录</h1>
+        <h1>👨‍🏫 教师登录</h1>
         <div class="form-group">
             <label>管理密码</label>
             <input type="password" id="password" placeholder="请输入密码" onkeypress="if(event.key==='Enter')login()">
@@ -96,12 +98,6 @@
         async function login() {
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
-            
-            if (!password) {
-                errorMsg.textContent = '请输入密码';
-                errorMsg.style.display = 'block';
-                return;
-            }
             
             try {
                 const response = await fetch('/api/admin/login', {
@@ -122,6 +118,7 @@
             } catch (error) {
                 errorMsg.textContent = '网络错误，请检查连接';
                 errorMsg.style.display = 'block';
+                console.error('登录失败:', error);
             }
         }
     </script>

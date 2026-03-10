@@ -29,11 +29,13 @@
             cursor: pointer;
             text-decoration: none;
         }
+        
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 30px;
         }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -49,6 +51,7 @@
         }
         .stat-box h3 { font-size: 36px; color: #667eea; margin-bottom: 5px; }
         .stat-box p { color: #666; }
+        
         .tabs {
             display: flex;
             gap: 10px;
@@ -65,13 +68,16 @@
             cursor: pointer;
             border-radius: 6px;
             font-size: 14px;
+            transition: all 0.3s;
         }
         .tab.active {
             background: #667eea;
             color: white;
         }
+        
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
         .card {
             background: white;
             border-radius: 12px;
@@ -85,6 +91,7 @@
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
+        
         .filter-bar {
             display: flex;
             gap: 15px;
@@ -106,10 +113,12 @@
             border-radius: 8px;
             cursor: pointer;
         }
+        
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f8f9fa; font-weight: 600; color: #555; }
         tr:hover { background: #f8f9fa; }
+        
         .badge {
             display: inline-block;
             padding: 4px 12px;
@@ -119,6 +128,8 @@
         .badge-success { background: #d4edda; color: #155724; }
         .badge-warning { background: #fff3cd; color: #856404; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        
         .btn-small {
             padding: 6px 14px;
             font-size: 12px;
@@ -127,6 +138,7 @@
             cursor: pointer;
         }
         .btn-view { background: #667eea; color: white; }
+        
         .class-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -162,12 +174,14 @@
             border-radius: 16px;
             font-size: 13px;
         }
+        
         .empty-state {
             text-align: center;
             padding: 60px;
             color: #999;
         }
         .empty-state-icon { font-size: 64px; margin-bottom: 20px; }
+        
         .modal {
             display: none;
             position: fixed;
@@ -215,7 +229,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>👨 🏫 教师管理后台</h1>
+        <h1>👨‍🏫 教师管理后台</h1>
         <div>
             <a href="/" class="btn" style="margin-right: 10px;">学生端首页</a>
             <button class="btn" onclick="logout()">退出登录</button>
@@ -299,7 +313,7 @@
     </div>
 
     <script>
-        // ========== 【关键修复】登录检查 ==========
+        // ========== 登录检查（关键修复）==========
         if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
             location.href = '/admin/';
         }
@@ -330,6 +344,7 @@
                     body: JSON.stringify({})
                 });
                 const data = await response.json();
+                console.log('学生数据:', data);
                 
                 if (data.success && data.students) {
                     allStudents = data.students;
@@ -337,10 +352,10 @@
                     updateStats();
                     updateClassFilter();
                 } else {
-                    tableDiv.innerHTML = '<p class="error">加载失败: ' + (data.message || '无数据') + '</p>';
+                    tableDiv.innerHTML = '<p class="error">加载失败: ' + (data.message || '未知错误') + '</p>';
                 }
             } catch (error) {
-                tableDiv.innerHTML = '<p class="error">加载失败，请检查网络连接</p>';
+                tableDiv.innerHTML = '<p class="error">加载失败，请检查网络</p>';
                 console.error(error);
             }
         }
@@ -356,15 +371,16 @@
             
             students.forEach(s => {
                 const className = extractClass(s.realName);
-                const genderBadge = s.gender ? `<span class="badge badge-success">${s.gender}</span>` : '<span class="badge badge-warning">未设置</span>';
-                const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
+                const genderBadge = s.gender ? 
+                    `<span class="badge badge-success">${s.gender}</span>` : 
+                    '<span class="badge badge-warning">未设置</span>';
                 
                 html += `<tr>
                     <td><strong>${s.nickname}</strong></td>
                     <td>${s.realName || '-'}</td>
                     <td>${genderBadge}</td>
                     <td><span class="badge badge-info">${className}</span></td>
-                    <td>${dateStr}</td>
+                    <td>${formatDate(s.createdAt)}</td>
                     <td><button class="btn-small btn-view" onclick="viewStudent('${s.nickname}')">详细信息</button></td>
                 </tr>`;
             });
@@ -427,9 +443,10 @@
             
             let html = '<div class="class-grid">';
             classNames.forEach(className => {
+                if (className === '未分班') return;
                 const students = classes[className];
                 html += `<div class="class-card">
-                    <h4>🏫 ${className} <span class="count">${students.length}人</span></h4>
+                    <h4>🏫 ${className}<span class="count">${students.length}人</span></h4>
                     <div class="student-tags">${students.map(s => `<span class="student-tag">${s.realName || s.nickname}</span>`).join('')}</div>
                 </div>`;
             });
@@ -437,17 +454,42 @@
             gridDiv.innerHTML = html;
         }
         
-        function viewStudent(nickname) {
+        async function viewStudent(nickname) {
             const student = allStudents.find(s => s.nickname === nickname);
             if (!student) return;
             
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '<p class="loading">加载中...</p>';
             document.getElementById('studentModal').classList.add('active');
-            document.getElementById('modalBody').innerHTML = `
+            
+            let recordsHtml = '<p>暂无学习记录</p>';
+            try {
+                const response = await fetch('/api/admin/student-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname })
+                });
+                const data = await response.json();
+                if (data.success && data.records?.length > 0) {
+                    recordsHtml = `<table style="width:100%;margin-top:10px;"><thead><tr style="background:#f8f9fa;">
+                        <th style="padding:10px;text-align:left;">日期</th>
+                        <th style="padding:10px;text-align:left;">类型</th>
+                        <th style="padding:10px;text-align:left;">详情</th>
+                    </tr></thead><tbody>${data.records.slice(0,20).map(r => `<tr>
+                        <td style="padding:10px;">${formatDate(r.date)}</td>
+                        <td style="padding:10px;">${r.type}</td>
+                        <td style="padding:10px;">${r.detail}</td>
+                    </tr>`).join('')}</tbody></table>`;
+                }
+            } catch(e) { console.log('获取记录失败:', e); }
+            
+            modalBody.innerHTML = `
                 <div class="info-row"><div class="info-label">昵称</div><div class="info-value">${student.nickname}</div></div>
-                <div class="info-row"><div class="info-label">真实姓名</div><div class="info-value">${student.realName || '-'}</div></div>
-                <div class="info-row"><div class="info-label">性别</div><div class="info-value">${student.gender || '未设置'}</div></div>
+                <div class="info-row"><div class="info-label">真实姓名</div><div class="info-value">${student.realName || '未填写'}</div></div>
+                <div class="info-row"><div class="info-label">性别</div><div class="info-value">${student.gender || '未填写'}</div></div>
                 <div class="info-row"><div class="info-label">班级</div><div class="info-value">${extractClass(student.realName)}</div></div>
-                <div class="info-row"><div class="info-label">注册时间</div><div class="info-value">${student.createdAt ? new Date(student.createdAt).toLocaleString('zh-CN') : '-'}</div></div>
+                <div class="info-row"><div class="info-label">注册时间</div><div class="info-value">${formatDate(student.createdAt)}</div></div>
+                <div style="margin-top:20px;"><h4 style="margin-bottom:15px;">📚 学习记录</h4>${recordsHtml}</div>
             `;
         }
         
@@ -466,10 +508,10 @@
                 const tableDiv = document.getElementById('rankingTable');
                 
                 if (data.success && data.rank?.length > 0) {
-                    let html = `<table><thead><tr><th>排名</th><th>昵称</th><th>WPM</th><th>准确率</th><th>用时</th></tr></thead><tbody>`;
+                    let html = `<table><thead><tr><th>排名</th><th>昵称</th><th>WPM</th><th>准确率</th><th>用时(秒)</th></tr></thead><tbody>`;
                     data.rank.forEach((r, i) => {
                         const medal = ['🥇','🥈','🥉'][i] || (i+1);
-                        html += `<tr><td style="font-size:20px;">${medal}</td><td><strong>${r.nickname}</strong></td><td style="color:#667eea;font-weight:bold;">${r.wpm}</td><td>${r.accuracy}%</td><td>${r.duration}s</td></tr>`;
+                        html += `<tr><td>${medal}</td><td><strong>${r.nickname}</strong></td><td style="color:#667eea;font-weight:bold;">${r.wpm}</td><td>${r.accuracy}%</td><td>${r.duration}s</td></tr>`;
                     });
                     html += '</tbody></table>';
                     tableDiv.innerHTML = html;
@@ -487,6 +529,11 @@
             document.getElementById('completedInfo').textContent = completed;
             const classes = new Set(allStudents.map(s => extractClass(s.realName)).filter(c => c !== '未分班'));
             document.getElementById('totalClasses').textContent = classes.size;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try { return new Date(dateStr).toLocaleString('zh-CN'); } catch(e) { return dateStr; }
         }
         
         function logout() {
