@@ -27,7 +27,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      const userKey = `user:${nickname}`;
+      const userKey = `user:`;
       const exists = await env.TYPEREADING_KV.get(userKey);
 
       if (exists) {
@@ -62,7 +62,7 @@ export async function onRequest(context) {
     if (path === "auth/login" && request.method === "POST") {
       const { nickname, password } = await request.json();
 
-      const userKey = `user:${nickname}`;
+      const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
 
       if (!data) {
@@ -115,7 +115,7 @@ export async function onRequest(context) {
     if (path === "admin/student/update") {
       const { nickname, realName, gender, className } = await request.json();
 
-      const userKey = `user:${nickname}`;
+      const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false });
 
@@ -135,7 +135,7 @@ export async function onRequest(context) {
     ========================== */
     if (path === "admin/student/delete") {
       const { nickname } = await request.json();
-      await env.TYPEREADING_KV.delete(`user:${nickname}`);
+      await env.TYPEREADING_KV.delete(`user:`);
       return json({ success: true });
     }
 
@@ -146,7 +146,7 @@ export async function onRequest(context) {
       const { nicknames } = await request.json();
 
       for (const n of nicknames) {
-        await env.TYPEREADING_KV.delete(`user:${n}`);
+        await env.TYPEREADING_KV.delete(`user:`);
       }
 
       return json({ success: true });
@@ -158,7 +158,7 @@ export async function onRequest(context) {
     if (path === "admin/class/create") {
       const { className } = await request.json();
       await env.TYPEREADING_KV.put(
-        `class:${className}`,
+        `class:`,
         JSON.stringify({
           name: className,
           createdAt: new Date().toISOString()
@@ -188,7 +188,7 @@ export async function onRequest(context) {
     if (path === "checkin/reading") {
       const { nickname, articleTitle, wordCount } = await request.json();
 
-      const recordKey = `reading:${nickname}:${Date.now()}`;
+      const recordKey = `reading::`;
 
       await env.TYPEREADING_KV.put(
         recordKey,
@@ -239,7 +239,7 @@ export async function onRequest(context) {
 
       const records = [];
 
-      for (const key of keys) {
+      for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (!data) continue;
 
@@ -260,7 +260,7 @@ export async function onRequest(context) {
     if (path === "typing/result") {
       const { nickname, wpm, accuracy } = await request.json();
 
-      const recordKey = `typing:${nickname}:${Date.now()}`;
+      const recordKey = `typing::`;
 
       await env.TYPEREADING_KV.put(
         recordKey,
@@ -349,7 +349,7 @@ export async function onRequest(context) {
         if (!data) continue;
 
         const record = JSON.parse(data);
-        const userData = await env.TYPEREADING_KV.get(`user:${record.nickname}`);
+        const userData = await env.TYPEREADING_KV.get(`user:`);
         if (!userData) continue;
 
         const user = JSON.parse(userData);
