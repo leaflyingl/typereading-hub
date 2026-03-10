@@ -27,7 +27,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名：user: + nickname
       const userKey = `user:`;
       const exists = await env.TYPEREADING_KV.get(userKey);
 
@@ -67,7 +67,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
 
@@ -77,6 +77,7 @@ export async function onRequest(context) {
 
       const user = JSON.parse(data);
 
+      // ✅ 支持无密码登录（如果用户没有设置密码）
       if (user.password && user.password !== password) {
         return json({ success: false, message: "密码错误" });
       }
@@ -125,7 +126,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
@@ -151,12 +152,12 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名
       const userKey = `user:`;
       await env.TYPEREADING_KV.delete(userKey);
       
       // 删除该学生的所有记录
-      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       for (const key of readingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
@@ -167,7 +168,7 @@ export async function onRequest(context) {
         }
       }
       
-      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
@@ -192,12 +193,12 @@ export async function onRequest(context) {
       }
 
       for (const nickname of nicknames) {
-        // ✅ 修复：使用昵称作为 key 的一部分
+        // ✅ 正确的键名
         const userKey = `user:`;
         await env.TYPEREADING_KV.delete(userKey);
         
         // 删除阅读记录
-        const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
+        const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
         for (const key of readingKeys) {
           const data = await env.TYPEREADING_KV.get(key.name);
           if (data) {
@@ -209,7 +210,7 @@ export async function onRequest(context) {
         }
         
         // 删除打字记录
-        const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
+        const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
         for (const key of typingKeys) {
           const data = await env.TYPEREADING_KV.get(key.name);
           if (data) {
@@ -272,7 +273,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名：reading:nickname:timestamp
       const recordKey = `reading::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -359,7 +360,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 修复：使用昵称作为 key 的一部分
+      // ✅ 正确的键名：typing:nickname:timestamp
       const recordKey = `typing::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -468,13 +469,14 @@ export async function onRequest(context) {
 
         const record = JSON.parse(data);
         
-        // ✅ 修复：使用记录中的昵称获取用户信息
+        // ✅ 正确的键名：使用记录中的昵称获取用户信息
         const userKey = `user:`;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
 
         const user = JSON.parse(userData);
 
+        // 只显示有真实姓名的学生
         if (user.realName) {
           results.push({
             ...record,
