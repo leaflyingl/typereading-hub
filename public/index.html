@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
@@ -36,14 +36,10 @@
             display: inline-block;
         }
         .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5568d3; }
+        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
         .btn-secondary { background: #f0f0f0; color: #333; }
         .btn-secondary:hover { background: #e0e0e0; }
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none !important;
-        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
         
         .welcome-section {
             background: rgba(255,255,255,0.95);
@@ -53,7 +49,7 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; }
+        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
         .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
         
         .features {
@@ -77,10 +73,10 @@
         .login-tip {
             background: #fff3cd;
             color: #856404;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            margin-top: 10px;
         }
         
         .footer-settings {
@@ -97,37 +93,32 @@
             cursor: pointer;
             font-size: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
         }
+        .settings-btn:hover { transform: rotate(90deg); background: white; }
     </style>
 </head>
 <body>
     <div id="app"></div>
+    
     <div class="footer-settings">
-        <button class="settings-btn" onclick="location.href='/admin/'">⚙️</button>
+        <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
     </div>
 
     <script>
-        // 【关键修复】正确检测登录状态
+        // 获取当前用户
+        const currentUserStr = localStorage.getItem('currentUser');
         let currentUser = null;
         try {
-            const userStr = localStorage.getItem('currentUser');
-            if (userStr && userStr !== 'null' && userStr !== 'undefined') {
-                currentUser = JSON.parse(userStr);
-                // 验证必要字段
-                if (!currentUser || !currentUser.nickname) {
-                    currentUser = null;
-                    localStorage.removeItem('currentUser');
-                }
-            }
+            currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
         } catch(e) {
             currentUser = null;
-            localStorage.removeItem('currentUser');
         }
         
-        const isLoggedIn = !!currentUser;
+        const isLoggedIn = !!currentUser && currentUser.nickname;
         const app = document.getElementById('app');
         
-        // 始终显示功能区，根据登录状态决定交互
+        // 渲染页面（功能区始终显示，登录后才能使用）
         app.innerHTML = `
             <div class="container">
                 <header>
@@ -135,21 +126,15 @@
                     <div class="user-info">
                         ${isLoggedIn 
                             ? `<span>👋 欢迎，</span><button class="btn btn-secondary" onclick="logout()">退出登录</button>`
-                            : `<span>🔴 未登录</span><a href="/register/" class="btn btn-primary">登录 / 注册</a>`
+                            : `<span>🔒 未登录</span><a href="/register/" class="btn btn-primary">登录 / 注册</a>`
                         }
                     </div>
                 </header>
                 
-                ${!isLoggedIn ? '<div class="login-tip">💡 登录后可使用完整功能，记录学习进度</div>' : ''}
-                
                 <div class="welcome-section">
                     <h1>开始今天的学习吧！</h1>
                     <p>坚持阅读和打字练习，提升英语能力</p>
-                    <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                        <button onclick="goTo('/reading/')" class="btn btn-primary">📖 阅读打卡</button>
-                        <button onclick="goTo('/typing/')" class="btn btn-primary">⌨️ 打字练习</button>
-                        <button onclick="goTo('/rank/')" class="btn btn-secondary">🏆 排行榜</button>
-                    </div>
+                    ${!isLoggedIn ? '<p class="login-tip">💡 登录后可记录学习进度并参与排行榜</p>' : ''}
                 </div>
                 
                 <div class="features">
@@ -157,31 +142,37 @@
                         <div class="feature-icon">📖</div>
                         <h3>每日阅读</h3>
                         <p>精选英语文章，提升阅读理解能力</p>
-                        <button onclick="goTo('/reading/')" class="btn btn-primary">开始阅读</button>
+                        <button class="btn btn-primary" onclick="goToPage('/reading/')" ${!isLoggedIn ? 'disabled title="请先登录"' : ''}>开始阅读</button>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">⌨️</div>
                         <h3>打字练习</h3>
                         <p>英文打字训练，提高输入速度和准确率</p>
-                        <button onclick="goTo('/typing/')" class="btn btn-primary">开始打字</button>
+                        <button class="btn btn-primary" onclick="goToPage('/typing/')" ${!isLoggedIn ? 'disabled title="请先登录"' : ''}>开始打字</button>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon">🏆</div>
                         <h3>排行榜</h3>
                         <p>查看成绩排名，与同学一较高下</p>
-                        <button onclick="goTo('/rank/')" class="btn btn-primary">查看排名</button>
+                        <button class="btn btn-primary" onclick="location.href='/rank/'">查看排名</button>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>学习记录</h3>
+                        <p>查看自己的学习历史和统计数据</p>
+                        <button class="btn btn-primary" onclick="goToPage('/history/')" ${!isLoggedIn ? 'disabled title="请先登录"' : ''}>查看记录</button>
                     </div>
                 </div>
             </div>
         `;
         
-        function goTo(url) {
-            if (isLoggedIn) {
-                location.href = url;
-            } else {
+        function goToPage(url) {
+            if (!isLoggedIn) {
                 alert('请先登录后再使用此功能');
                 location.href = '/register/';
+                return;
             }
+            location.href = url;
         }
         
         function logout() {
