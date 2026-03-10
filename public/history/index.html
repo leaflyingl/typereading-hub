@@ -113,6 +113,7 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f8f9fa; font-weight: 600; }
         .empty { text-align: center; padding: 60px; color: #999; }
+        .error { color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -198,7 +199,19 @@
 
     <script>
         // 检查登录
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const currentUserStr = localStorage.getItem('currentUser');
+        let currentUser = {};
+        
+        if (currentUserStr) {
+            try {
+                currentUser = JSON.parse(currentUserStr);
+            } catch (e) {
+                location.href = '/register/';
+            }
+        } else {
+            location.href = '/register/';
+        }
+
         if (!currentUser.nickname) {
             location.href = '/register/';
         }
@@ -213,7 +226,7 @@
         };
 
         function switchTab(tab, btn) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
             btn.classList.add('active');
             
             document.getElementById('reading-panel').style.display = tab === 'reading' ? 'block' : 'none';
@@ -222,9 +235,10 @@
 
         async function loadReadingStats(period, btn) {
             if (btn) {
-                document.querySelectorAll('#reading-panel .period-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('#reading-panel .period-tab').forEach(function(t) { t.classList.remove('active'); });
                 btn.classList.add('active');
             }
+            currentReadingPeriod = period;
             
             try {
                 const response = await fetch('/api/user/stats', {
@@ -234,21 +248,32 @@
                 });
                 const data = await response.json();
                 
-                if (data.success) {
-                    const stats = period === 'total' ? data.stats.reading.total : data.stats.reading[period];
-                    document.getElementById('readingCount').textContent = stats.count;
-                    document.getElementById('readingWords').textContent = stats.words;
+                if (data.success && data.stats) {
+                    let stats;
+                    if (period === 'total') {
+                        stats = data.stats.reading.total;
+                    } else {
+                        stats = data.stats.reading[period] || { count: 0, words: 0 };
+                    }
+                    document.getElementById('readingCount').textContent = stats.count || 0;
+                    document.getElementById('readingWords').textContent = stats.words || 0;
+                } else {
+                    document.getElementById('readingCount').textContent = '0';
+                    document.getElementById('readingWords').textContent = '0';
                 }
             } catch (e) {
                 console.error('加载阅读统计失败:', e);
+                document.getElementById('readingCount').textContent = '0';
+                document.getElementById('readingWords').textContent = '0';
             }
         }
 
         async function loadTypingStats(period, btn) {
             if (btn) {
-                document.querySelectorAll('#typing-panel .period-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('#typing-panel .period-tab').forEach(function(t) { t.classList.remove('active'); });
                 btn.classList.add('active');
             }
+            currentTypingPeriod = period;
             
             try {
                 const response = await fetch('/api/user/stats', {
@@ -258,14 +283,26 @@
                 });
                 const data = await response.json();
                 
-                if (data.success) {
-                    const stats = period === 'total' ? data.stats.typing.total : data.stats.typing[period];
-                    document.getElementById('typingCount').textContent = stats.count;
+                if (data.success && data.stats) {
+                    let stats;
+                    if (period === 'total') {
+                        stats = data.stats.typing.total;
+                    } else {
+                        stats = data.stats.typing[period] || { count: 0, avgWpm: 0, avgAccuracy: 0 };
+                    }
+                    document.getElementById('typingCount').textContent = stats.count || 0;
                     document.getElementById('typingWpm').textContent = stats.avgWpm || 0;
                     document.getElementById('typingAccuracy').textContent = (stats.avgAccuracy || 0) + '%';
+                } else {
+                    document.getElementById('typingCount').textContent = '0';
+                    document.getElementById('typingWpm').textContent = '0';
+                    document.getElementById('typingAccuracy').textContent = '0%';
                 }
             } catch (e) {
                 console.error('加载打字统计失败:', e);
+                document.getElementById('typingCount').textContent = '0';
+                document.getElementById('typingWpm').textContent = '0';
+                document.getElementById('typingAccuracy').textContent = '0%';
             }
         }
 
@@ -279,25 +316,22 @@
                 });
                 const readingData = await readingRes.json();
                 
-                if (readingData.success && readingData.records.length > 0) {
-                    let html = `<table>
-                        <thead>
-                            <tr><th>日期</th><th>文章</th><th>字数</th></tr>
-                        </thead>
-                        <tbody>`;
-                    readingData.records.slice(0, 10).forEach(r => {
-                        html += `<tr>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                        </tr>`;
+                const readingDiv = document.getElementById('readingRecords');
+                if (readingData.success && readingData.records && readingData.records.length > 0) {
+                    let html = '<table><thead><tr><th>日期</th><th>文章</th><th>字数</th></tr></thead><tbody>';
+                    readingData.records.slice(0, 10).forEach(function(r) {
+                        const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('zh-CN') : '-';
+                        const title = r.articleTitle || '未命名文章';
+                        const words = r.wordCount || 0;
+                        html += '<tr><td>' + date + '</td><td>' + escapeHtml(title) + '</td><td>' + words + '</td></tr>';
                     });
                     html += '</tbody></table>';
-                    document.getElementById('readingRecords').innerHTML = html;
+                    readingDiv.innerHTML = html;
                 } else {
-                    document.getElementById('readingRecords').innerHTML = '<p class="empty">暂无阅读记录</p>';
+                    readingDiv.innerHTML = '<p class="empty">暂无阅读记录</p>';
                 }
             } catch (e) {
+                console.error('加载阅读记录失败:', e);
                 document.getElementById('readingRecords').innerHTML = '<p class="empty">加载失败</p>';
             }
 
@@ -310,28 +344,34 @@
                 });
                 const typingData = await typingRes.json();
                 
-                if (typingData.success && typingData.records.length > 0) {
-                    let html = `<table>
-                        <thead>
-                            <tr><th>日期</th><th>WPM</th><th>准确率</th></tr>
-                        </thead>
-                        <tbody>`;
-                    typingData.records.slice(0, 10).forEach(r => {
-                        const date = new Date(r.timestamp).toLocaleDateString('zh-CN');
-                        html += `<tr>
-                            <td></td>
-                            <td></td>
-                            <td>%</td>
-                        </tr>`;
+                const typingDiv = document.getElementById('typingRecords');
+                if (typingData.success && typingData.records && typingData.records.length > 0) {
+                    let html = '<table><thead><tr><th>日期</th><th>WPM</th><th>准确率</th></tr></thead><tbody>';
+                    typingData.records.slice(0, 10).forEach(function(r) {
+                        const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('zh-CN') : '-';
+                        const wpm = r.wpm || 0;
+                        const accuracy = r.accuracy || 0;
+                        html += '<tr><td>' + date + '</td><td>' + wpm + '</td><td>' + accuracy + '%</td></tr>';
                     });
                     html += '</tbody></table>';
-                    document.getElementById('typingRecords').innerHTML = html;
+                    typingDiv.innerHTML = html;
                 } else {
-                    document.getElementById('typingRecords').innerHTML = '<p class="empty">暂无打字记录</p>';
+                    typingDiv.innerHTML = '<p class="empty">暂无打字记录</p>';
                 }
             } catch (e) {
+                console.error('加载打字记录失败:', e);
                 document.getElementById('typingRecords').innerHTML = '<p class="empty">加载失败</p>';
             }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
     </script>
 </body>
