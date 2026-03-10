@@ -1,105 +1,308 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>阅读打卡 - TypeReading Hub</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        h1 { color: #333; margin-bottom: 20px; }
-        .article {
-            line-height: 1.8;
-            color: #444;
-            margin-bottom: 30px;
-        }
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-        }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-secondary { background: #f0f0f0; color: #333; }
-        .status { margin-top: 20px; padding: 15px; border-radius: 8px; }
-        .status.success { background: #d4edda; color: #155724; }
-        .back { color: #667eea; text-decoration: none; display: inline-block; margin-bottom: 20px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读打卡 - TypeReading Hub</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .header {
+      background: white;
+      border-radius: 16px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    .back-btn {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .loading {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+    }
+    .checked-in {
+      text-align: center;
+      padding: 40px;
+    }
+    .checked-in-icon {
+      font-size: 64px;
+      color: #52c41a;
+      margin-bottom: 20px;
+    }
+    .checked-in h2 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .checked-in p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .stat-item {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #667eea;
+    }
+    .stat-label {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .article-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .article-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+    .article-content {
+      color: #555;
+      line-height: 1.8;
+      font-size: 16px;
+      white-space: pre-wrap;
+    }
+    .word-count {
+      color: #999;
+      font-size: 14px;
+      margin-top: 15px;
+      text-align: right;
+    }
+    .checkin-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .checkin-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    .checkin-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .no-content {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    .no-content-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 16px 24px;
+      border-radius: 8px;
+      color: white;
+      font-weight: 500;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.success { background: #52c41a; }
+    .toast.error { background: #ff4d4f; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <a href="/" class="back">← 返回首页</a>
-        <div class="card">
-            <h1>📖 每日阅读</h1>
-            <div class="article" id="articleContent">
-                <p><strong>The Benefits of Reading</strong></p>
-                <p>Reading is one of the most important skills you can learn. It opens up new worlds and opportunities. When you read regularly, you improve your vocabulary, comprehension, and critical thinking skills.</p>
-                <p>Make reading a daily habit. Even 15 minutes a day can make a big difference in your learning journey.</p>
-            </div>
-            <button class="btn btn-primary" onclick="doCheckin()" id="checkinBtn">完成阅读打卡</button>
-            <a href="/" class="btn btn-secondary">返回首页</a>
-            <div id="status"></div>
-        </div>
+  <div class="container">
+    <div class="header">
+      <h1>📖 阅读打卡</h1>
+      <a href="/" class="back-btn">← 返回首页</a>
     </div>
 
-    <script>
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        if (!currentUser) {
-            alert('请先登录');
-            location.href = '/register/';
-        }
-        
-        // 检查今日是否已打卡
-        async function checkStatus() {
-            try {
-                const res = await fetch('/api/checkin/status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nickname: currentUser.nickname})
-                });
-                const data = await res.json();
-                if (data.checkedIn) {
-                    document.getElementById('checkinBtn').textContent = '今日已完成';
-                    document.getElementById('checkinBtn').disabled = true;
-                    document.getElementById('status').innerHTML = '<div class="status success">✅ 今日阅读打卡已完成</div>';
-                }
-            } catch(e) {}
-        }
-        
-        async function doCheckin() {
-            try {
-                const res = await fetch('/api/checkin/reading', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({nickname: currentUser.nickname})
-                });
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('checkinBtn').textContent = '今日已完成';
-                    document.getElementById('checkinBtn').disabled = true;
-                    document.getElementById('status').innerHTML = '<div class="status success">✅ 打卡成功！</div>';
-                }
-            } catch(e) {
-                alert('打卡失败，请重试');
-            }
-        }
-        
-        checkStatus();
-    </script>
+    <div id="content-area">
+      <div class="card loading">加载中...</div>
+    </div>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    
+    if (!currentUser.nickname) {
+      window.location.href = '/register/';
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast `;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    async function checkTodayStatus() {
+      try {
+        const response = await fetch('/api/checkin/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nickname: currentUser.nickname })
+        });
+        return await response.json();
+      } catch (err) {
+        return { success: false, hasCheckedIn: false };
+      }
+    }
+
+    async function getTodayContent() {
+      try {
+        const response = await fetch('/api/content/reading');
+        return await response.json();
+      } catch (err) {
+        return { success: false, content: null };
+      }
+    }
+
+    async function doCheckin(articleTitle, wordCount) {
+      try {
+        const response = await fetch('/api/checkin/reading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nickname: currentUser.nickname,
+            articleTitle,
+            wordCount
+          })
+        });
+        return await response.json();
+      } catch (err) {
+        return { success: false, message: '网络错误' };
+      }
+    }
+
+    function renderCheckedIn(record) {
+      document.getElementById('content-area').innerHTML = `
+        <div class="card checked-in">
+          <div class="checked-in-icon">✅</div>
+          <h2>今日已完成阅读打卡</h2>
+          <p>文章：《》</p>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value"></div>
+              <div class="stat-label">阅读字数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">1</div>
+              <div class="stat-label">打卡次数</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderContent(content) {
+      const contentArea = document.getElementById('content-area');
+      
+      if (!content) {
+        contentArea.innerHTML = `
+          <div class="card no-content">
+            <div class="no-content-icon">📚</div>
+            <h3>暂无阅读内容</h3>
+            <p>请联系老师添加阅读材料</p>
+          </div>
+        `;
+        return;
+      }
+
+      contentArea.innerHTML = `
+        <div class="card">
+          <div class="article-card">
+            <div class="article-title"></div>
+            <div class="article-content"></div>
+            <div class="word-count">字数：</div>
+          </div>
+          <button class="checkin-btn" onclick="handleCheckin('', )">
+            完成阅读，立即打卡
+          </button>
+        </div>
+      `;
+    }
+
+    async function handleCheckin(title, wordCount) {
+      const btn = document.querySelector('.checkin-btn');
+      btn.disabled = true;
+      btn.textContent = '打卡中...';
+
+      const result = await doCheckin(title, wordCount);
+      
+      if (result.success) {
+        showToast('打卡成功！', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showToast(result.message || '打卡失败', 'error');
+        btn.disabled = false;
+        btn.textContent = '完成阅读，立即打卡';
+      }
+    }
+
+    async function init() {
+      const statusResult = await checkTodayStatus();
+      
+      if (statusResult.success && statusResult.hasCheckedIn) {
+        renderCheckedIn(statusResult.record);
+      } else {
+        const contentResult = await getTodayContent();
+        renderContent(contentResult.success ? contentResult.content : null);
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>
