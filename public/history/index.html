@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习历史 - TypeReading Hub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; }
+        .btn {
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-left: 10px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        .tab {
+            padding: 12px 24px;
+            border: none;
+            background: #f0f0f0;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-box .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-box .label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .period-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .period-tab {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .period-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .empty { text-align: center; padding: 60px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 学习历史</h1>
+        <div>
+            <a href="/" class="btn">← 返回首页</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('reading', this)">📖 阅读统计</button>
+            <button class="tab" onclick="switchTab('typing', this)">⌨️ 打字统计</button>
+        </div>
+        
+        <!-- 阅读统计 -->
+        <div id="reading-panel" class="tab-panel">
+            <div class="card">
+                <h2>阅读数据概览</h2>
+                <div class="period-tabs">
+                    <button class="period-tab active" onclick="loadReadingStats('day', this)">今日</button>
+                    <button class="period-tab" onclick="loadReadingStats('week', this)">本周</button>
+                    <button class="period-tab" onclick="loadReadingStats('month', this)">本月</button>
+                    <button class="period-tab" onclick="loadReadingStats('year', this)">本年</button>
+                    <button class="period-tab" onclick="loadReadingStats('total', this)">总计</button>
+                </div>
+                <div class="stats-grid" id="readingStats">
+                    <div class="stat-box">
+                        <div class="number" id="readingCount">-</div>
+                        <div class="label">阅读篇数</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="readingWords">-</div>
+                        <div class="label">阅读字数</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>最近阅读记录</h2>
+                <div id="readingRecords">
+                    <p class="empty">加载中...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 打字统计 -->
+        <div id="typing-panel" class="tab-panel" style="display:none;">
+            <div class="card">
+                <h2>打字数据概览</h2>
+                <div class="period-tabs">
+                    <button class="period-tab active" onclick="loadTypingStats('day', this)">今日</button>
+                    <button class="period-tab" onclick="loadTypingStats('week', this)">本周</button>
+                    <button class="period-tab" onclick="loadTypingStats('month', this)">本月</button>
+                    <button class="period-tab" onclick="loadTypingStats('year', this)">本年</button>
+                    <button class="period-tab" onclick="loadTypingStats('total', this)">总计</button>
+                </div>
+                <div class="stats-grid" id="typingStats">
+                    <div class="stat-box">
+                        <div class="number" id="typingCount">-</div>
+                        <div class="label">练习次数</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="typingWpm">-</div>
+                        <div class="label">平均WPM</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="typingAccuracy">-</div>
+                        <div class="label">平均准确率</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>最近打字记录</h2>
+                <div id="typingRecords">
+                    <p class="empty">加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 检查登录
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (!currentUser.nickname) {
+            location.href = '/register/';
+        }
+
+        let currentReadingPeriod = 'day';
+        let currentTypingPeriod = 'day';
+
+        window.onload = function() {
+            loadReadingStats('day');
+            loadTypingStats('day');
+            loadRecentRecords();
+        };
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.getElementById('reading-panel').style.display = tab === 'reading' ? 'block' : 'none';
+            document.getElementById('typing-panel').style.display = tab === 'typing' ? 'block' : 'none';
+        }
+
+        async function loadReadingStats(period, btn) {
+            if (btn) {
+                document.querySelectorAll('#reading-panel .period-tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            
+            try {
+                const response = await fetch('/api/user/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = period === 'total' ? data.stats.reading.total : data.stats.reading[period];
+                    document.getElementById('readingCount').textContent = stats.count;
+                    document.getElementById('readingWords').textContent = stats.words;
+                }
+            } catch (e) {
+                console.error('加载阅读统计失败:', e);
+            }
+        }
+
+        async function loadTypingStats(period, btn) {
+            if (btn) {
+                document.querySelectorAll('#typing-panel .period-tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+            }
+            
+            try {
+                const response = await fetch('/api/user/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = period === 'total' ? data.stats.typing.total : data.stats.typing[period];
+                    document.getElementById('typingCount').textContent = stats.count;
+                    document.getElementById('typingWpm').textContent = stats.avgWpm || 0;
+                    document.getElementById('typingAccuracy').textContent = (stats.avgAccuracy || 0) + '%';
+                }
+            } catch (e) {
+                console.error('加载打字统计失败:', e);
+            }
+        }
+
+        async function loadRecentRecords() {
+            // 加载阅读记录
+            try {
+                const readingRes = await fetch('/api/user/reading-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const readingData = await readingRes.json();
+                
+                if (readingData.success && readingData.records.length > 0) {
+                    let html = `<table>
+                        <thead>
+                            <tr><th>日期</th><th>文章</th><th>字数</th></tr>
+                        </thead>
+                        <tbody>`;
+                    readingData.records.slice(0, 10).forEach(r => {
+                        html += `<tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('readingRecords').innerHTML = html;
+                } else {
+                    document.getElementById('readingRecords').innerHTML = '<p class="empty">暂无阅读记录</p>';
+                }
+            } catch (e) {
+                document.getElementById('readingRecords').innerHTML = '<p class="empty">加载失败</p>';
+            }
+
+            // 加载打字记录
+            try {
+                const typingRes = await fetch('/api/user/typing-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const typingData = await typingRes.json();
+                
+                if (typingData.success && typingData.records.length > 0) {
+                    let html = `<table>
+                        <thead>
+                            <tr><th>日期</th><th>WPM</th><th>准确率</th></tr>
+                        </thead>
+                        <tbody>`;
+                    typingData.records.slice(0, 10).forEach(r => {
+                        const date = new Date(r.timestamp).toLocaleDateString('zh-CN');
+                        html += `<tr>
+                            <td></td>
+                            <td></td>
+                            <td>%</td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('typingRecords').innerHTML = html;
+                } else {
+                    document.getElementById('typingRecords').innerHTML = '<p class="empty">暂无打字记录</p>';
+                }
+            } catch (e) {
+                document.getElementById('typingRecords').innerHTML = '<p class="empty">加载失败</p>';
+            }
+        }
+    </script>
+</body>
+</html>
