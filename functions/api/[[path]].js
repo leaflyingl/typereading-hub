@@ -361,17 +361,19 @@ export async function onRequest(context) {
       return json({ success: true, records });
     }
 
-    /* ========================= 打字记录提交 ========================== */
+    /* ========================= 打字记录提交（修改） ========================== */
     if (path === "typing/result") {
-      const { nickname, wpm, accuracy } = await request.json();
+      const { nickname, wpm, accuracy, wordCount, content } = await request.json();
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
       const recordKey = "typing:" + nickname + ":" + Date.now();
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
+
+      // 修改：添加 wordCount 字段，优先使用传入的 wordCount，否则计算 content 长度
+      const finalWordCount = Number(wordCount) || (content ? content.length : 0);
 
       await env.TYPEREADING_KV.put(
         recordKey,
@@ -379,6 +381,8 @@ export async function onRequest(context) {
           nickname,
           wpm: Number(wpm) || 0,
           accuracy: Number(accuracy) || 0,
+          wordCount: finalWordCount,  // 新增：打字单词数
+          content: content || "",      // 可选：保存原文
           date: dateStr,
           timestamp: now.toISOString()
         })
