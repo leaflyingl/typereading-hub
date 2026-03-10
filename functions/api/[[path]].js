@@ -1,9 +1,7 @@
 export async function onRequest(context) {
   const { request, env } = context;
-
   const url = new URL(request.url);
   const path = url.pathname.replace(/^\/api\//, '');
-
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
@@ -16,25 +14,18 @@ export async function onRequest(context) {
   }
 
   try {
-
-    /* =========================
-       学生注册
-    ========================== */
+    /* ========================= 学生注册 ========================== */
     if (path === "auth/register" && request.method === "POST") {
       const { nickname, password } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const userKey = `user:`;
       const exists = await env.TYPEREADING_KV.get(userKey);
-
       if (exists) {
         return json({ success: false, message: "该昵称已被注册" });
       }
-
       const userData = {
         nickname,
         password: password || null,
@@ -43,9 +34,7 @@ export async function onRequest(context) {
         className: "",
         createdAt: new Date().toISOString()
       };
-
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(userData));
-
       return json({ 
         success: true, 
         user: {
@@ -57,104 +46,73 @@ export async function onRequest(context) {
       });
     }
 
-    /* =========================
-       学生登录
-    ========================== */
+    /* ========================= 学生登录 ========================== */
     if (path === "auth/login" && request.method === "POST") {
       const { nickname, password } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
-
       if (!data) {
         return json({ success: false, message: "用户不存在" });
       }
-
       const user = JSON.parse(data);
-
       if (user.password && user.password !== password) {
         return json({ success: false, message: "密码错误" });
       }
-
       return json({ success: true, user });
     }
 
-    /* =========================
-       教师登录
-    ========================== */
+    /* ========================= 教师登录 ========================== */
     if (path === "admin/login" && request.method === "POST") {
       const { password } = await request.json();
-
       if (password === "teacher123") {
         return json({ success: true });
       }
-
       return json({ success: false, message: "密码错误" });
     }
 
-    /* =========================
-       获取所有学生
-    ========================== */
+    /* ========================= 获取所有学生 ========================== */
     if (path === "admin/students") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
-
       const students = [];
-
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) students.push(JSON.parse(data));
       }
-
       students.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
       return json({ success: true, students });
     }
 
-    /* =========================
-       更新学生信息
-    ========================== */
+    /* ========================= 更新学生信息 ========================== */
     if (path === "admin/student/update") {
       const { nickname, realName, gender, className } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
-
       const user = JSON.parse(data);
-
       user.realName = realName || "";
       user.gender = gender || "";
       user.className = className || "";
-
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
-
       return json({ success: true });
     }
 
-    /* =========================
-       删除单个学生
-    ========================== */
+    /* ========================= 删除单个学生 ========================== */
     if (path === "admin/student/delete") {
       const { nickname } = await request.json();
-      
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const userKey = `user:`;
       await env.TYPEREADING_KV.delete(userKey);
-      
       // 删除该学生的所有记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       for (const key of readingKeys) {
@@ -166,7 +124,6 @@ export async function onRequest(context) {
           }
         }
       }
-      
       const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -177,25 +134,19 @@ export async function onRequest(context) {
           }
         }
       }
-
       return json({ success: true });
     }
 
-    /* =========================
-       批量删除学生
-    ========================== */
+    /* ========================= 批量删除学生 ========================== */
     if (path === "admin/student/delete-batch") {
       const { nicknames } = await request.json();
-
       if (!nicknames || !Array.isArray(nicknames) || nicknames.length === 0) {
         return json({ success: false, message: "未选择学生" });
       }
-
       for (const nickname of nicknames) {
-        // ✅ 修复：正确使用 nickname 变量
+        // ✅ 修复：使用 nickname 变量
         const userKey = `user:`;
         await env.TYPEREADING_KV.delete(userKey);
-        
         // 删除阅读记录
         const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
         for (const key of readingKeys) {
@@ -207,7 +158,6 @@ export async function onRequest(context) {
             }
           }
         }
-        
         // 删除打字记录
         const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
         for (const key of typingKeys) {
@@ -220,22 +170,16 @@ export async function onRequest(context) {
           }
         }
       }
-
       return json({ success: true });
     }
 
-    /* =========================
-       创建班级
-    ========================== */
+    /* ========================= 创建班级 ========================== */
     if (path === "admin/class/create") {
       const { className } = await request.json();
-      
       if (!className) {
         return json({ success: false, message: "班级名称不能为空" });
       }
-
       const classKey = `class:`;
-      
       await env.TYPEREADING_KV.put(
         classKey,
         JSON.stringify({
@@ -243,40 +187,30 @@ export async function onRequest(context) {
           createdAt: new Date().toISOString()
         })
       );
-      
       return json({ success: true });
     }
 
-    /* =========================
-       获取班级列表
-    ========================== */
+    /* ========================= 获取班级列表 ========================== */
     if (path === "admin/classes") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "class:" });
-
       const classes = [];
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) classes.push(JSON.parse(data));
       }
-
       return json({ success: true, classes });
     }
 
-    /* =========================
-       阅读打卡
-    ========================== */
+    /* ========================= 阅读打卡 ========================== */
     if (path === "checkin/reading") {
       const { nickname, articleTitle, wordCount } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const recordKey = `reading::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
-
       await env.TYPEREADING_KV.put(
         recordKey,
         JSON.stringify({
@@ -287,83 +221,59 @@ export async function onRequest(context) {
           timestamp: now.toISOString()
         })
       );
-
       return json({ success: true });
     }
 
-    /* =========================
-       获取阅读记录
-    ========================== */
+    /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
       const { nickname } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
       const { keys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
-
       const records = [];
-
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (!data) continue;
-
         const r = JSON.parse(data);
         if (r.nickname === nickname) {
           records.push(r);
         }
       }
-
       records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
       return json({ success: true, records });
     }
 
-    /* =========================
-       获取打字记录
-    ========================== */
+    /* ========================= 获取打字记录 ========================== */
     if (path === "user/typing-records") {
       const { nickname } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
       const { keys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
-
       const records = [];
-
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (!data) continue;
-
         const r = JSON.parse(data);
         if (r.nickname === nickname) {
           records.push(r);
         }
       }
-
       records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
       return json({ success: true, records });
     }
 
-    /* =========================
-       打字记录提交
-    ========================== */
+    /* ========================= 打字记录提交 ========================== */
     if (path === "typing/result") {
       const { nickname, wpm, accuracy } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
-      // ✅ 修复：正确使用 nickname 变量
+      // ✅ 修复：使用 nickname 变量
       const recordKey = `typing::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
-
       await env.TYPEREADING_KV.put(
         recordKey,
         JSON.stringify({
@@ -374,25 +284,19 @@ export async function onRequest(context) {
           timestamp: now.toISOString()
         })
       );
-
       return json({ success: true });
     }
 
-    /* =========================
-       获取学习统计
-    ========================== */
+    /* ========================= 获取学习统计 ========================== */
     if (path === "user/stats") {
       const { nickname } = await request.json();
-
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-
       const today = new Date().toISOString().split("T")[0];
       const weekStart = getWeekStart(new Date());
       const thisMonth = today.substring(0, 7);
       const thisYear = today.substring(0, 4);
-
       // 获取阅读记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
       const readingRecords = [];
@@ -406,7 +310,6 @@ export async function onRequest(context) {
           readingRecords.push(r);
         }
       }
-
       // 获取打字记录
       const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
       const typingRecords = [];
@@ -420,11 +323,9 @@ export async function onRequest(context) {
           typingRecords.push(r);
         }
       }
-
       // 过滤当前用户的记录
       const userReading = readingRecords.filter(r => r.nickname === nickname);
       const userTyping = typingRecords.filter(r => r.nickname === nickname);
-
       // 计算统计
       const stats = {
         reading: {
@@ -450,31 +351,22 @@ export async function onRequest(context) {
           }
         }
       };
-
       return json({ success: true, stats });
     }
 
-    /* =========================
-       排行榜
-    ========================== */
+    /* ========================= 排行榜 ========================== */
     if (path === "rank/typing") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
-
       const results = [];
-
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (!data) continue;
-
         const record = JSON.parse(data);
-        
-        // ✅ 修复：正确使用记录中的 nickname 获取用户信息
+        // ✅ 修复：使用 record.nickname 变量
         const userKey = `user:`;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
-
         const user = JSON.parse(userData);
-
         if (user.realName) {
           results.push({
             ...record,
@@ -483,14 +375,11 @@ export async function onRequest(context) {
           });
         }
       }
-
       results.sort((a, b) => b.wpm - a.wpm);
-
       return json({ success: true, rank: results.slice(0, 20) });
     }
 
     return json({ success: false, message: "接口不存在：" + path });
-
   } catch (err) {
     console.error("API Error:", err);
     return json({ success: false, message: err.message });
@@ -508,14 +397,12 @@ export async function onRequest(context) {
     const filtered = records.filter(r => {
       const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
       if (!recordDate) return false;
-      
       if (type === 'date') return recordDate === period;
       if (type === 'week') return recordDate >= period;
       if (type === 'month') return recordDate.startsWith(period);
       if (type === 'year') return recordDate.startsWith(period);
       return false;
     });
-
     return {
       count: filtered.length,
       words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
@@ -526,22 +413,18 @@ export async function onRequest(context) {
     const filtered = records.filter(r => {
       const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
       if (!recordDate) return false;
-      
       if (type === 'date') return recordDate === period;
       if (type === 'week') return recordDate >= period;
       if (type === 'month') return recordDate.startsWith(period);
       if (type === 'year') return recordDate.startsWith(period);
       return false;
     });
-
     const avgWpm = filtered.length > 0 
       ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
       : 0;
-
     const avgAccuracy = filtered.length > 0
       ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
       : 0;
-
     return {
       count: filtered.length,
       avgWpm,
