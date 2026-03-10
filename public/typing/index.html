@@ -146,6 +146,9 @@
             const accuracy = parseInt(document.getElementById('accuracy').textContent);
             const duration = parseInt(document.getElementById('time').textContent);
             
+            // 新增：计算打字单词数（按空格分割，过滤空字符串）
+            const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
+            
             try {
                 const res = await fetch('/api/typing/result', {
                     method: 'POST',
@@ -155,7 +158,8 @@
                         wpm,
                         accuracy,
                         duration,
-                        text: input
+                        wordCount,  // 新增：打字单词数
+                        content: input  // 原文（可选）
                     })
                 });
                 const data = await res.json();
@@ -166,7 +170,7 @@
                 alert('提交失败');
             }
         }
-        
+
         function resetTest() {
             document.getElementById('inputText').value = '';
             document.getElementById('wpm').textContent = '0';
