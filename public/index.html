@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TypeReading Hub - 首页</title>
+    <title>TypeReading Hub - 英语阅读与打字练习平台</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
         }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header {
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .header {
             background: rgba(255,255,255,0.95);
             padding: 20px 40px;
             border-radius: 16px;
@@ -23,8 +23,9 @@
             justify-content: space-between;
             align-items: center;
         }
-        .logo { font-size: 24px; font-weight: bold; color: #667eea; }
-        .user-info { display: flex; align-items: center; gap: 15px; }
+        .logo { font-size: 28px; font-weight: bold; color: #667eea; }
+        .user-status { display: flex; align-items: center; gap: 15px; }
+        .welcome-text { color: #667eea; font-weight: 500; }
         .btn {
             padding: 10px 24px;
             border: none;
@@ -36,54 +37,155 @@
             display: inline-block;
         }
         .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
         .btn-secondary { background: #f0f0f0; color: #333; }
-        .btn-secondary:hover { background: #e0e0e0; }
         
-        .welcome-section {
+        .hero {
             background: rgba(255,255,255,0.95);
-            padding: 40px;
-            border-radius: 16px;
+            padding: 60px 40px;
+            border-radius: 20px;
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
-        .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
+        .hero h1 { font-size: 42px; margin-bottom: 20px; color: #333; }
+        .hero p { font-size: 18px; color: #666; margin-bottom: 30px; }
         
         .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 25px;
+            margin-bottom: 30px;
         }
         .feature-card {
             background: rgba(255,255,255,0.95);
-            padding: 30px;
+            padding: 35px 25px;
             border-radius: 16px;
             text-align: center;
             transition: transform 0.3s;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             cursor: pointer;
-            position: relative;
         }
         .feature-card:hover { transform: translateY(-5px); }
         .feature-icon { font-size: 48px; margin-bottom: 15px; }
-        .feature-card h3 { font-size: 20px; margin-bottom: 10px; }
-        .feature-card p { color: #666; margin-bottom: 20px; }
+        .feature-card h3 { font-size: 20px; margin-bottom: 10px; color: #333; }
+        .feature-card p { color: #666; font-size: 14px; }
         
-        .feature-preview {
-            background: #f8f9fa;
-            border: 2px dashed #ddd;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 15px;
-            text-align: left;
+        .admin-link {
+            text-align: center;
+            margin-top: 30px;
         }
-        .preview-badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-  
+        .admin-link a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .admin-link a:hover { color: white; }
+        
+        .login-prompt {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #856404;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">📚 TypeReading Hub</div>
+            <div class="user-status" id="userStatus">
+                <!-- 动态显示登录状态 -->
+            </div>
+        </div>
+        
+        <div class="hero">
+            <h1>英语阅读与打字练习平台</h1>
+            <p>提升英语阅读能力，锻炼打字速度，记录学习进度</p>
+            <a href="/register/" class="btn btn-primary" id="startBtn">开始学习</a>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card" onclick="goToPage('/register/')">
+                <div class="feature-icon">🎓</div>
+                <h3>学生登录</h3>
+                <p>注册或登录开始学习之旅</p>
+            </div>
+            <div class="feature-card" onclick="goToPage('/reading/')">
+                <div class="feature-icon">📖</div>
+                <h3>阅读打卡</h3>
+                <p>每日阅读任务打卡记录</p>
+            </div>
+            <div class="feature-card" onclick="goToPage('/typing/')">
+                <div class="feature-icon">⌨️</div>
+                <h3>打字练习</h3>
+                <p>盲打速度与准确率训练</p>
+            </div>
+            <div class="feature-card" onclick="goToPage('/rank/')">
+                <div class="feature-icon">🏆</div>
+                <h3>排行榜</h3>
+                <p>查看打字成绩排名</p>
+            </div>
+        </div>
+        
+        <div class="admin-link">
+            <a href="/admin/">⚙️ 管理入口</a>
+        </div>
+    </div>
+
+    <script>
+        // 检查登录状态并显示用户名
+        function checkLoginStatus() {
+            const userStatusDiv = document.getElementById('userStatus');
+            const startBtn = document.getElementById('startBtn');
+            const currentUser = localStorage.getItem('currentUser');
+            
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    // 修复：正确显示用户名
+                    userStatusDiv.innerHTML = `
+                        <span class="welcome-text">欢迎，${user.nickname || '同学'}！</span>
+                        <button class="btn btn-secondary" onclick="logout()">退出</button>
+                    `;
+                    startBtn.textContent = '进入学习';
+                    startBtn.href = '/reading/';
+                } catch (e) {
+                    // 数据解析失败，清除存储
+                    localStorage.removeItem('currentUser');
+                    showLoginPrompt();
+                }
+            } else {
+                showLoginPrompt();
+            }
+        }
+        
+        function showLoginPrompt() {
+            const userStatusDiv = document.getElementById('userStatus');
+            userStatusDiv.innerHTML = `
+                <span class="login-prompt">👋 请先登录后使用完整功能</span>
+                <a href="/register/" class="btn btn-primary">登录 / 注册</a>
+            `;
+        }
+        
+        function logout() {
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+        
+        function goToPage(url) {
+            const currentUser = localStorage.getItem('currentUser');
+            if (!currentUser && url !== '/register/') {
+                alert('请先登录后再使用此功能');
+                location.href = '/register/';
+                return;
+            }
+            location.href = url;
+        }
+        
+        // 页面加载时检查登录状态
+        checkLoginStatus();
+    </script>
+</body>
+</html>
