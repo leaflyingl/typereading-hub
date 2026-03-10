@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -12,155 +12,49 @@
             min-height: 100vh;
         }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header {
-            background: rgba(255,255,255,0.95);
-            padding: 20px 40px;
-            border-radius: 16px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-size: 24px; font-weight: bold; color: #667eea; }
+        .guest-section { text-align: center; padding: 100px 20px; color: white; }
+        .guest-section h1 { font-size: 48px; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .guest-section p { font-size: 20px; margin-bottom: 40px; opacity: 0.9; }
         .btn {
-            padding: 10px 24px;
+            padding: 15px 40px;
+            margin: 10px;
             border: none;
             border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            font-size: 14px;
             text-decoration: none;
             display: inline-block;
-            transition: all 0.3s;
+            transition: transform 0.2s;
         }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5568d3; }
-        .btn-secondary { background: #f0f0f0; color: #333; }
-        
-        .welcome-section {
-            background: rgba(255,255,255,0.95);
-            padding: 40px;
-            border-radius: 16px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
-        .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-        }
-        .feature-card {
-            background: rgba(255,255,255,0.95);
-            padding: 30px;
-            border-radius: 16px;
-            text-align: center;
-            transition: transform 0.3s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .feature-card:hover { transform: translateY(-5px); }
-        .feature-icon { font-size: 48px; margin-bottom: 15px; }
-        .feature-card h3 { font-size: 20px; margin-bottom: 10px; }
-        .feature-card p { color: #666; margin-bottom: 20px; }
-        
-        .guest-section { text-align: center; padding: 80px 20px; }
-        .guest-section h1 { font-size: 48px; color: white; margin-bottom: 20px; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .guest-section p { font-size: 20px; color: rgba(255,255,255,0.9); margin-bottom: 40px; }
-        .guest-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
-        .guest-buttons .btn { padding: 15px 40px; font-size: 16px; }
-        
-        .footer-settings {
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: white; color: #667eea; }
+        .btn-secondary { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; }
+        .settings-btn {
             position: fixed;
             bottom: 20px;
             right: 20px;
-        }
-        .settings-btn {
             width: 50px;
             height: 50px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.9);
+            background: white;
             border: none;
             cursor: pointer;
             font-size: 24px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.3s;
         }
-        .settings-btn:hover { transform: rotate(90deg); background: white; }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-    <div class="footer-settings">
-        <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
+    <div class="container">
+        <div class="guest-section">
+            <h1>📚 TypeReading Hub</h1>
+            <p>英语阅读 + 打字练习，让学习更高效</p>
+            <div>
+                <a href="/register/" class="btn btn-primary">🎓 学生登录 / 注册</a>
+                <a href="/rank/" class="btn btn-secondary">🏆 查看排行榜</a>
+            </div>
+        </div>
     </div>
-
-    <script>
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        const app = document.getElementById('app');
-        
-        if (!currentUser) {
-            app.innerHTML = `
-                <div class="container">
-                    <div class="guest-section">
-                        <h1>📚 TypeReading Hub</h1>
-                        <p>英语阅读 + 打字练习，让学习更高效</p>
-                        <div class="guest-buttons">
-                            <a href="/register/" class="btn btn-primary">🎓 学生登录 / 注册</a>
-                            <a href="/rank/" class="btn" style="background: rgba(255,255,255,0.9); color: #667eea;">🏆 查看排行榜</a>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            app.innerHTML = `
-                <div class="container">
-                    <header>
-                        <div class="logo">📚 TypeReading Hub</div>
-                        <div style="display: flex; align-items: center; gap: 15px;">
-                            <span>👋 欢迎，</span>
-                            <button class="btn btn-secondary" onclick="logout()">退出登录</button>
-                        </div>
-                    </header>
-                    <div class="welcome-section">
-                        <h1>开始今天的学习吧！</h1>
-                        <p>坚持阅读和打字练习，提升英语能力</p>
-                        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                            <a href="/reading/" class="btn btn-primary">📖 阅读打卡</a>
-                            <a href="/typing/" class="btn btn-primary">⌨️ 打字练习</a>
-                            <a href="/rank/" class="btn btn-secondary">🏆 排行榜</a>
-                        </div>
-                    </div>
-                    <div class="features">
-                        <div class="feature-card">
-                            <div class="feature-icon">📖</div>
-                            <h3>每日阅读</h3>
-                            <p>精选英语文章，提升阅读理解能力</p>
-                            <a href="/reading/" class="btn btn-primary">开始阅读</a>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">⌨️</div>
-                            <h3>打字练习</h3>
-                            <p>英文打字训练，提高输入速度和准确率</p>
-                            <a href="/typing/" class="btn btn-primary">开始打字</a>
-                        </div>
-                        <div class="feature-card">
-                            <div class="feature-icon">🏆</div>
-                            <h3>排行榜</h3>
-                            <p>查看成绩排名，与同学一较高下</p>
-                            <a href="/rank/" class="btn btn-primary">查看排名</a>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        function logout() {
-            localStorage.removeItem('currentUser');
-            location.reload();
-        }
-    </script>
+    <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
 </body>
 </html>
