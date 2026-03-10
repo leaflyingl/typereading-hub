@@ -20,12 +20,14 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const userKey = `user:`;
+
+      // 修复：正确使用 nickname 变量
+      const userKey = "user:" + nickname;
       const exists = await env.TYPEREADING_KV.get(userKey);
       if (exists) {
         return json({ success: false, message: "该昵称已被注册" });
       }
+
       const userData = {
         nickname,
         password: password || null,
@@ -34,6 +36,7 @@ export async function onRequest(context) {
         className: "",
         createdAt: new Date().toISOString()
       };
+
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(userData));
       return json({ 
         success: true, 
@@ -52,16 +55,19 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const userKey = `user:`;
+
+      // 修复：正确使用 nickname 变量
+      const userKey = "user:" + nickname;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) {
         return json({ success: false, message: "用户不存在" });
       }
+
       const user = JSON.parse(data);
       if (user.password && user.password !== password) {
         return json({ success: false, message: "密码错误" });
       }
+
       return json({ success: true, user });
     }
 
@@ -92,14 +98,17 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const userKey = `user:`;
+
+      // 修复：正确使用 nickname 变量
+      const userKey = "user:" + nickname;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
+
       const user = JSON.parse(data);
       user.realName = realName || "";
       user.gender = gender || "";
       user.className = className || "";
+
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
       return json({ success: true });
     }
@@ -110,9 +119,11 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const userKey = `user:`;
+
+      // 修复：正确使用 nickname 变量
+      const userKey = "user:" + nickname;
       await env.TYPEREADING_KV.delete(userKey);
+
       // 删除该学生的所有记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       for (const key of readingKeys) {
@@ -124,6 +135,7 @@ export async function onRequest(context) {
           }
         }
       }
+
       const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -134,6 +146,7 @@ export async function onRequest(context) {
           }
         }
       }
+
       return json({ success: true });
     }
 
@@ -143,10 +156,12 @@ export async function onRequest(context) {
       if (!nicknames || !Array.isArray(nicknames) || nicknames.length === 0) {
         return json({ success: false, message: "未选择学生" });
       }
+
       for (const nickname of nicknames) {
-        // ✅ 修复：使用 nickname 变量
-        const userKey = `user:`;
+        // 修复：正确使用 nickname 变量
+        const userKey = "user:" + nickname;
         await env.TYPEREADING_KV.delete(userKey);
+
         // 删除阅读记录
         const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
         for (const key of readingKeys) {
@@ -158,6 +173,7 @@ export async function onRequest(context) {
             }
           }
         }
+
         // 删除打字记录
         const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
         for (const key of typingKeys) {
@@ -170,6 +186,7 @@ export async function onRequest(context) {
           }
         }
       }
+
       return json({ success: true });
     }
 
@@ -179,7 +196,9 @@ export async function onRequest(context) {
       if (!className) {
         return json({ success: false, message: "班级名称不能为空" });
       }
-      const classKey = `class:`;
+
+      // 修复：正确使用 className 变量
+      const classKey = "class:" + className;
       await env.TYPEREADING_KV.put(
         classKey,
         JSON.stringify({
@@ -187,6 +206,7 @@ export async function onRequest(context) {
           createdAt: new Date().toISOString()
         })
       );
+
       return json({ success: true });
     }
 
@@ -207,10 +227,12 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const recordKey = `reading::`;
+
+      // 修复：正确使用 nickname 变量
+      const recordKey = "reading:" + nickname + ":" + Date.now();
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
+
       await env.TYPEREADING_KV.put(
         recordKey,
         JSON.stringify({
@@ -221,6 +243,7 @@ export async function onRequest(context) {
           timestamp: now.toISOString()
         })
       );
+
       return json({ success: true });
     }
 
@@ -230,7 +253,8 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       const records = [];
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -250,7 +274,8 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const records = [];
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -270,10 +295,12 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
-      // ✅ 修复：使用 nickname 变量
-      const recordKey = `typing::`;
+
+      // 修复：正确使用 nickname 变量
+      const recordKey = "typing:" + nickname + ":" + Date.now();
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
+
       await env.TYPEREADING_KV.put(
         recordKey,
         JSON.stringify({
@@ -284,6 +311,7 @@ export async function onRequest(context) {
           timestamp: now.toISOString()
         })
       );
+
       return json({ success: true });
     }
 
@@ -293,12 +321,14 @@ export async function onRequest(context) {
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
+
       const today = new Date().toISOString().split("T")[0];
       const weekStart = getWeekStart(new Date());
       const thisMonth = today.substring(0, 7);
       const thisYear = today.substring(0, 4);
+
       // 获取阅读记录
-      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       const readingRecords = [];
       for (const key of readingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -310,8 +340,9 @@ export async function onRequest(context) {
           readingRecords.push(r);
         }
       }
+
       // 获取打字记录
-      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const typingRecords = [];
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -323,9 +354,11 @@ export async function onRequest(context) {
           typingRecords.push(r);
         }
       }
+
       // 过滤当前用户的记录
       const userReading = readingRecords.filter(r => r.nickname === nickname);
       const userTyping = typingRecords.filter(r => r.nickname === nickname);
+
       // 计算统计
       const stats = {
         reading: {
@@ -351,6 +384,7 @@ export async function onRequest(context) {
           }
         }
       };
+
       return json({ success: true, stats });
     }
 
@@ -358,14 +392,17 @@ export async function onRequest(context) {
     if (path === "rank/typing") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const results = [];
+
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (!data) continue;
         const record = JSON.parse(data);
-        // ✅ 修复：使用 record.nickname 变量
-        const userKey = `user:`;
+
+        // 修复：正确使用 record.nickname 变量
+        const userKey = "user:" + record.nickname;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
+
         const user = JSON.parse(userData);
         if (user.realName) {
           results.push({
@@ -375,11 +412,13 @@ export async function onRequest(context) {
           });
         }
       }
+
       results.sort((a, b) => b.wpm - a.wpm);
       return json({ success: true, rank: results.slice(0, 20) });
     }
 
     return json({ success: false, message: "接口不存在：" + path });
+
   } catch (err) {
     console.error("API Error:", err);
     return json({ success: false, message: err.message });
@@ -403,6 +442,7 @@ export async function onRequest(context) {
       if (type === 'year') return recordDate.startsWith(period);
       return false;
     });
+
     return {
       count: filtered.length,
       words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
@@ -419,12 +459,14 @@ export async function onRequest(context) {
       if (type === 'year') return recordDate.startsWith(period);
       return false;
     });
+
     const avgWpm = filtered.length > 0 
       ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
       : 0;
     const avgAccuracy = filtered.length > 0
       ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
       : 0;
+
     return {
       count: filtered.length,
       avgWpm,
