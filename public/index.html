@@ -1,16 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TypeReading Hub - 首页</title>
+    <title>TypeReading Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            color: #333;
         }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         header {
@@ -24,21 +23,19 @@
             align-items: center;
         }
         .logo { font-size: 24px; font-weight: bold; color: #667eea; }
-        .user-info { display: flex; align-items: center; gap: 15px; }
         .btn {
             padding: 10px 24px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-size: 14px;
-            transition: all 0.3s;
             text-decoration: none;
             display: inline-block;
+            transition: all 0.3s;
         }
         .btn-primary { background: #667eea; color: white; }
-        .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+        .btn-primary:hover { background: #5568d3; }
         .btn-secondary { background: #f0f0f0; color: #333; }
-        .btn-secondary:hover { background: #e0e0e0; }
         
         .welcome-section {
             background: rgba(255,255,255,0.95);
@@ -48,7 +45,7 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; }
+        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
         .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
         
         .features {
@@ -75,18 +72,6 @@
         .guest-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
         .guest-buttons .btn { padding: 15px 40px; font-size: 16px; }
         
-        .alert {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
         .footer-settings {
             position: fixed;
             bottom: 20px;
@@ -108,7 +93,6 @@
 </head>
 <body>
     <div id="app"></div>
-    
     <div class="footer-settings">
         <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
     </div>
@@ -118,7 +102,6 @@
         const app = document.getElementById('app');
         
         if (!currentUser) {
-            // 未登录
             app.innerHTML = `
                 <div class="container">
                     <div class="guest-section">
@@ -132,22 +115,15 @@
                 </div>
             `;
         } else {
-            // 已登录
-            const nickname = currentUser.nickname || '同学';
-            const needComplete = !currentUser.realName || !currentUser.gender;
-            
             app.innerHTML = `
                 <div class="container">
                     <header>
                         <div class="logo">📚 TypeReading Hub</div>
-                        <div class="user-info">
-                            <span>👋 欢迎，${nickname}</span>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span>👋 欢迎，</span>
                             <button class="btn btn-secondary" onclick="logout()">退出登录</button>
                         </div>
                     </header>
-                    
-                    ${needComplete ? `<div class="alert">⚠️ 请完善真实姓名和性别信息，以便分班</div>` : ''}
-                    
                     <div class="welcome-section">
                         <h1>开始今天的学习吧！</h1>
                         <p>坚持阅读和打字练习，提升英语能力</p>
@@ -157,7 +133,6 @@
                             <a href="/rank/" class="btn btn-secondary">🏆 排行榜</a>
                         </div>
                     </div>
-                    
                     <div class="features">
                         <div class="feature-card">
                             <div class="feature-icon">📖</div>
