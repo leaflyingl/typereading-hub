@@ -27,6 +27,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
+      // ✅ 修复：使用昵称作为 key 的一部分
       const userKey = `user:`;
       const exists = await env.TYPEREADING_KV.get(userKey);
 
@@ -62,6 +63,11 @@ export async function onRequest(context) {
     if (path === "auth/login" && request.method === "POST") {
       const { nickname, password } = await request.json();
 
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      // ✅ 修复：使用昵称作为 key 的一部分
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
 
@@ -115,6 +121,11 @@ export async function onRequest(context) {
     if (path === "admin/student/update") {
       const { nickname, realName, gender, className } = await request.json();
 
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      // ✅ 修复：使用昵称作为 key 的一部分
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
@@ -140,11 +151,11 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 同时删除该学生的所有记录
+      // ✅ 修复：使用昵称作为 key 的一部分
       const userKey = `user:`;
       await env.TYPEREADING_KV.delete(userKey);
       
-      // 删除阅读记录
+      // 删除该学生的所有记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
       for (const key of readingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -156,7 +167,6 @@ export async function onRequest(context) {
         }
       }
       
-      // 删除打字记录
       const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -182,7 +192,7 @@ export async function onRequest(context) {
       }
 
       for (const nickname of nicknames) {
-        // 删除用户
+        // ✅ 修复：使用昵称作为 key 的一部分
         const userKey = `user:`;
         await env.TYPEREADING_KV.delete(userKey);
         
@@ -262,6 +272,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
+      // ✅ 修复：使用昵称作为 key 的一部分
       const recordKey = `reading::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -290,7 +301,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
 
       const records = [];
 
@@ -319,7 +330,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
 
       const records = [];
 
@@ -348,6 +359,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
+      // ✅ 修复：使用昵称作为 key 的一部分
       const recordKey = `typing::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -382,13 +394,12 @@ export async function onRequest(context) {
       const thisYear = today.substring(0, 4);
 
       // 获取阅读记录
-      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: `reading:` });
       const readingRecords = [];
       for (const key of readingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
           const r = JSON.parse(data);
-          // 兼容旧数据：如果没有 date 字段，从 timestamp 提取
           if (!r.date && r.timestamp) {
             r.date = r.timestamp.split("T")[0];
           }
@@ -397,13 +408,12 @@ export async function onRequest(context) {
       }
 
       // 获取打字记录
-      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: `typing:` });
       const typingRecords = [];
       for (const key of typingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
           const r = JSON.parse(data);
-          // 兼容旧数据
           if (!r.date && r.timestamp) {
             r.date = r.timestamp.split("T")[0];
           }
@@ -458,14 +468,13 @@ export async function onRequest(context) {
 
         const record = JSON.parse(data);
         
-        // 获取用户信息
+        // ✅ 修复：使用记录中的昵称获取用户信息
         const userKey = `user:`;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
 
         const user = JSON.parse(userData);
 
-        // 只显示有真实姓名的学生
         if (user.realName) {
           results.push({
             ...record,
@@ -475,7 +484,6 @@ export async function onRequest(context) {
         }
       }
 
-      // 按 WPM 降序排序
       results.sort((a, b) => b.wpm - a.wpm);
 
       return json({ success: true, rank: results.slice(0, 20) });
