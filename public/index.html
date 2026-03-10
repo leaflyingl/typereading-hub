@@ -70,16 +70,18 @@
         .feature-card h3 { font-size: 20px; margin-bottom: 10px; color: #333; }
         .feature-card p { color: #666; font-size: 14px; }
         
+        /* 修复：淡化管理入口样式 */
         .admin-link {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 40px;
         }
         .admin-link a {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.4);
             text-decoration: none;
-            font-size: 14px;
+            font-size: 13px;
+            transition: color 0.3s;
         }
-        .admin-link a:hover { color: white; }
+        .admin-link a:hover { color: rgba(255,255,255,0.8); }
         
         .login-prompt {
             background: #fff3cd;
@@ -107,7 +109,6 @@
         </div>
         
         <div class="features">
-            <!-- 修复：第一项改为"学习历史" -->
             <div class="feature-card" onclick="goTo('/history/')">
                 <div class="feature-icon">📊</div>
                 <h3>学习历史</h3>
@@ -130,8 +131,9 @@
             </div>
         </div>
         
+        <!-- 修复：淡化管理入口，只保留图标 -->
         <div class="admin-link">
-            <a href="/admin/">⚙️ 管理入口</a>
+            <a href="/admin/">⚙️</a>
         </div>
     </div>
 
@@ -148,11 +150,11 @@
             if (currentUserStr) {
                 try {
                     const user = JSON.parse(currentUserStr);
-                    // 修复：正确显示用户名
-                    userStatusDiv.innerHTML = `
-                        <span class="welcome-text">欢迎，！</span>
-                        <button class="btn btn-secondary" onclick="logout()">退出</button>
-                    `;
+                    // 修复：正确显示用户名（昵称）
+                    const nickname = user.nickname || '同学';
+                    userStatusDiv.innerHTML = 
+                        '<span class="welcome-text">欢迎，' + escapeHtml(nickname) + '！</span>' +
+                        '<button class="btn btn-secondary" onclick="logout()">退出</button>';
                     startBtn.textContent = '进入学习';
                     startBtn.href = '/reading/';
                 } catch (e) {
@@ -164,12 +166,21 @@
             }
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function showLoginPrompt() {
             const userStatusDiv = document.getElementById('userStatus');
-            userStatusDiv.innerHTML = `
-                <span class="login-prompt">👋 请先登录</span>
-                <a href="/register/" class="btn btn-primary">登录 / 注册</a>
-            `;
+            userStatusDiv.innerHTML = 
+                '<span class="login-prompt">👋 请先登录</span>' +
+                '<a href="/register/" class="btn btn-primary">登录 / 注册</a>';
         }
 
         function logout() {
