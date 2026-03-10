@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>教师管理后台 - TypeReading Hub</title>
   <style>
-    /* 保持原有样式不变 */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -252,7 +251,7 @@
       </div>
     </div>
 
-    <!-- 内容管理（新增） -->
+    <!-- 内容管理 -->
     <div id="content-tab" class="tab-content">
       <div class="card">
         <h3 style="margin-bottom: 20px;">内容管理</h3>
@@ -331,7 +330,7 @@
     </div>
   </div>
 
-  <!-- 内容编辑弹窗（新增） -->
+  <!-- 内容编辑弹窗 -->
   <div id="content-modal" class="modal">
     <div class="modal-content" style="max-width: 700px;">
       <div class="modal-header">
@@ -378,7 +377,6 @@
   </div>
 
   <script>
-    // ========== 基础功能（保持原有逻辑）==========
     let allStudents = [];
     let allClasses = [];
     let selectedStudents = new Set();
@@ -451,6 +449,7 @@
 
       filtered.forEach(s => {
         const date = new Date(s.createdAt).toLocaleDateString();
+        // 修复：正确插入变量值
         html += `<tr>
           <td><input type="checkbox" value="" onchange="toggleSelect('', this.checked)"></td>
           <td></td>
@@ -463,289 +462,4 @@
       });
 
       html += '</tbody></table>';
-      document.getElementById('students-list').innerHTML = html;
-    }
-
-    function toggleSelectAll(cb) {
-      document.querySelectorAll('#students-list input[type="checkbox"]').forEach(box => {
-        box.checked = cb.checked;
-        if (box.value) toggleSelect(box.value, cb.checked);
-      });
-    }
-
-    function toggleSelect(nickname, checked) {
-      if (checked) selectedStudents.add(nickname);
-      else selectedStudents.delete(nickname);
-    }
-
-    function editStudent(nickname) {
-      const s = allStudents.find(x => x.nickname === nickname);
-      if (!s) return;
-      document.getElementById('edit-nickname').value = s.nickname;
-      document.getElementById('edit-realname').value = s.realName || '';
-      document.getElementById('edit-gender').value = s.gender || '';
-      document.getElementById('edit-class').value = s.className || '';
-      document.getElementById('student-modal').style.display = 'flex';
-    }
-
-    function closeStudentModal() {
-      document.getElementById('student-modal').style.display = 'none';
-    }
-
-    async function saveStudent() {
-      const data = {
-        nickname: document.getElementById('edit-nickname').value,
-        realName: document.getElementById('edit-realname').value.trim(),
-        gender: document.getElementById('edit-gender').value,
-        className: document.getElementById('edit-class').value
-      };
-      try {
-        const res = await fetch('/api/admin/student/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        if (result.success) {
-          closeStudentModal();
-          loadStudents();
-        }
-      } catch (e) {
-        alert('保存失败');
-      }
-    }
-
-    async function deleteSelected() {
-      if (selectedStudents.size === 0) {
-        alert('请先选择学生');
-        return;
-      }
-      if (!confirm(`确定删除选中的  名学生吗？`)) return;
-      try {
-        const res = await fetch('/api/admin/student/delete-batch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nicknames: Array.from(selectedStudents) })
-        });
-        const result = await res.json();
-        if (result.success) {
-          selectedStudents.clear();
-          loadStudents();
-        }
-      } catch (e) {
-        alert('删除失败');
-      }
-    }
-
-    // ========== 班级管理 ==========
-    async function loadClasses() {
-      try {
-        const res = await fetch('/api/admin/classes');
-        const result = await res.json();
-        if (result.success) {
-          allClasses = result.classes;
-          updateStats();
-          renderClasses();
-          updateClassFilter();
-        }
-      } catch (e) {
-        document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败</p>';
-      }
-    }
-
-    function renderClasses() {
-      if (allClasses.length === 0) {
-        document.getElementById('classes-list').innerHTML = '<p style="text-align: center; color: #999;">暂无班级</p>';
-        return;
-      }
-      let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>学生数</th><th>创建时间</th></tr></thead><tbody>';
-      allClasses.forEach(c => {
-        const count = allStudents.filter(s => s.className === c.name).length;
-        const date = new Date(c.createdAt).toLocaleDateString();
-        html += `<tr><td></td><td></td><td></td></tr>`;
-      });
-      html += '</tbody></table>';
-      document.getElementById('classes-list').innerHTML = html;
-    }
-
-    function showClassModal() {
-      document.getElementById('class-name').value = '';
-      document.getElementById('class-modal').style.display = 'flex';
-    }
-
-    function closeClassModal() {
-      document.getElementById('class-modal').style.display = 'none';
-    }
-
-    async function createClass() {
-      const name = document.getElementById('class-name').value.trim();
-      if (!name) {
-        alert('请输入班级名称');
-        return;
-      }
-      try {
-        const res = await fetch('/api/admin/class/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ className: name })
-        });
-        const result = await res.json();
-        if (result.success) {
-          closeClassModal();
-          loadClasses();
-        }
-      } catch (e) {
-        alert('创建失败');
-      }
-    }
-
-    // ========== 内容管理（新增）==========
-    async function loadContentList() {
-      const filter = document.getElementById('content-filter').value;
-      try {
-        const res = await fetch('/api/admin/content/list', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: filter })
-        });
-        const result = await res.json();
-        if (result.success) renderContentList(result.contents);
-      } catch (e) {
-        document.getElementById('content-list').innerHTML = '<p style="color: red;">加载失败</p>';
-      }
-    }
-
-    function renderContentList(contents) {
-      if (contents.length === 0) {
-        document.getElementById('content-list').innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无内容</p>';
-        return;
-      }
-      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-      contents.forEach(item => {
-        const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
-        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
-        const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
-        const date = new Date(item.updatedAt).toLocaleDateString();
-        html += `<tr>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td>
-            <button class="btn btn-small btn-secondary" onclick='editContent()'>编辑</button>
-            <button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent('', '')">删除</button>
-          </td>
-        </tr>`;
-      });
-      html += '</tbody></table>';
-      document.getElementById('content-list').innerHTML = html;
-    }
-
-    function showContentModal() {
-      editingContentId = null;
-      document.getElementById('content-modal-title').textContent = '添加内容';
-      document.getElementById('content-type').value = 'reading';
-      document.getElementById('content-title').value = '';
-      document.getElementById('content-text').value = '';
-      document.getElementById('content-wordcount').value = '';
-      document.getElementById('content-difficulty').value = 'medium';
-      document.getElementById('content-active').checked = true;
-      document.getElementById('content-modal').style.display = 'flex';
-    }
-
-    function editContent(content) {
-      editingContentId = content.id;
-      document.getElementById('content-modal-title').textContent = '编辑内容';
-      document.getElementById('content-type').value = content.type;
-      document.getElementById('content-title').value = content.title;
-      document.getElementById('content-text').value = content.content;
-      document.getElementById('content-wordcount').value = content.wordCount || '';
-      document.getElementById('content-difficulty').value = content.difficulty || 'medium';
-      document.getElementById('content-active').checked = content.isActive !== false;
-      document.getElementById('content-modal').style.display = 'flex';
-    }
-
-    function closeContentModal() {
-      document.getElementById('content-modal').style.display = 'none';
-      editingContentId = null;
-    }
-
-    async function saveContent() {
-      const data = {
-        id: editingContentId,
-        type: document.getElementById('content-type').value,
-        title: document.getElementById('content-title').value.trim(),
-        content: document.getElementById('content-text').value.trim(),
-        wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
-        difficulty: document.getElementById('content-difficulty').value,
-        isActive: document.getElementById('content-active').checked
-      };
-      if (!data.title || !data.content) {
-        alert('请填写标题和内容');
-        return;
-      }
-      try {
-        const res = await fetch('/api/admin/content/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        if (result.success) {
-          closeContentModal();
-          loadContentList();
-        } else {
-          alert(result.message || '保存失败');
-        }
-      } catch (e) {
-        alert('网络错误');
-      }
-    }
-
-    async function deleteContent(id, type) {
-      if (!confirm('确定删除此内容？')) return;
-      try {
-        const res = await fetch('/api/admin/content/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, type })
-        });
-        const result = await res.json();
-        if (result.success) loadContentList();
-        else alert(result.message || '删除失败');
-      } catch (e) {
-        alert('网络错误');
-      }
-    }
-
-    // ========== 排行榜 ==========
-    async function loadRank() {
-      try {
-        const res = await fetch('/api/rank/typing');
-        const result = await res.json();
-        if (result.success) renderRank(result.rank);
-      } catch (e) {
-        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
-      }
-    }
-
-    function renderRank(rank) {
-      if (rank.length === 0) {
-        document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
-        return;
-      }
-      let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
-      rank.forEach((r, i) => {
-        html += `<tr><td></td><td></td><td></td><td></td><td>%</td></tr>`;
-      });
-      html += '</tbody></table>';
-      document.getElementById('rank-list').innerHTML = html;
-    }
-
-    // 初始化
-    loadStudents();
-  </script>
-</body>
-</html>
+      document.getElementById('student
