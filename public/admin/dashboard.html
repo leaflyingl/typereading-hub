@@ -29,13 +29,11 @@
             cursor: pointer;
             text-decoration: none;
         }
-        
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 30px;
         }
-        
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -51,7 +49,6 @@
         }
         .stat-box h3 { font-size: 36px; color: #667eea; margin-bottom: 5px; }
         .stat-box p { color: #666; }
-        
         .tabs {
             display: flex;
             gap: 10px;
@@ -68,16 +65,13 @@
             cursor: pointer;
             border-radius: 6px;
             font-size: 14px;
-            transition: all 0.3s;
         }
         .tab.active {
             background: #667eea;
             color: white;
         }
-        
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
         .card {
             background: white;
             border-radius: 12px;
@@ -91,7 +85,6 @@
             padding-bottom: 15px;
             border-bottom: 1px solid #eee;
         }
-        
         .filter-bar {
             display: flex;
             gap: 15px;
@@ -113,23 +106,10 @@
             border-radius: 8px;
             cursor: pointer;
         }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
         tr:hover { background: #f8f9fa; }
-        
         .badge {
             display: inline-block;
             padding: 4px 12px;
@@ -139,19 +119,14 @@
         .badge-success { background: #d4edda; color: #155724; }
         .badge-warning { background: #fff3cd; color: #856404; }
         .badge-info { background: #d1ecf1; color: #0c5460; }
-        .badge-secondary { background: #e2e3e5; color: #383d41; }
-        
         .btn-small {
             padding: 6px 14px;
             font-size: 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            margin-right: 5px;
         }
         .btn-view { background: #667eea; color: white; }
-        .btn-view:hover { background: #5568d3; }
-        
         .class-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -162,15 +137,12 @@
             border-radius: 12px;
             padding: 20px;
             border: 2px solid #e0e0e0;
-            transition: all 0.3s;
         }
-        .class-card:hover { border-color: #667eea; }
         .class-card h4 {
             font-size: 18px;
             margin-bottom: 15px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
         }
         .class-card .count {
             background: #667eea;
@@ -190,21 +162,17 @@
             border-radius: 16px;
             font-size: 13px;
         }
-        
         .empty-state {
             text-align: center;
             padding: 60px;
             color: #999;
         }
         .empty-state-icon { font-size: 64px; margin-bottom: 20px; }
-        
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 1000;
             justify-content: center;
@@ -226,7 +194,6 @@
             justify-content: space-between;
             align-items: center;
         }
-        .modal-header h3 { font-size: 18px; }
         .modal-close {
             background: none;
             border: none;
@@ -240,20 +207,15 @@
             padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
-        .info-label {
-            width: 120px;
-            color: #666;
-            font-weight: 500;
-        }
+        .info-label { width: 120px; color: #666; font-weight: 500; }
         .info-value { flex: 1; color: #333; }
-        
         .loading { color: #999; font-style: italic; }
         .error { color: #dc3545; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>👨‍🏫 教师管理后台</h1>
+        <h1>👨 🏫 教师管理后台</h1>
         <div>
             <a href="/" class="btn" style="margin-right: 10px;">学生端首页</a>
             <button class="btn" onclick="logout()">退出登录</button>
@@ -276,7 +238,7 @@
             </div>
             <div class="stat-box">
                 <h3 id="typingCount">-</h3>
-                <p>打字练习次数</p>
+                <p>练习次数</p>
             </div>
         </div>
         
@@ -332,19 +294,17 @@
                 <h3>👤 学生详细信息</h3>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
-            <div class="modal-body" id="modalBody">
-            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
     <script>
-        let allStudents = [];
-        let allClasses = {};
-        
-        // 检查登录
-        if (!sessionStorage.getItem('adminLoggedIn')) {
+        // ========== 【关键修复】登录检查 ==========
+        if (sessionStorage.getItem('adminLoggedIn') !== 'true') {
             location.href = '/admin/';
         }
+
+        let allStudents = [];
         
         window.onload = function() {
             loadStudents();
@@ -354,10 +314,8 @@
         function switchTab(tab, btn) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            
             btn.classList.add('active');
             document.getElementById(tab + '-tab').classList.add('active');
-            
             if (tab === 'classes') loadClasses();
         }
         
@@ -371,9 +329,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-                
                 const data = await response.json();
-                console.log('学生数据:', data);
                 
                 if (data.success && data.students) {
                     allStudents = data.students;
@@ -381,60 +337,36 @@
                     updateStats();
                     updateClassFilter();
                 } else {
-                    tableDiv.innerHTML = '<p class="error">加载失败: ' + (data.message || '未知错误') + '</p>';
+                    tableDiv.innerHTML = '<p class="error">加载失败: ' + (data.message || '无数据') + '</p>';
                 }
             } catch (error) {
-                console.error('加载学生失败:', error);
                 tableDiv.innerHTML = '<p class="error">加载失败，请检查网络连接</p>';
+                console.error(error);
             }
         }
         
         function renderStudents(students) {
             const tableDiv = document.getElementById('studentsTable');
-            
             if (students.length === 0) {
-                tableDiv.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">📭</div>
-                        <p>暂无学生数据</p>
-                    </div>
-                `;
+                tableDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>暂无学生数据</p></div>';
                 return;
             }
             
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>昵称</th>
-                            <th>真实姓名</th>
-                            <th>性别</th>
-                            <th>班级</th>
-                            <th>注册时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            let html = `<table><thead><tr><th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th><th>注册时间</th><th>操作</th></tr></thead><tbody>`;
             
             students.forEach(s => {
                 const className = extractClass(s.realName);
-                const genderBadge = s.gender ? 
-                    `<span class="badge badge-success">${s.gender}</span>` : 
-                    '<span class="badge badge-warning">未设置</span>';
+                const genderBadge = s.gender ? `<span class="badge badge-success">${s.gender}</span>` : '<span class="badge badge-warning">未设置</span>';
+                const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
                 
-                html += `
-                    <tr>
-                        <td><strong>${s.nickname || '-'}</strong></td>
-                        <td>${s.realName || '-'}</td>
-                        <td>${genderBadge}</td>
-                        <td><span class="badge badge-info">${className}</span></td>
-                        <td>${formatDate(s.createdAt)}</td>
-                        <td>
-                            <button class="btn-small btn-view" onclick="viewStudent('${s.nickname}')">详细信息</button>
-                        </td>
-                    </tr>
-                `;
+                html += `<tr>
+                    <td><strong>${s.nickname}</strong></td>
+                    <td>${s.realName || '-'}</td>
+                    <td>${genderBadge}</td>
+                    <td><span class="badge badge-info">${className}</span></td>
+                    <td>${dateStr}</td>
+                    <td><button class="btn-small btn-view" onclick="viewStudent('${s.nickname}')">详细信息</button></td>
+                </tr>`;
             });
             
             html += '</tbody></table>';
@@ -458,10 +390,8 @@
                     (s.realName && s.realName.toLowerCase().includes(search));
                 const matchClass = !classFilter || extractClass(s.realName) === classFilter;
                 const matchGender = !genderFilter || s.gender === genderFilter;
-                
                 return matchSearch && matchClass && matchGender;
             });
-            
             renderStudents(filtered);
         }
         
@@ -469,7 +399,7 @@
             const classes = new Set();
             allStudents.forEach(s => {
                 const className = extractClass(s.realName);
-                if (className && className !== '未分班') classes.add(className);
+                if (className !== '未分班') classes.add(className);
             });
             
             let html = '<option value="">全部班级</option>';
@@ -480,120 +410,44 @@
         }
         
         function loadClasses() {
-            allClasses = {};
+            const classes = {};
             allStudents.forEach(s => {
                 const className = extractClass(s.realName);
-                if (!allClasses[className]) allClasses[className] = [];
-                allClasses[className].push(s);
+                if (!classes[className]) classes[className] = [];
+                classes[className].push(s);
             });
             
-            const classNames = Object.keys(allClasses).sort();
+            const classNames = Object.keys(classes).sort();
             const gridDiv = document.getElementById('classesGrid');
             
-            if (classNames.length === 0) {
-                gridDiv.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-state-icon">🏫</div>
-                        <p>暂无班级数据</p>
-                        <p style="font-size: 14px; color: #999; margin-top: 10px;">
-                            学生填写真实姓名（如"一班张三"）后将自动分组
-                        </p>
-                    </div>
-                `;
+            if (classNames.length === 0 || (classNames.length === 1 && classNames[0] === '未分班')) {
+                gridDiv.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏫</div><p>暂无班级数据</p><p style="font-size:14px;color:#999;margin-top:10px;">学生填写真实姓名（如"一班张三"）后将自动分组</p></div>`;
                 return;
             }
             
             let html = '<div class="class-grid">';
             classNames.forEach(className => {
-                const students = allClasses[className];
-                html += `
-                    <div class="class-card">
-                        <h4>
-                            🏫 ${className}
-                            <span class="count">${students.length}人</span>
-                        </h4>
-                        <div class="student-tags">
-                            ${students.map(s => `
-                                <span class="student-tag" title="${s.realName || s.nickname}">
-                                    ${s.realName || s.nickname}
-                                </span>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
+                const students = classes[className];
+                html += `<div class="class-card">
+                    <h4>🏫 ${className} <span class="count">${students.length}人</span></h4>
+                    <div class="student-tags">${students.map(s => `<span class="student-tag">${s.realName || s.nickname}</span>`).join('')}</div>
+                </div>`;
             });
             html += '</div>';
             gridDiv.innerHTML = html;
         }
         
-        async function viewStudent(nickname) {
+        function viewStudent(nickname) {
             const student = allStudents.find(s => s.nickname === nickname);
             if (!student) return;
             
-            const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = '<p class="loading">加载中...</p>';
             document.getElementById('studentModal').classList.add('active');
-            
-            // 获取学习记录
-            let recordsHtml = '<p>暂无学习记录</p>';
-            try {
-                const response = await fetch('/api/admin/student-records', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nickname })
-                });
-                const data = await response.json();
-                if (data.success && data.records && data.records.length > 0) {
-                    recordsHtml = `
-                        <table style="width: 100%; margin-top: 10px;">
-                            <thead>
-                                <tr style="background: #f8f9fa;">
-                                    <th style="padding: 10px; text-align: left;">日期</th>
-                                    <th style="padding: 10px; text-align: left;">类型</th>
-                                    <th style="padding: 10px; text-align: left;">详情</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.records.map(r => `
-                                    <tr>
-                                        <td style="padding: 10px;">${formatDate(r.date)}</td>
-                                        <td style="padding: 10px;">${r.type}</td>
-                                        <td style="padding: 10px;">${r.content || r.score || '-'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    `;
-                }
-            } catch (e) {
-                console.log('获取记录失败:', e);
-            }
-            
-            modalBody.innerHTML = `
-                <div class="info-row">
-                    <div class="info-label">昵称</div>
-                    <div class="info-value">${student.nickname || '-'}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">真实姓名</div>
-                    <div class="info-value">${student.realName || '-'}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">性别</div>
-                    <div class="info-value">${student.gender || '未设置'}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">班级</div>
-                    <div class="info-value">${extractClass(student.realName)}</div>
-                </div>
-                <div class="info-row">
-                    <div class="info-label">注册时间</div>
-                    <div class="info-value">${formatDate(student.createdAt)}</div>
-                </div>
-                <div style="margin-top: 20px;">
-                    <h4 style="margin-bottom: 15px;">📚 学习记录</h4>
-                    ${recordsHtml}
-                </div>
+            document.getElementById('modalBody').innerHTML = `
+                <div class="info-row"><div class="info-label">昵称</div><div class="info-value">${student.nickname}</div></div>
+                <div class="info-row"><div class="info-label">真实姓名</div><div class="info-value">${student.realName || '-'}</div></div>
+                <div class="info-row"><div class="info-label">性别</div><div class="info-value">${student.gender || '未设置'}</div></div>
+                <div class="info-row"><div class="info-label">班级</div><div class="info-value">${extractClass(student.realName)}</div></div>
+                <div class="info-row"><div class="info-label">注册时间</div><div class="info-value">${student.createdAt ? new Date(student.createdAt).toLocaleString('zh-CN') : '-'}</div></div>
             `;
         }
         
@@ -608,84 +462,31 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ limit: 20 })
                 });
-                
                 const data = await response.json();
                 const tableDiv = document.getElementById('rankingTable');
                 
-                if (data.success && data.rank && data.rank.length > 0) {
-                    let html = `
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>排名</th>
-                                    <th>昵称</th>
-                                    <th>WPM</th>
-                                    <th>准确率</th>
-                                    <th>用时</th>
-                                    <th>练习时间</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-                    
+                if (data.success && data.rank?.length > 0) {
+                    let html = `<table><thead><tr><th>排名</th><th>昵称</th><th>WPM</th><th>准确率</th><th>用时</th></tr></thead><tbody>`;
                     data.rank.forEach((r, i) => {
-                        const medal = i < 3 ? ['🥇', '🥈', '🥉'][i] : (i + 1);
-                        html += `
-                            <tr>
-                                <td style="font-size: 20px;">${medal}</td>
-                                <td><strong>${r.nickname}</strong></td>
-                                <td><span style="color: #667eea; font-weight: bold;">${r.wpm}</span></td>
-                                <td>${r.accuracy}%</td>
-                                <td>${r.time}s</td>
-                                <td>${formatDate(r.createdAt)}</td>
-                            </tr>
-                        `;
+                        const medal = ['🥇','🥈','🥉'][i] || (i+1);
+                        html += `<tr><td style="font-size:20px;">${medal}</td><td><strong>${r.nickname}</strong></td><td style="color:#667eea;font-weight:bold;">${r.wpm}</td><td>${r.accuracy}%</td><td>${r.duration}s</td></tr>`;
                     });
-                    
                     html += '</tbody></table>';
                     tableDiv.innerHTML = html;
                 } else {
-                    tableDiv.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-state-icon">🏆</div>
-                            <p>暂无排行数据</p>
-                        </div>
-                    `;
+                    tableDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏆</div><p>暂无排行数据</p></div>';
                 }
             } catch (error) {
-                console.error('加载排行榜失败:', error);
                 document.getElementById('rankingTable').innerHTML = '<p class="error">加载失败</p>';
             }
         }
         
         function updateStats() {
             document.getElementById('totalStudents').textContent = allStudents.length;
-            
             const completed = allStudents.filter(s => s.realName && s.gender).length;
             document.getElementById('completedInfo').textContent = completed;
-            
-            const classes = new Set();
-            allStudents.forEach(s => {
-                const className = extractClass(s.realName);
-                if (className && className !== '未分班') classes.add(className);
-            });
+            const classes = new Set(allStudents.map(s => extractClass(s.realName)).filter(c => c !== '未分班'));
             document.getElementById('totalClasses').textContent = classes.size;
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            try {
-                const date = new Date(dateStr);
-                return date.toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                return dateStr;
-            }
         }
         
         function logout() {

@@ -12,11 +12,7 @@
             min-height: 100vh;
             color: #333;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         header {
             background: rgba(255,255,255,0.95);
             padding: 20px 40px;
@@ -52,7 +48,7 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; color: #333; }
+        .welcome-section h1 { font-size: 36px; margin-bottom: 15px; }
         .welcome-section p { font-size: 18px; color: #666; margin-bottom: 30px; }
         
         .features {
@@ -79,6 +75,18 @@
         .guest-buttons { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
         .guest-buttons .btn { padding: 15px 40px; font-size: 16px; }
         
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
         .footer-settings {
             position: fixed;
             bottom: 20px;
@@ -96,37 +104,21 @@
             transition: all 0.3s;
         }
         .settings-btn:hover { transform: rotate(90deg); background: white; }
-        
-        .alert {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- 内容将由 JavaScript 动态插入 -->
-    </div>
+    <div id="app"></div>
     
-    <!-- 教师入口 -->
     <div class="footer-settings">
         <button class="settings-btn" onclick="location.href='/admin/'" title="教师管理">⚙️</button>
     </div>
 
     <script>
-        // 检查登录状态
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         const app = document.getElementById('app');
         
         if (!currentUser) {
-            // 未登录 - 显示访客界面
+            // 未登录
             app.innerHTML = `
                 <div class="container">
                     <div class="guest-section">
@@ -140,7 +132,7 @@
                 </div>
             `;
         } else {
-            // 已登录 - 显示学生主界面
+            // 已登录
             const nickname = currentUser.nickname || '同学';
             const needComplete = !currentUser.realName || !currentUser.gender;
             
@@ -154,13 +146,7 @@
                         </div>
                     </header>
                     
-                    ${needComplete ? `
-                    <div class="alert">
-                        <span>⚠️</span>
-                        <span>请完善您的真实姓名和性别信息，以便老师进行班级分组</span>
-                        <a href="/register/" style="color: #856404; margin-left: auto; text-decoration: underline;">去完善</a>
-                    </div>
-                    ` : ''}
+                    ${needComplete ? `<div class="alert">⚠️ 请完善真实姓名和性别信息，以便分班</div>` : ''}
                     
                     <div class="welcome-section">
                         <h1>开始今天的学习吧！</h1>
