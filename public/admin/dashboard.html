@@ -50,26 +50,6 @@
         }
         .stat-box h3 { font-size: 36px; color: #667eea; margin-bottom: 5px; }
         .stat-box p { color: #666; }
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-        }
-        .tab {
-            padding: 12px 24px;
-            border: none;
-            background: white;
-            cursor: pointer;
-            border-radius: 8px;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-        .tab.active {
-            background: #667eea;
-            color: white;
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         .card {
             background: white;
             border-radius: 12px;
@@ -87,13 +67,13 @@
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
-            flex-wrap: wrap;
         }
-        .filter-bar input, .filter-bar select {
+        .filter-bar input {
             padding: 10px 15px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 14px;
+            flex: 1;
         }
         .filter-bar button {
             padding: 10px 20px;
@@ -115,21 +95,12 @@
         }
         .badge-success { background: #d4edda; color: #155724; }
         .badge-warning { background: #fff3cd; color: #856404; }
-        .btn-small {
-            padding: 6px 14px;
-            font-size: 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-        .btn-edit { background: #28a745; color: white; }
         .empty-state {
             text-align: center;
             padding: 60px;
             color: #999;
         }
-        .error { color: #dc3545; padding: 20px; }
+        .error { color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px; }
         .debug-info {
             background: #f8f9fa;
             padding: 15px;
@@ -137,28 +108,13 @@
             margin-top: 20px;
             font-size: 13px;
             color: #666;
-        }
-        .student-class-form {
-            display: inline-flex;
-            gap: 5px;
-            align-items: center;
-        }
-        .student-class-form input {
-            padding: 4px 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 12px;
-            width: 80px;
-        }
-        .student-class-form button {
-            padding: 4px 10px;
-            font-size: 12px;
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>👨‍🏫 教师管理后台</h1>
+        <h1>👨 🏫 教师管理后台</h1>
         <div>
             <a href="/" class="btn">学生端首页</a>
             <button class="btn" onclick="logout()">退出登录</button>
@@ -168,61 +124,39 @@
     <div class="container">
         <div class="stats-grid">
             <div class="stat-box">
-                <h3 id="totalStudents">0</h3>
+                <h3 id="totalStudents">-</h3>
                 <p>总学生数</p>
             </div>
             <div class="stat-box">
-                <h3 id="completedInfo">0</h3>
+                <h3 id="completedInfo">-</h3>
                 <p>已完善信息</p>
             </div>
             <div class="stat-box">
-                <h3 id="withPassword">0</h3>
-                <p>设置密码</p>
+                <h3 id="classCount">-</h3>
+                <p>班级数量</p>
             </div>
             <div class="stat-box">
-                <h3 id="typingCount">0</h3>
+                <h3 id="typingRecords">-</h3>
                 <p>打字记录</p>
             </div>
         </div>
         
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('students', this)">👥 学生管理</button>
-            <button class="tab" onclick="switchTab('ranking', this)">🏆 排行榜</button>
-            <button class="tab" onclick="switchTab('debug', this)">🔧 调试</button>
-        </div>
-        
-        <!-- 学生管理 -->
-        <div id="students-tab" class="tab-content active">
-            <div class="card">
-                <h2>学生列表</h2>
-                <div class="filter-bar">
-                    <input type="text" id="searchInput" placeholder="搜索昵称..." onkeyup="filterStudents()">
-                    <button onclick="forceLoadStudents()">🔄 强制刷新</button>
-                    <button onclick="clearAllData()" style="background:#dc3545;">🗑️ 清空数据</button>
-                </div>
-                <div id="studentsTable">
-                    <p>正在加载学生数据...</p>
-                </div>
-                <div id="debugInfo" class="debug-info" style="display:none;"></div>
+        <div class="card">
+            <h2>👥 学生列表</h2>
+            <div class="filter-bar">
+                <input type="text" id="searchInput" placeholder="搜索昵称或姓名..." onkeyup="filterStudents()">
+                <button onclick="loadStudents()">🔄 刷新</button>
             </div>
-        </div>
-        
-        <!-- 排行榜 -->
-        <div id="ranking-tab" class="tab-content">
-            <div class="card">
-                <h2>打字排行榜 TOP 20</h2>
-                <div id="rankingTable">
-                    <p>正在加载排行榜...</p>
-                </div>
+            <div id="studentsTable">
+                <p>正在加载学生数据...</p>
             </div>
+            <div id="debugInfo" class="debug-info" style="display:none;"></div>
         </div>
         
-        <!-- 调试 -->
-        <div id="debug-tab" class="tab-content">
-            <div class="card">
-                <h2>存储调试</h2>
-                <button onclick="testKVStorage()" class="btn" style="margin-bottom:15px;">测试KV存储</button>
-                <div id="debugOutput"></div>
+        <div class="card">
+            <h2>🏆 打字排行榜 TOP 20</h2>
+            <div id="rankingTable">
+                <p>正在加载排行榜...</p>
             </div>
         </div>
     </div>
@@ -240,48 +174,35 @@
             loadRanking();
         };
 
-        function switchTab(tab, btn) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tab + '-tab').classList.add('active');
-        }
-
         async function loadStudents() {
             const tableDiv = document.getElementById('studentsTable');
             const debugDiv = document.getElementById('debugInfo');
             
             tableDiv.innerHTML = '<p>正在加载学生数据...</p>';
             debugDiv.style.display = 'block';
-            debugDiv.innerHTML = '正在请求 /api/admin/students...';
             
             try {
+                // 修复：使用正确的 API 路径和请求格式
                 const response = await fetch('/api/admin/students', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({})  // 发送空对象作为请求体
                 });
                 
-                debugDiv.innerHTML += '<br>响应状态: ' + response.status;
-                
                 const data = await response.json();
-                debugDiv.innerHTML += '<br>响应数据: ' + JSON.stringify(data).substring(0, 200);
+                debugDiv.innerHTML = 'API响应: ' + JSON.stringify(data, null, 2);
                 
                 if (data.success && data.students) {
                     allStudents = data.students;
                     renderStudents(allStudents);
                     updateStats();
                 } else {
-                    tableDiv.innerHTML = '<p class="error">加载失败：' + (data.message || '无数据') + '</p>';
+                    tableDiv.innerHTML = '<div class="error">加载失败：' + (data.message || '未知错误') + '</div>';
                 }
             } catch (error) {
-                tableDiv.innerHTML = '<p class="error">网络错误：' + error.message + '</p>';
-                debugDiv.innerHTML += '<br>错误详情: ' + error.message;
+                tableDiv.innerHTML = '<div class="error">网络错误：' + error.message + '</div>';
+                debugDiv.innerHTML = '错误详情: ' + error.message;
             }
-        }
-
-        function forceLoadStudents() {
-            loadStudents();
         }
 
         function renderStudents(students) {
@@ -300,15 +221,17 @@
                         <th>性别</th>
                         <th>密码</th>
                         <th>注册时间</th>
-                        <th>班级（从姓名提取）</th>
+                        <th>班级</th>
                     </tr>
                 </thead>
                 <tbody>`;
             
             students.forEach(s => {
-                const hasPassword = s.password ? '✅ 有' : '<span style="color:#999">无</span>';
-                const gender = s.gender || '<span style="color:#999">-</span>';
-                const realName = s.realName || '<span style="color:#999">未设置</span>';
+                const hasPassword = s.hasPassword ? 
+                    '<span class="badge badge-success">✅ 已设置</span>' : 
+                    '<span class="badge badge-warning">未设置</span>';
+                const gender = s.gender === 'male' ? '男' : (s.gender === 'female' ? '女' : '-');
+                const realName = s.realName || '<span style="color:#999">未填写</span>';
                 const className = extractClass(s.realName);
                 const dateStr = s.createdAt ? new Date(s.createdAt).toLocaleDateString('zh-CN') : '-';
                 
@@ -318,9 +241,7 @@
                     <td>${gender}</td>
                     <td>${hasPassword}</td>
                     <td>${dateStr}</td>
-                    <td>
-                        <span class="badge badge-success">${className || '未分班'}</span>
-                    </td>
+                    <td><span class="badge badge-success">${className || '未分班'}</span></td>
                 </tr>`;
             });
             
@@ -328,7 +249,7 @@
             tableDiv.innerHTML = html;
         }
 
-        // 从真实姓名提取班级（如"一班王小明"提取"一班"）
+        // 从真实姓名提取班级
         function extractClass(realName) {
             if (!realName) return '';
             const match = realName.match(/^([一二三四五六七八九十\d]+班)/);
@@ -348,8 +269,17 @@
             document.getElementById('totalStudents').textContent = allStudents.length;
             const completed = allStudents.filter(s => s.realName && s.gender).length;
             document.getElementById('completedInfo').textContent = completed;
-            const withPwd = allStudents.filter(s => s.password).length;
-            document.getElementById('withPassword').textContent = withPwd;
+            
+            // 统计班级数量
+            const classes = new Set();
+            allStudents.forEach(s => {
+                const cls = extractClass(s.realName);
+                if (cls) classes.add(cls);
+            });
+            document.getElementById('classCount').textContent = classes.size;
+            
+            // 打字记录数（简化统计）
+            document.getElementById('typingRecords').textContent = '-';
         }
 
         async function loadRanking() {
@@ -370,6 +300,7 @@
                                 <th>昵称</th>
                                 <th>WPM</th>
                                 <th>准确率</th>
+                                <th>时间</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -381,6 +312,7 @@
                             <td><strong>${r.nickname}</strong></td>
                             <td style="color:#667eea;font-weight:bold;">${r.wpm}</td>
                             <td>${r.accuracy}%</td>
+                            <td>${new Date(r.date).toLocaleDateString('zh-CN')}</td>
                         </tr>`;
                     });
                     
@@ -390,44 +322,8 @@
                     tableDiv.innerHTML = '<div class="empty-state"><p>暂无排行数据</p></div>';
                 }
             } catch (error) {
-                document.getElementById('rankingTable').innerHTML = '<p class="error">加载失败</p>';
+                document.getElementById('rankingTable').innerHTML = '<div class="error">加载失败</div>';
             }
-        }
-
-        async function testKVStorage() {
-            const output = document.getElementById('debugOutput');
-            output.innerHTML = '<p>测试中...</p>';
-            
-            try {
-                // 测试写入
-                const testData = { nickname: '__test__', createdAt: new Date().toISOString() };
-                await fetch('/api/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(testData)
-                });
-                
-                // 测试读取
-                const response = await fetch('/api/admin/students', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                const data = await response.json();
-                
-                output.innerHTML = '<p>✅ 存储测试成功</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
-            } catch (e) {
-                output.innerHTML = '<p class="error">❌ 测试失败: ' + e.message + '</p>';
-            }
-        }
-
-        function clearAllData() {
-            if (!confirm('确定要清空所有学生数据吗？此操作不可恢复！')) return;
-            
-            // 清除 localStorage 中的班级数据
-            localStorage.removeItem('customClasses');
-            alert('本地数据已清除。如需清除服务器数据，请手动删除 KV 存储。');
-            location.reload();
         }
 
         function logout() {
