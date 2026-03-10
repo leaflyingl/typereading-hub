@@ -80,7 +80,7 @@ export async function onRequest(context) {
       return json({ success: false, message: "密码错误" });
     }
 
-    /* ========================= 获取所有学生（修改） ========================== */
+     /* ========================= 获取所有学生（修改） ========================== */
     if (path === "admin/students") {
       // 先获取所有阅读记录和打字记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
@@ -108,9 +108,10 @@ export async function onRequest(context) {
           user.totalReadingWords = readingRecords
             .filter(r => r.nickname === user.nickname)
             .reduce((sum, r) => sum + (r.wordCount || 0), 0);
-          user.totalTypingCount = typingRecords
+          // 修改：打字总单词数（从打字记录中提取内容长度）
+          user.totalTypingWords = typingRecords
             .filter(r => r.nickname === user.nickname)
-            .length;
+            .reduce((sum, r) => sum + (r.wordCount || r.content?.length || 0), 0);
           students.push(user);
         }
       }
