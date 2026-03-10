@@ -3,9 +3,9 @@
 
 export async function onRequest(context) {
   const { request, env, params } = context;
-  const path = params.path?.[0] || '';
+  const path = params.path ? params.path.join('/') : '';
   
-  // 处理 CORS
+// 处理 CORS
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
