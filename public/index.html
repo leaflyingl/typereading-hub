@@ -96,7 +96,7 @@
         <div class="header">
             <div class="logo">📚 TypeReading Hub</div>
             <div class="user-status" id="userStatus">
-                <!-- 动态显示登录状态 -->
+                <!-- 动态显示 -->
             </div>
         </div>
         
@@ -107,22 +107,23 @@
         </div>
         
         <div class="features">
-            <div class="feature-card" onclick="goToPage('/register/')">
-                <div class="feature-icon">🎓</div>
-                <h3>学生登录</h3>
-                <p>注册或登录开始学习之旅</p>
+            <!-- 修复：第一项改为"学习历史" -->
+            <div class="feature-card" onclick="goTo('/history/')">
+                <div class="feature-icon">📊</div>
+                <h3>学习历史</h3>
+                <p>查看阅读与打字的学习统计记录</p>
             </div>
-            <div class="feature-card" onclick="goToPage('/reading/')">
+            <div class="feature-card" onclick="goTo('/reading/')">
                 <div class="feature-icon">📖</div>
                 <h3>阅读打卡</h3>
                 <p>每日阅读任务打卡记录</p>
             </div>
-            <div class="feature-card" onclick="goToPage('/typing/')">
+            <div class="feature-card" onclick="goTo('/typing/')">
                 <div class="feature-icon">⌨️</div>
                 <h3>打字练习</h3>
                 <p>盲打速度与准确率训练</p>
             </div>
-            <div class="feature-card" onclick="goToPage('/rank/')">
+            <div class="feature-card" onclick="goTo('/rank/')">
                 <div class="feature-icon">🏆</div>
                 <h3>排行榜</h3>
                 <p>查看打字成绩排名</p>
@@ -135,24 +136,26 @@
     </div>
 
     <script>
-        // 检查登录状态并显示用户名
-        function checkLoginStatus() {
+        window.onload = function() {
+            checkLogin();
+        };
+
+        function checkLogin() {
             const userStatusDiv = document.getElementById('userStatus');
             const startBtn = document.getElementById('startBtn');
-            const currentUser = localStorage.getItem('currentUser');
+            const currentUserStr = localStorage.getItem('currentUser');
             
-            if (currentUser) {
+            if (currentUserStr) {
                 try {
-                    const user = JSON.parse(currentUser);
+                    const user = JSON.parse(currentUserStr);
                     // 修复：正确显示用户名
                     userStatusDiv.innerHTML = `
-                        <span class="welcome-text">欢迎，${user.nickname || '同学'}！</span>
+                        <span class="welcome-text">欢迎，！</span>
                         <button class="btn btn-secondary" onclick="logout()">退出</button>
                     `;
                     startBtn.textContent = '进入学习';
                     startBtn.href = '/reading/';
                 } catch (e) {
-                    // 数据解析失败，清除存储
                     localStorage.removeItem('currentUser');
                     showLoginPrompt();
                 }
@@ -160,21 +163,21 @@
                 showLoginPrompt();
             }
         }
-        
+
         function showLoginPrompt() {
             const userStatusDiv = document.getElementById('userStatus');
             userStatusDiv.innerHTML = `
-                <span class="login-prompt">👋 请先登录后使用完整功能</span>
+                <span class="login-prompt">👋 请先登录</span>
                 <a href="/register/" class="btn btn-primary">登录 / 注册</a>
             `;
         }
-        
+
         function logout() {
             localStorage.removeItem('currentUser');
             location.reload();
         }
-        
-        function goToPage(url) {
+
+        function goTo(url) {
             const currentUser = localStorage.getItem('currentUser');
             if (!currentUser && url !== '/register/') {
                 alert('请先登录后再使用此功能');
@@ -183,9 +186,6 @@
             }
             location.href = url;
         }
-        
-        // 页面加载时检查登录状态
-        checkLoginStatus();
     </script>
 </body>
 </html>
