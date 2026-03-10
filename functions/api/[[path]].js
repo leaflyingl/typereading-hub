@@ -308,3 +308,34 @@ export async function onRequest(context) {
     }, 500);
   }
 }
+
+   // 更新用户信息（教师后台用）
+if (path === 'user/update') {
+    const { nickname, realName, gender } = body;
+    
+    if (!nickname) {
+        return jsonResponse({ success: false, message: '缺少昵称参数' });
+    }
+    
+    const userData = await env.TYPEREADING_KV.get(`user::`);
+    if (!userData) {
+        return jsonResponse({ success: false, message: '用户不存在' });
+    }
+    
+    const user = JSON.parse(userData);
+    user.realName = realName !== undefined ? realName : user.realName;
+    user.gender = gender !== undefined ? gender : user.gender;
+    user.updatedAt = new Date().toISOString();
+    
+    await env.TYPEREADING_KV.put(`user::`, JSON.stringify(user));
+    
+    return jsonResponse({
+        success: true,
+        message: '更新成功',
+        user: {
+            nickname: user.nickname,
+            realName: user.realName,
+            gender: user.gender,
+        }
+    });
+}
