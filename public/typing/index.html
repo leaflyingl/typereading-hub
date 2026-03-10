@@ -42,10 +42,11 @@
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);  /* 改为4列 */
             gap: 15px;
             margin: 20px 0;
         }
+
         .stat-box {
             background: #f8f9fa;
             padding: 15px;
@@ -86,7 +87,12 @@
                     <h3 id="time">0s</h3>
                     <p>用时</p>
                 </div>
+                <div class="stat-box">
+                    <h3 id="wordCount">0</h3>
+                    <p>单词数</p>
+                </div>
             </div>
+
             <button class="btn btn-primary" onclick="submitResult()">提交成绩</button>
             <button class="btn btn-secondary" onclick="resetTest()">重新开始</button>
             <a href="/" class="btn btn-secondary">返回首页</a>
@@ -104,12 +110,17 @@
         let startTime = null;
         let timerInterval = null;
         
+        
         function checkTyping() {
             const input = document.getElementById('inputText').value;
             if (!startTime && input.length > 0) {
                 startTime = Date.now();
                 timerInterval = setInterval(updateTime, 100);
             }
+            
+            // 新增：实时计算单词数
+            const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
+            document.getElementById('wordCount').textContent = wordCount;
             
             // 计算准确率
             let correct = 0;
@@ -127,7 +138,7 @@
                 document.getElementById('wpm').textContent = wpm;
             }
         }
-        
+
         function updateTime() {
             if (startTime) {
                 const elapsed = Math.round((Date.now() - startTime) / 1000);
@@ -176,9 +187,11 @@
             document.getElementById('wpm').textContent = '0';
             document.getElementById('accuracy').textContent = '100%';
             document.getElementById('time').textContent = '0s';
+            document.getElementById('wordCount').textContent = '0';  // 新增
             startTime = null;
             clearInterval(timerInterval);
         }
+
     </script>
 </body>
 </html>
