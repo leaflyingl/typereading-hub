@@ -6,95 +6,228 @@
     <title>学生登录 - TypeReading Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 40px 20px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        .nav { max-width: 450px; margin: 0 auto 20px; text-align: center; }
-        .nav a { color: white; text-decoration: none; font-size: 1.1em; opacity: 0.9; }
-        .container { max-width: 450px; margin: 0 auto; }
-        .card { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+        .box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
         }
-        h2 { text-align: center; color: #333; margin-bottom: 10px; font-size: 1.8em; }
-        .subtitle { text-align: center; color: #999; margin-bottom: 30px; font-size: 0.95em; }
-        .tabs { display: flex; margin-bottom: 30px; border-bottom: 2px solid #f0f0f0; }
-        .tab { 
-            flex: 1; 
-            padding: 15px; 
-            text-align: center; 
-            cursor: pointer; 
-            color: #999;
-            font-weight: 500;
-            transition: all 0.3s;
+        h1 { text-align: center; margin-bottom: 30px; color: #333; }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
         }
-        .tab.active { 
-            color: #667eea; 
-            border-bottom: 2px solid #667eea; 
-            margin-bottom: -2px;
-        }
-        .form-group { margin-bottom: 20px; }
-        label { 
-            display: block; 
-            margin-bottom: 8px; 
-            color: #555; 
-            font-weight: 500;
-            font-size: 0.9em;
-        }
-        .required::after { content: ' *'; color: #e74c3c; }
-        input[type="text"], input[type="password"] { 
-            width: 100%; 
-            padding: 14px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 10px; 
-            font-size: 16px; 
-            transition: border-color 0.3s;
-        }
-        input:focus { outline: none; border-color: #667eea; }
-        .radio-group { display: flex; gap: 20px; }
-        .radio-item { 
-            flex: 1; 
-            padding: 12px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 10px; 
+        .tab {
+            flex: 1;
+            padding: 12px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
         }
-        .radio-item:hover, .radio-item.selected { 
-            border-color: #667eea; 
-            background: #f0f3ff;
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: bold;
         }
-        .radio-item input { display: none; }
-        button { 
-            width: 100%; 
-            padding: 16px; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            border: none; 
-            border-radius: 10px; 
-            font-size: 16px; 
-            cursor: pointer; 
-            font-weight: 600;
-            margin-top: 10px;
-            transition: transform 0.2s, box-shadow 0.2s;
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
         }
-        button:hover:not(:disabled) { 
-            transform: translateY(-2px); 
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); 
-        }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        button.secondary {
-            background: #f8f9fa;
-            color: #666;
+        input, select {
+            width: 100%;
+            padding: 12px;
             border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
         }
-        button.danger {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+        input:focus { outline: none; border-color: #667eea; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
         }
-        .message
+        button:hover { background: #5568d3; }
+        .error {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+        }
+        .optional {
+            color: #999;
+            font-size: 12px;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>📚 TypeReading Hub</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('login')">登录</div>
+            <div class="tab" onclick="switchTab('register')">注册</div>
+        </div>
+        
+        <!-- 登录表单 -->
+        <div id="login-form">
+            <div class="form-group">
+                <label>昵称</label>
+                <input type="text" id="login-nickname" placeholder="请输入昵称">
+            </div>
+            <div class="form-group">
+                <label>密码 <span class="optional">（未设置过可不填）</span></label>
+                <input type="password" id="login-password" placeholder="请输入密码">
+            </div>
+            <button onclick="doLogin()">登录</button>
+        </div>
+        
+        <!-- 注册表单 -->
+        <div id="register-form" style="display: none;">
+            <div class="form-group">
+                <label>昵称 *</label>
+                <input type="text" id="reg-nickname" placeholder="设置一个昵称">
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" id="reg-password" placeholder="设置密码（可选）">
+            </div>
+            <div class="form-group">
+                <label>真实姓名 <span class="optional">（用于分班级，如"一班张三"）</span></label>
+                <input type="text" id="reg-realname" placeholder="例如：一班张三">
+            </div>
+            <div class="form-group">
+                <label>性别</label>
+                <select id="reg-gender">
+                    <option value="">请选择</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <button onclick="doRegister()">注册</button>
+        </div>
+        
+        <p class="error" id="errorMsg"></p>
+        <a href="/" class="back">← 返回首页</a>
+    </div>
+
+    <script>
+        let currentTab = 'login';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (tab === 'login') {
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('register-form').style.display = 'none';
+            } else {
+                document.getElementById('login-form').style.display = 'none';
+                document.getElementById('register-form').style.display = 'block';
+            }
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+        
+        async function doLogin() {
+            const nickname = document.getElementById('login-nickname').value.trim();
+            const password = document.getElementById('login-password').value;
+            const error = document.getElementById('errorMsg');
+            
+            if (!nickname) {
+                error.textContent = '请输入昵称';
+                error.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nickname, password})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    location.href = '/';
+                } else {
+                    error.textContent = data.message || '登录失败';
+                    error.style.display = 'block';
+                }
+            } catch(e) {
+                error.textContent = '网络错误';
+                error.style.display = 'block';
+            }
+        }
+        
+        async function doRegister() {
+            const nickname = document.getElementById('reg-nickname').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const realName = document.getElementById('reg-realname').value.trim();
+            const gender = document.getElementById('reg-gender').value;
+            const error = document.getElementById('errorMsg');
+            
+            if (!nickname) {
+                error.textContent = '请输入昵称';
+                error.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({nickname, password, realName, gender})
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    location.href = '/';
+                } else {
+                    error.textContent = data.message || '注册失败';
+                    error.style.display = 'block';
+                }
+            } catch(e) {
+                error.textContent = '网络错误';
+                error.style.display = 'block';
+            }
+        }
+        
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (currentTab === 'login') doLogin();
+                else doRegister();
+            }
+        });
+    </script>
+</body>
+</html>
