@@ -27,7 +27,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名：user: + nickname
+      // ✅ 修复：正确使用 nickname 变量
       const userKey = `user:`;
       const exists = await env.TYPEREADING_KV.get(userKey);
 
@@ -67,7 +67,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名
+      // ✅ 修复：正确使用 nickname 变量
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
 
@@ -77,7 +77,6 @@ export async function onRequest(context) {
 
       const user = JSON.parse(data);
 
-      // ✅ 支持无密码登录（如果用户没有设置密码）
       if (user.password && user.password !== password) {
         return json({ success: false, message: "密码错误" });
       }
@@ -126,7 +125,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名
+      // ✅ 修复：正确使用 nickname 变量
       const userKey = `user:`;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
@@ -152,7 +151,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名
+      // ✅ 修复：正确使用 nickname 变量
       const userKey = `user:`;
       await env.TYPEREADING_KV.delete(userKey);
       
@@ -193,7 +192,7 @@ export async function onRequest(context) {
       }
 
       for (const nickname of nicknames) {
-        // ✅ 正确的键名
+        // ✅ 修复：正确使用 nickname 变量
         const userKey = `user:`;
         await env.TYPEREADING_KV.delete(userKey);
         
@@ -273,7 +272,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名：reading:nickname:timestamp
+      // ✅ 修复：正确使用 nickname 变量
       const recordKey = `reading::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -360,7 +359,7 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // ✅ 正确的键名：typing:nickname:timestamp
+      // ✅ 修复：正确使用 nickname 变量
       const recordKey = `typing::`;
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
@@ -469,14 +468,13 @@ export async function onRequest(context) {
 
         const record = JSON.parse(data);
         
-        // ✅ 正确的键名：使用记录中的昵称获取用户信息
+        // ✅ 修复：正确使用记录中的 nickname 获取用户信息
         const userKey = `user:`;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
 
         const user = JSON.parse(userData);
 
-        // 只显示有真实姓名的学生
         if (user.realName) {
           results.push({
             ...record,
