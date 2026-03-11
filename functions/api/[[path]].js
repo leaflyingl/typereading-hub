@@ -21,7 +21,6 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
       const userKey = "user:" + nickname;
       const exists = await env.TYPEREADING_KV.get(userKey);
       if (exists) {
@@ -56,7 +55,6 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
       const userKey = "user:" + nickname;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) {
@@ -80,9 +78,8 @@ export async function onRequest(context) {
       return json({ success: false, message: "密码错误" });
     }
 
-     /* ========================= 获取所有学生（修改） ========================== */
+    /* ========================= 获取所有学生 ========================== */
     if (path === "admin/students") {
-      // 先获取所有阅读记录和打字记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       const readingRecords = [];
       for (const key of readingKeys) {
@@ -97,18 +94,15 @@ export async function onRequest(context) {
         if (data) typingRecords.push(JSON.parse(data));
       }
 
-      // 获取学生列表并附加统计数据
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
       const students = [];
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
           const user = JSON.parse(data);
-          // 计算该学生的统计数据
           user.totalReadingWords = readingRecords
             .filter(r => r.nickname === user.nickname)
             .reduce((sum, r) => sum + (r.wordCount || 0), 0);
-          // 修改：打字总单词数（从打字记录中提取内容长度）
           user.totalTypingWords = typingRecords
             .filter(r => r.nickname === user.nickname)
             .reduce((sum, r) => sum + (r.wordCount || r.content?.length || 0), 0);
@@ -119,7 +113,6 @@ export async function onRequest(context) {
       return json({ success: true, students });
     }
 
-
     /* ========================= 更新学生信息 ========================== */
     if (path === "admin/student/update") {
       const { nickname, realName, gender, className } = await request.json();
@@ -127,7 +120,6 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
       const userKey = "user:" + nickname;
       const data = await env.TYPEREADING_KV.get(userKey);
       if (!data) return json({ success: false, message: "用户不存在" });
@@ -148,11 +140,9 @@ export async function onRequest(context) {
         return json({ success: false, message: "昵称不能为空" });
       }
 
-      // 修复：正确使用 nickname 变量
       const userKey = "user:" + nickname;
       await env.TYPEREADING_KV.delete(userKey);
 
-      // 删除该学生的所有记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       for (const key of readingKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -186,11 +176,9 @@ export async function onRequest(context) {
       }
 
       for (const nickname of nicknames) {
-        // 修复：正确使用 nickname 变量
         const userKey = "user:" + nickname;
         await env.TYPEREADING_KV.delete(userKey);
 
-        // 删除阅读记录
         const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
         for (const key of readingKeys) {
           const data = await env.TYPEREADING_KV.get(key.name);
@@ -202,7 +190,6 @@ export async function onRequest(context) {
           }
         }
 
-        // 删除打字记录
         const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
         for (const key of typingKeys) {
           const data = await env.TYPEREADING_KV.get(key.name);
@@ -225,7 +212,6 @@ export async function onRequest(context) {
         return json({ success: false, message: "班级名称不能为空" });
       }
 
-      // 修复：正确使用 className 变量
       const classKey = "class:" + className;
       await env.TYPEREADING_KV.put(
         classKey,
@@ -249,7 +235,7 @@ export async function onRequest(context) {
       return json({ success: true, classes });
     }
 
-        /* ========================= 查询今日打卡状态（新增） ========================== */
+    /* ========================= 查询今日打卡状态 ========================== */
     if (path === "checkin/status") {
       const { nickname } = await request.json();
       if (!nickname) {
@@ -280,7 +266,7 @@ export async function onRequest(context) {
       });
     }
 
-    /* ========================= 阅读打卡（修改） ========================== */
+    /* ========================= 阅读打卡 ========================== */
     if (path === "checkin/reading") {
       const { nickname, articleTitle, wordCount } = await request.json();
       if (!nickname) {
@@ -289,7 +275,6 @@ export async function onRequest(context) {
 
       const today = new Date().toISOString().split("T")[0];
       
-      // 新增：检查今日是否已打卡
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -317,7 +302,6 @@ export async function onRequest(context) {
 
       return json({ success: true, message: "打卡成功" });
     }
-
 
     /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
@@ -361,7 +345,7 @@ export async function onRequest(context) {
       return json({ success: true, records });
     }
 
-    /* ========================= 打字记录提交（修改） ========================== */
+    /* ========================= 打字记录提交 ========================== */
     if (path === "typing/result") {
       const { nickname, wpm, accuracy, wordCount, content } = await request.json();
       if (!nickname) {
@@ -372,7 +356,6 @@ export async function onRequest(context) {
       const now = new Date();
       const dateStr = now.toISOString().split("T")[0];
 
-      // 修改：添加 wordCount 字段，优先使用传入的 wordCount，否则计算 content 长度
       const finalWordCount = Number(wordCount) || (content ? content.length : 0);
 
       await env.TYPEREADING_KV.put(
@@ -381,8 +364,8 @@ export async function onRequest(context) {
           nickname,
           wpm: Number(wpm) || 0,
           accuracy: Number(accuracy) || 0,
-          wordCount: finalWordCount,  // 新增：打字单词数
-          content: content || "",      // 可选：保存原文
+          wordCount: finalWordCount,
+          content: content || "",
           date: dateStr,
           timestamp: now.toISOString()
         })
@@ -403,7 +386,6 @@ export async function onRequest(context) {
       const thisMonth = today.substring(0, 7);
       const thisYear = today.substring(0, 4);
 
-      // 获取阅读记录
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
       const readingRecords = [];
       for (const key of readingKeys) {
@@ -417,7 +399,6 @@ export async function onRequest(context) {
         }
       }
 
-      // 获取打字记录
       const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const typingRecords = [];
       for (const key of typingKeys) {
@@ -431,11 +412,9 @@ export async function onRequest(context) {
         }
       }
 
-      // 过滤当前用户的记录
       const userReading = readingRecords.filter(r => r.nickname === nickname);
       const userTyping = typingRecords.filter(r => r.nickname === nickname);
 
-      // 计算统计
       const stats = {
         reading: {
           day: calcStats(userReading, today, 'date'),
@@ -464,9 +443,9 @@ export async function onRequest(context) {
       return json({ success: true, stats });
     }
 
-        /* ========================= 保存阅读/打字内容（新增） ========================== */
+    /* ========================= 保存阅读/打字内容（修改） ========================== */
     if (path === "admin/content/save") {
-      const { id, type, title, content, wordCount, difficulty, isActive } = await request.json();
+      const { id, type, title, content, wordCount, difficulty, targetClass, isActive } = await request.json();
       
       if (!type || !["reading", "typing"].includes(type)) {
         return json({ success: false, message: "类型错误" });
@@ -488,6 +467,7 @@ export async function onRequest(context) {
         content,
         wordCount: Number(wordCount) || content.length,
         difficulty: difficulty || "medium",
+        targetClass: targetClass || "",
         isActive: isActive !== false,
         updatedAt: new Date().toISOString()
       };
@@ -496,7 +476,7 @@ export async function onRequest(context) {
       return json({ success: true, content: contentData });
     }
 
-    /* ========================= 获取内容列表（新增） ========================== */
+    /* ========================= 获取内容列表 ========================== */
     if (path === "admin/content/list") {
       const { type } = await request.json();
       
@@ -515,7 +495,7 @@ export async function onRequest(context) {
       return json({ success: true, contents });
     }
 
-    /* ========================= 删除内容（新增） ========================== */
+    /* ========================= 删除内容 ========================== */
     if (path === "admin/content/delete") {
       const { id, type } = await request.json();
       if (!id || !type) {
@@ -527,8 +507,11 @@ export async function onRequest(context) {
       return json({ success: true });
     }
 
-    /* ========================= 获取今日阅读内容（新增） ========================== */
+    /* ========================= 获取今日阅读内容（修改） ========================== */
     if (path === "content/reading") {
+      const body = await request.json().catch(() => ({}));
+      const className = body.className || "";
+      
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:reading:" });
       const contents = [];
       for (const key of keys) {
@@ -536,7 +519,9 @@ export async function onRequest(context) {
         if (data) {
           const content = JSON.parse(data);
           if (content.isActive) {
-            contents.push(content);
+            if (!className || !content.targetClass || content.targetClass === className) {
+              contents.push(content);
+            }
           }
         }
       }
@@ -548,8 +533,11 @@ export async function onRequest(context) {
       return json({ success: true, content: selectedContent });
     }
 
-    /* ========================= 获取打字练习内容（新增） ========================== */
+    /* ========================= 获取打字练习内容（修改） ========================== */
     if (path === "content/typing") {
+      const body = await request.json().catch(() => ({}));
+      const className = body.className || "";
+      
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
       const contents = [];
       for (const key of keys) {
@@ -557,7 +545,9 @@ export async function onRequest(context) {
         if (data) {
           const content = JSON.parse(data);
           if (content.isActive) {
-            contents.push(content);
+            if (!className || !content.targetClass || content.targetClass === className) {
+              contents.push(content);
+            }
           }
         }
       }
@@ -579,7 +569,6 @@ export async function onRequest(context) {
         if (!data) continue;
         const record = JSON.parse(data);
 
-        // 修复：正确使用 record.nickname 变量
         const userKey = "user:" + record.nickname;
         const userData = await env.TYPEREADING_KV.get(userKey);
         if (!userData) continue;
@@ -605,7 +594,6 @@ export async function onRequest(context) {
     return json({ success: false, message: err.message });
   }
 
-  // 辅助函数
   function getWeekStart(date) {
     const d = new Date(date);
     const day = d.getDay();
