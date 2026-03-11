@@ -237,42 +237,48 @@ export async function onRequest(context) {
 
     /* ========================= 分组管理 API（新增） ========================== */
     
-    // 获取分组列表
-    if (path === "admin/groups/list") {
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-      const groups = [];
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-          const group = JSON.parse(data);
-          group.classNames = Array.isArray(group.classNames) ? group.classNames : [];
-          groups.push(group);
-        }
-      }
-      return json({ success: true, groups });
+   // 获取分组列表 - 修复：添加 classNames 兜底
+if (path === "admin/groups/list") {
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+  const groups = [];
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const group = JSON.parse(data);
+      group.classNames = Array.isArray(group.classNames) ? group.classNames : [];  // ✅ 兜底
+      groups.push(group);
     }
+  }
+  return json({ success: true, groups });
+}
 
-    // 创建/更新分组
-    if (path === "admin/groups/save") {
-      const { id, name, classNames } = await request.json();
-      
-      if (!name) {
-        return json({ success: false, message: "分组名称不能为空" });
-      }
+   // 创建/更新分组 - 修复：分离 KV key 与业务 id
+if (path === "admin/groups/save") {
+  const { id, name, classNames } = await request.json();
+  
+  if (!name) {
+    return json({ success: false, message: "分组名称不能为空" });
+  }
 
-      const groupId = id || Date.now().toString();
-      const groupKey = "group:" + groupId;
-      
-      const groupData = {
-        id: groupId,
-        name,
-        classNames: Array.isArray(classNames) ? classNames : [],
-        updatedAt: new Date().toISOString()
-      };
+  const groupId = id || Date.now().toString();  // ✅ 纯数字 id
+  const groupKey = "group:" + groupId;  // ✅ KV key 单独定义
+  
+  const groupData = {
+    id: groupId,  // ✅ 存储纯 id
+    name,
+    classNames: Array.isArray(classNames) ? classNames : [],  // ✅ 确保是数组
+    updatedAt: new Date().toISOString()
+  };
 
-      await env.TYPEREADING_KV.put(groupKey, JSON.stringify(groupData));
-      return json({ success: true, group: groupData });
-    }
+  // 新建分组时添加 createdAt
+  if (!id) {
+    groupData.createdAt = new Date().toISOString();
+  }
+
+  await env.TYPEREADING_KV.put(groupKey, JSON.stringify(groupData));  // ✅ 使用正确的 key
+  return json({ success: true, group: groupData });
+}
+
 
     // 删除分组
     if (path === "admin/groups/delete") {
