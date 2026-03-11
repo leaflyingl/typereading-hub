@@ -249,7 +249,6 @@ export async function onRequest(context) {
 +  group.classNames = Array.isArray(group.classNames) ? group.classNames : [];
 +  groups.push(group);
 }
-
       }
       return json({ success: true, groups });
     }
