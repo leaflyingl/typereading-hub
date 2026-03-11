@@ -522,17 +522,6 @@
       if (tab === 'rank') loadRank();
     }
 
-    // ========== 初始化 ==========
-    async function init() {
-      // 并行加载所有基础数据
-      await Promise.all([
-        loadClasses(),
-        loadGroups()
-      ]);
-      // 然后加载学生数据（依赖班级和分组）
-      await loadStudents();
-    }
-
     // ========== 学生管理 ==========
     async function loadStudents() {
       try {
@@ -930,4 +919,232 @@
       let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>分发目标</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
       contents.forEach(item => {
         const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
-        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty
+        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
+        
+        // 显示分发目标
+        let targetDisplay = '所有班级';
+        if (item.targetType === 'class' && item.targetClasses && item.targetClasses.length > 0) {
+          targetDisplay = '班级: ' + item.targetClasses.join(', ');
+        } else if (item.targetType === 'group' && item.targetGroups && item.targetGroups.length > 0) {
+          const groupNames = item.targetGroups.map(gid => {
+            const g = allGroups.find(grp => grp.id === gid);
+            return g ? g.name : gid;
+          });
+          targetDisplay = '分组: ' + groupNames.join(', ');
+        }
+        
+        const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
+        const date = new Date(item.updatedAt).toLocaleDateString();
+        html += '<tr>' +
+          '<td>' + typeTag + '</td>' +
+          '<td>' + item.title + '</td>' +
+          '<td>' + (item.wordCount || 0) + '</td>' +
+          '<td>' + diff + '</td>' +
+          '<td>' + targetDisplay + '</td>' +
+          '<td>' + status + '</td>' +
+          '<td>' + date + '</td>' +
+          '<td>' +
+            '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent(\'' + item.id + '\', \'' + item.type + '\')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('content-list').innerHTML = html;
+      window.currentContents = contents;
+    }
+
+    function editContentById(id) {
+      const item = window.currentContents.find(c => c.id === id);
+      if (item) editContent(item);
+    }
+
+    function showContentModal() {
+      editingContentId = null;
+      document.getElementById('content-modal-title').textContent = '添加内容';
+      document.getElementById('content-type').value = 'reading';
+      document.getElementById('content-title').value = '';
+      document.getElementById('content-text').value = '';
+      document.getElementById('content-wordcount').value = '';
+      document.getElementById('content-difficulty').value = 'medium';
+      
+      // 重置目标选择
+      document.querySelector('input[name="target-type"][value="all"]').checked = true;
+      toggleTargetSection();
+      
+      document.getElementById('content-active').checked = true;
+      document.getElementById('content-modal').style.display = 'flex';
+    }
+
+    function editContent(content) {
+      editingContentId = content.id;
+      document.getElementById('content-modal-title').textContent = '编辑内容';
+      document.getElementById('content-type').value = content.type;
+      document.getElementById('content-title').value = content.title;
+      document.getElementById('content-text').value = content.content;
+      document.getElementById('content-wordcount').value = content.wordCount || '';
+      document.getElementById('content-difficulty').value = content.difficulty || 'medium';
+      
+      // 设置目标选择
+      const targetType = content.targetType || 'all';
+      document.querySelector('input[name="target-type"][value="' + targetType + '"]').checked = true;
+      toggleTargetSection();
+      
+      if (targetType === 'class' && content.targetClasses) {
+        document.querySelectorAll('#content-target-classes input').forEach(cb => {
+          cb.checked = content.targetClasses.includes(cb.value);
+        });
+      } else if (targetType === 'group' && content.targetGroups) {
+        document.querySelectorAll('#content-target-groups input').forEach(cb => {
+          cb.checked = content.targetGroups.includes(cb.value);
+        });
+      }
+      
+      document.getElementById('content-active').checked = content.isActive !== false;
+      document.getElementById('content-modal').style.display = 'flex';
+    }
+
+    function toggleTargetSection() {
+      const targetType = document.querySelector('input[name="target-type"]:checked').value;
+      document.getElementById('target-class-section').style.display = targetType === 'class' ? 'block' : 'none';
+      document.getElementById('target-group-section').style.display = targetType === 'group' ? 'block' : 'none';
+      
+      // 渲染班级选择
+      if (targetType === 'class') {
+        const container = document.getElementById('content-target-classes');
+        let html = '';
+        allClasses.forEach(c => {
+          html += '<label class="checkbox-item">' +
+            '<input type="checkbox" value="' + c.name + '"> ' +
+            c.name +
+          '</label>';
+        });
+        container.innerHTML = html;
+      }
+      
+      // 渲染分组选择
+      if (targetType === 'group') {
+        const container = document.getElementById('content-target-groups');
+        let html = '';
+        allGroups.forEach(g => {
+          html += '<label class="checkbox-item">' +
+            '<input type="checkbox" value="' + g.id + '"> ' +
+            g.name +
+          '</label>';
+        });
+        container.innerHTML = html;
+      }
+    }
+
+    function closeContentModal() {
+      document.getElementById('content-modal').style.display = 'none';
+      editingContentId = null;
+    }
+
+    async function saveContent() {
+      const targetType = document.querySelector('input[name="target-type"]:checked').value;
+      
+      let targetClasses = [];
+      let targetGroups = [];
+      
+      if (targetType === 'class') {
+        document.querySelectorAll('#content-target-classes input:checked').forEach(cb => {
+          targetClasses.push(cb.value);
+        });
+      } else if (targetType === 'group') {
+        document.querySelectorAll('#content-target-groups input:checked').forEach(cb => {
+          targetGroups.push(cb.value);
+        });
+      }
+      
+      const data = {
+        id: editingContentId,
+        type: document.getElementById('content-type').value,
+        title: document.getElementById('content-title').value.trim(),
+        content: document.getElementById('content-text').value.trim(),
+        wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
+        difficulty: document.getElementById('content-difficulty').value,
+        targetType: targetType,
+        targetClasses: targetClasses,
+        targetGroups: targetGroups,
+        isActive: document.getElementById('content-active').checked
+      };
+      
+      if (!data.title || !data.content) {
+        alert('请填写标题和内容');
+        return;
+      }
+      
+      if (targetType === 'class' && targetClasses.length === 0) {
+        alert('请至少选择一个班级');
+        return;
+      }
+      
+      if (targetType === 'group' && targetGroups.length === 0) {
+        alert('请至少选择一个分组');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/content/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeContentModal();
+          loadContentList();
+        } else {
+          alert(result.message || '保存失败');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
+    async function deleteContent(id, type) {
+      if (!confirm('确定删除此内容？')) return;
+      try {
+        const res = await fetch('/api/admin/content/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, type })
+        });
+        const result = await res.json();
+        if (result.success) loadContentList();
+        else alert(result.message || '删除失败');
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
+    // ========== 排行榜 ==========
+    async function loadRank() {
+      try {
+        const res = await fetch('/api/rank/typing');
+        const result = await res.json();
+        if (result.success) renderRank(result.rank);
+      } catch (e) {
+        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
+      }
+    }
+
+    function renderRank(rank) {
+      if (rank.length === 0) {
+        document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
+        return;
+      }
+      let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
+      rank.forEach((r, i) => {
+        html += '<tr><td>' + (i + 1) + '</td><td>' + (r.realName || '-') + '</td><td>' + (r.className || '-') + '</td><td>' + r.wpm + '</td><td>' + r.accuracy + '%</td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('rank-list').innerHTML = html;
+    }
+
+    // 初始化 - 修复：直接调用 loadStudents 而不是不存在的 init()
+    loadStudents();
+  </script>
+</body>
+</html>
