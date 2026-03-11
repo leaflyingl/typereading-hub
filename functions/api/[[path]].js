@@ -499,162 +499,234 @@ if (path === "admin/groups/save") {
       return json({ success: true, stats });
     }
 
-    /* ========================= 保存阅读/打字内容（修改：添加 targetGroup） ========================== */
-    if (path === "admin/content/save") {
-      const { id, type, title, content, wordCount, difficulty, targetClass, targetGroup, isActive } = await request.json();
-      
-      if (!type || !["reading", "typing"].includes(type)) {
-        return json({ success: false, message: "类型错误" });
-      }
-      if (!title) {
-        return json({ success: false, message: "标题不能为空" });
-      }
-      if (!content) {
-        return json({ success: false, message: "内容不能为空" });
-      }
+    /* ========================= 保存内容（统一内容池） ========================== */
+if (path === "admin/content/save") {
+  const { id, title, content, wordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
+  
+  if (!title) {
+    return json({ success: false, message: "标题不能为空" });
+  }
+  if (!content) {
+    return json({ success: false, message: "内容不能为空" });
+  }
+  if (!useForReading && !useForTyping) {
+    return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
+  }
 
-      const contentId = id || Date.now().toString();
-      const contentKey = "content:" + type + ":" + contentId;
+  const contentId = id || Date.now().toString();
+  const contentKey = "content:item:" + contentId;  // 统一前缀
 
-      const contentData = {
-        id: contentId,
-        type,
-        title,
-        content,
-        wordCount: Number(wordCount) || content.length,
-        difficulty: difficulty || "medium",
-        targetClass: targetClass || "",
-        targetGroup: targetGroup || "",  // 新增：指定分组
-        isActive: isActive !== false,
-        updatedAt: new Date().toISOString()
-      };
+  const contentData = {
+    id: contentId,
+    title,
+    content,
+    wordCount: Number(wordCount) || content.length,
+    difficulty: difficulty || "medium",
+    useForReading: useForReading === true,
+    useForTyping: useForTyping === true,
+    targetType: targetType || "all",  // "all" | "group" | "class"
+    targetGroup: targetGroup || "",
+    targetClasses: targetClasses || [],  // 数组，支持多班级
+    isActive: isActive !== false,
+    updatedAt: new Date().toISOString()
+  };
 
-      await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
-      return json({ success: true, content: contentData });
+  await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
+  return json({ success: true, content: contentData });
+}
+
+
+   /* ========================= 获取内容列表（统一内容池） ========================== */
+if (path === "admin/content/list") {
+  const { useForReading, useForTyping } = await request.json();
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+  const contents = [];
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      // 可选：按使用方式筛选
+      if (useForReading && !content.useForReading) continue;
+      if (useForTyping && !content.useForTyping) continue;
+      contents.push(content);
     }
+  }
+  contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  return json({ success: true, contents });
+}
 
-    /* ========================= 获取内容列表 ========================== */
-    if (path === "admin/content/list") {
-      const { type } = await request.json();
-      
-      let prefix = "content:";
-      if (type) {
-        prefix = "content:" + type + ":";
-      }
+    /* ========================= 删除内容（支持新旧格式） ========================== */
+if (path === "admin/content/delete") {
+  const { id, type } = await request.json();
+  if (!id) {
+    return json({ success: false, message: "参数错误：缺少ID" });
+  }
 
-      const { keys } = await env.TYPEREADING_KV.list({ prefix });
-      const contents = [];
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) contents.push(JSON.parse(data));
-      }
-      contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-      return json({ success: true, contents });
-    }
-
-    /* ========================= 删除内容 ========================== */
-    if (path === "admin/content/delete") {
-      const { id, type } = await request.json();
-      if (!id || !type) {
-        return json({ success: false, message: "参数错误" });
-      }
-
-      const contentKey = "content:" + type + ":" + id;
-      await env.TYPEREADING_KV.delete(contentKey);
+  // 尝试删除新格式（统一内容池）
+  const itemKey = "content:item:" + id;
+  const itemExists = await env.TYPEREADING_KV.get(itemKey);
+  if (itemExists) {
+    await env.TYPEREADING_KV.delete(itemKey);
+    return json({ success: true });
+  }
+  
+  // 兼容旧格式：尝试删除旧格式的 reading 或 typing
+  if (type) {
+    const oldKey = "content:" + type + ":" + id;
+    const oldExists = await env.TYPEREADING_KV.get(oldKey);
+    if (oldExists) {
+      await env.TYPEREADING_KV.delete(oldKey);
       return json({ success: true });
     }
+  }
+  
+  // 如果都没有找到，尝试两种旧格式都删除
+  const readingKey = "content:reading:" + id;
+  const typingKey = "content:typing:" + id;
+  
+  const readingExists = await env.TYPEREADING_KV.get(readingKey);
+  if (readingExists) {
+    await env.TYPEREADING_KV.delete(readingKey);
+    return json({ success: true });
+  }
+  
+  const typingExists = await env.TYPEREADING_KV.get(typingKey);
+  if (typingExists) {
+    await env.TYPEREADING_KV.delete(typingKey);
+    return json({ success: true });
+  }
+  
+  return json({ success: false, message: "内容不存在" });
+}
 
-    /* ========================= 获取今日阅读内容（修改：支持分组） ========================== */
-    if (path === "content/reading") {
-      const body = await request.json().catch(() => ({}));
-      const className = body.className || "";
-      
-      // 获取该班级所属的分组
-      let groupNames = [];
-      if (className) {
-        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-        for (const key of keys) {
-          const data = await env.TYPEREADING_KV.get(key.name);
-          if (data) {
-            const group = JSON.parse(data);
-            if (group.classNames && group.classNames.includes(className)) {
-              groupNames.push(group.name);
-            }
-          }
+
+    /* ========================= 获取今日阅读内容（统一内容池） ========================== */
+if (path === "content/reading") {
+  const body = await request.json().catch(() => ({}));
+  const className = body.className || "";
+  
+  // 获取该班级所属的分组
+  let groupNames = [];
+  if (className) {
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const group = JSON.parse(data);
+        if (group.classNames && group.classNames.includes(className)) {
+          groupNames.push(group.name);
         }
       }
-      
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:reading:" });
-      const contents = [];
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-          const content = JSON.parse(data);
-          if (content.isActive) {
-            // 匹配逻辑：班级匹配 或 分组匹配 或 无限制
-            const classMatch = !content.targetClass || content.targetClass === className;
-            const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
-            const noRestriction = !content.targetClass && !content.targetGroup;
-            
-            if (noRestriction || classMatch || groupMatch) {
-              contents.push(content);
-            }
-          }
-        }
-      }
-      
-      const selectedContent = contents.length > 0 
-        ? contents[Math.floor(Math.random() * contents.length)]
-        : null;
-
-      return json({ success: true, content: selectedContent });
     }
-
-    /* ========================= 获取打字练习内容（修改：支持分组） ========================== */
-    if (path === "content/typing") {
-      const body = await request.json().catch(() => ({}));
-      const className = body.className || "";
+  }
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+  const contents = [];
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      // 必须启用且可用于阅读
+      if (!content.isActive || !content.useForReading) continue;
       
-      // 获取该班级所属的分组
-      let groupNames = [];
-      if (className) {
-        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-        for (const key of keys) {
-          const data = await env.TYPEREADING_KV.get(key.name);
-          if (data) {
-            const group = JSON.parse(data);
-            if (group.classNames && group.classNames.includes(className)) {
-              groupNames.push(group.name);
-            }
-          }
-        }
+      // 匹配逻辑
+      let isMatch = false;
+      if (content.targetType === "all") {
+        isMatch = true;
+      } else if (content.targetType === "group") {
+        isMatch = groupNames.includes(content.targetGroup);
+      } else if (content.targetType === "class") {
+        isMatch = content.targetClasses && content.targetClasses.includes(className);
       }
       
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
-      const contents = [];
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-          const content = JSON.parse(data);
-          if (content.isActive) {
-            // 匹配逻辑：班级匹配 或 分组匹配 或 无限制
-            const classMatch = !content.targetClass || content.targetClass === className;
-            const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
-            const noRestriction = !content.targetClass && !content.targetGroup;
-            
-            if (noRestriction || classMatch || groupMatch) {
-              contents.push(content);
-            }
-          }
-        }
+      if (isMatch) {
+        contents.push(content);
       }
-      
-      const selectedContent = contents.length > 0 
-        ? contents[Math.floor(Math.random() * contents.length)]
-        : null;
-
-      return json({ success: true, content: selectedContent });
     }
+  }
+  
+  const selectedContent = contents.length > 0 
+    ? contents[Math.floor(Math.random() * contents.length)]
+    : null;
+
+  return json({ success: true, content: selectedContent });
+}
+
+
+    /* ========================= 获取打字练习内容（支持新旧格式） ========================== */
+if (path === "content/typing") {
+  const body = await request.json().catch(() => ({}));
+  const className = body.className || "";
+  
+  // 获取该班级所属的分组
+  let groupNames = [];
+  if (className) {
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const group = JSON.parse(data);
+        if (group.classNames && group.classNames.includes(className)) {
+          groupNames.push(group.name);
+        }
+      }
+    }
+  }
+  
+  const contents = [];
+  
+  // 读取新格式内容（统一内容池）
+  const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+  for (const key of itemKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      
+      // ========== 与 content/reading 的唯一区别 ==========
+      // 检查 useForTyping 而不是 useForReading
+      if (!content.isActive || !content.useForTyping) continue;
+      
+      // 匹配逻辑
+      let isMatch = false;
+      if (content.targetType === "all" || !content.targetType) {
+        isMatch = true;
+      } else if (content.targetType === "group") {
+        isMatch = groupNames.includes(content.targetGroup);
+      } else if (content.targetType === "class") {
+        isMatch = content.targetClasses && content.targetClasses.includes(className);
+      }
+      
+      if (isMatch) {
+        contents.push(content);
+      }
+    }
+  }
+  
+  // 兼容旧格式：读取旧的 typing 内容
+  const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
+  for (const key of typingKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      if (content.isActive) {
+        const classMatch = !content.targetClass || content.targetClass === className;
+        const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
+        const noRestriction = !content.targetClass && !content.targetGroup;
+        
+        if (noRestriction || classMatch || groupMatch) {
+          contents.push(content);
+        }
+      }
+    }
+  }
+  
+  const selectedContent = contents.length > 0 
+    ? contents[Math.floor(Math.random() * contents.length)]
+    : null;
+
+  return json({ success: true, content: selectedContent });
+}
 
     /* ========================= 排行榜 ========================== */
     if (path === "rank/typing") {
