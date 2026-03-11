@@ -42,11 +42,10 @@
         }
         .stats {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);  /* 改为4列 */
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin: 20px 0;
         }
-
         .stat-box {
             background: #f8f9fa;
             padding: 15px;
@@ -72,8 +71,8 @@
         <a href="/" class="back">← 返回首页</a>
         <div class="card">
             <h1>⌨️ 打字练习</h1>
-            <div class="text-display" id="targetText">The quick brown fox jumps over the lazy dog. Practice makes perfect.</div>
-            <textarea id="inputText" placeholder="在此输入上面的文字..." oninput="checkTyping()"></textarea>
+            <div class="text-display" id="targetText">加载中...</div>
+            <textarea id="inputText" placeholder="在此输入上面的文字..." oninput="checkTyping()" disabled></textarea>
             <div class="stats">
                 <div class="stat-box">
                     <h3 id="wpm">0</h3>
@@ -92,13 +91,11 @@
                     <p>单词数</p>
                 </div>
             </div>
-
             <button class="btn btn-primary" onclick="submitResult()">提交成绩</button>
             <button class="btn btn-secondary" onclick="resetTest()">重新开始</button>
             <a href="/" class="btn btn-secondary">返回首页</a>
         </div>
     </div>
-
     <script>
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         if (!currentUser) {
@@ -106,10 +103,32 @@
             location.href = '/register/';
         }
         
-        const targetText = document.getElementById('targetText').textContent;
+        let targetText = '';
         let startTime = null;
         let timerInterval = null;
         
+        // 新增：从API获取打字内容
+        async function loadTypingContent() {
+            try {
+                const response = await fetch('/api/content/typing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ className: currentUser.className || '' })
+                });
+                const result = await response.json();
+                
+                if (result.success && result.content) {
+                    targetText = result.content.content;
+                    document.getElementById('targetText').textContent = targetText;
+                    document.getElementById('inputText').disabled = false;
+                } else {
+                    document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
+                }
+            } catch (err) {
+                console.error('加载内容失败:', err);
+                document.getElementById('targetText').textContent = '加载失败，请刷新重试';
+            }
+        }
         
         function checkTyping() {
             const input = document.getElementById('inputText').value;
@@ -118,7 +137,7 @@
                 timerInterval = setInterval(updateTime, 100);
             }
             
-            // 新增：实时计算单词数
+            // 实时计算单词数
             const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
             document.getElementById('wordCount').textContent = wordCount;
             
@@ -156,8 +175,6 @@
             const wpm = parseInt(document.getElementById('wpm').textContent);
             const accuracy = parseInt(document.getElementById('accuracy').textContent);
             const duration = parseInt(document.getElementById('time').textContent);
-            
-            // 新增：计算打字单词数（按空格分割，过滤空字符串）
             const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
             
             try {
@@ -169,8 +186,8 @@
                         wpm,
                         accuracy,
                         duration,
-                        wordCount,  // 新增：打字单词数
-                        content: input  // 原文（可选）
+                        wordCount,
+                        content: input
                     })
                 });
                 const data = await res.json();
@@ -187,11 +204,15 @@
             document.getElementById('wpm').textContent = '0';
             document.getElementById('accuracy').textContent = '100%';
             document.getElementById('time').textContent = '0s';
-            document.getElementById('wordCount').textContent = '0';  // 新增
+            document.getElementById('wordCount').textContent = '0';
             startTime = null;
             clearInterval(timerInterval);
+            // 重新加载内容
+            loadTypingContent();
         }
 
+        // 页面加载时获取内容
+        loadTypingContent();
     </script>
 </body>
 </html>
