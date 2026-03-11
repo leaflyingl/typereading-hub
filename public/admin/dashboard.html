@@ -1071,15 +1071,15 @@
   </script>
 
 <script>
-// 专为你的真实1000行dashboard修复：刷新保持当前标签
-document.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(()=>{
-    let h=location.hash;
-    h&&document.querySelector('.nav-tabs a[href="'+h+'"]')?.click();
-    document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(t=>{
-      t.addEventListener('click',()=>history.replaceState(null,null,t.getAttribute('href')))
-    })
-  },50)
+// 最终修复：刷新保持当前标签页（适配你真实1000行dashboard）
+document.addEventListener('DOMContentLoaded', function() {
+  const hash = window.location.hash;
+  if (hash) {
+    setTimeout(() => {
+      const tab = document.querySelector(`.nav-tabs a[href="${hash}"]`);
+      if (tab) new bootstrap.Tab(tab).show();
+    }, 100);
+  }
 });
 </script>
   
