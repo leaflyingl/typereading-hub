@@ -235,6 +235,49 @@ export async function onRequest(context) {
       return json({ success: true, classes });
     }
 
+    /* ========================= 分组管理 API（新增） ========================== */
+    
+    // 获取分组列表
+    if (path === "admin/groups/list") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      const groups = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) groups.push(JSON.parse(data));
+      }
+      return json({ success: true, groups });
+    }
+
+    // 创建/更新分组
+    if (path === "admin/groups/save") {
+      const { id, name, classNames } = await request.json();
+      
+      if (!name) {
+        return json({ success: false, message: "分组名称不能为空" });
+      }
+
+      const groupId = id || "group:" + Date.now();
+      const groupData = {
+        id: groupId,
+        name,
+        classNames: classNames || [],
+        updatedAt: new Date().toISOString()
+      };
+
+      await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
+      return json({ success: true, group: groupData });
+    }
+
+    // 删除分组
+    if (path === "admin/groups/delete") {
+      const { id } = await request.json();
+      if (!id) {
+        return json({ success: false, message: "Missing group ID" });
+      }
+      await env.TYPEREADING_KV.delete(id);
+      return json({ success: true });
+    }
+
     /* ========================= 查询今日打卡状态 ========================== */
     if (path === "checkin/status") {
       const { nickname } = await request.json();
@@ -443,9 +486,9 @@ export async function onRequest(context) {
       return json({ success: true, stats });
     }
 
-    /* ========================= 保存阅读/打字内容（修改） ========================== */
+    /* ========================= 保存阅读/打字内容（修改：添加 targetGroup） ========================== */
     if (path === "admin/content/save") {
-      const { id, type, title, content, wordCount, difficulty, targetClass, isActive } = await request.json();
+      const { id, type, title, content, wordCount, difficulty, targetClass, targetGroup, isActive } = await request.json();
       
       if (!type || !["reading", "typing"].includes(type)) {
         return json({ success: false, message: "类型错误" });
@@ -468,6 +511,7 @@ export async function onRequest(context) {
         wordCount: Number(wordCount) || content.length,
         difficulty: difficulty || "medium",
         targetClass: targetClass || "",
+        targetGroup: targetGroup || "",  // 新增：指定分组
         isActive: isActive !== false,
         updatedAt: new Date().toISOString()
       };
@@ -507,10 +551,25 @@ export async function onRequest(context) {
       return json({ success: true });
     }
 
-    /* ========================= 获取今日阅读内容（修改） ========================== */
+    /* ========================= 获取今日阅读内容（修改：支持分组） ========================== */
     if (path === "content/reading") {
       const body = await request.json().catch(() => ({}));
       const className = body.className || "";
+      
+      // 获取该班级所属的分组
+      let groupNames = [];
+      if (className) {
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+        for (const key of keys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const group = JSON.parse(data);
+            if (group.classNames && group.classNames.includes(className)) {
+              groupNames.push(group.name);
+            }
+          }
+        }
+      }
       
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:reading:" });
       const contents = [];
@@ -519,7 +578,12 @@ export async function onRequest(context) {
         if (data) {
           const content = JSON.parse(data);
           if (content.isActive) {
-            if (!className || !content.targetClass || content.targetClass === className) {
+            // 匹配逻辑：班级匹配 或 分组匹配 或 无限制
+            const classMatch = !content.targetClass || content.targetClass === className;
+            const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
+            const noRestriction = !content.targetClass && !content.targetGroup;
+            
+            if (noRestriction || classMatch || groupMatch) {
               contents.push(content);
             }
           }
@@ -533,10 +597,25 @@ export async function onRequest(context) {
       return json({ success: true, content: selectedContent });
     }
 
-    /* ========================= 获取打字练习内容（修改） ========================== */
+    /* ========================= 获取打字练习内容（修改：支持分组） ========================== */
     if (path === "content/typing") {
       const body = await request.json().catch(() => ({}));
       const className = body.className || "";
+      
+      // 获取该班级所属的分组
+      let groupNames = [];
+      if (className) {
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+        for (const key of keys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const group = JSON.parse(data);
+            if (group.classNames && group.classNames.includes(className)) {
+              groupNames.push(group.name);
+            }
+          }
+        }
+      }
       
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
       const contents = [];
@@ -545,7 +624,12 @@ export async function onRequest(context) {
         if (data) {
           const content = JSON.parse(data);
           if (content.isActive) {
-            if (!className || !content.targetClass || content.targetClass === className) {
+            // 匹配逻辑：班级匹配 或 分组匹配 或 无限制
+            const classMatch = !content.targetClass || content.targetClass === className;
+            const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
+            const noRestriction = !content.targetClass && !content.targetGroup;
+            
+            if (noRestriction || classMatch || groupMatch) {
               contents.push(content);
             }
           }
