@@ -1071,26 +1071,27 @@
   </script>
 
 <script>
-// 终极修复：强制覆盖原有逻辑，刷新保持当前标签
-document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(() => {
-    const hash = window.location.hash;
-    if (hash && document.querySelector(hash)) {
-      const tab = document.querySelector(`.nav-tabs a[href="${hash}"]`);
-      if (tab) {
-        tab.classList.remove('active');
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active'));
-        setTimeout(() => new bootstrap.Tab(tab).show(), 20);
-      }
-    }
+// 最终终极修复：强制覆盖Bootstrap默认行为，刷新永久保留当前标签
+window.addEventListener('load', function() {
+  const hash = window.location.hash;
+  if (!hash) return;
 
-    // 点击时保存hash
-    document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(tab => {
-      tab.addEventListener('click', () => {
-        setTimeout(() => history.replaceState(null, null, tab.getAttribute('href')), 10);
+  // 强制激活hash对应的标签，覆盖所有默认行为
+  setTimeout(() => {
+    const tabLink = document.querySelector(`.nav-tabs a[href="${hash}"]`);
+    const tabPane = document.querySelector(hash);
+    
+    if (tabLink && tabPane) {
+      // 清除所有默认激活状态
+      document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(el => {
+        el.classList.remove('show', 'active');
       });
-    });
-  }, 120);
+      // 强制激活目标标签
+      tabLink.classList.add('active');
+      tabPane.classList.add('show', 'active');
+    }
+  }, 0);
 });
 </script>
   
