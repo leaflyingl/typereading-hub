@@ -237,21 +237,50 @@ export async function onRequest(context) {
 
     /* ========================= 分组管理 API（新增） ========================== */
     
-    // 获取分组列表
-    if (path === "admin/groups/list") {
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-      const groups = [];
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) groups.push(JSON.parse(data));
+    // 获取分组列表 - 修复版
+if (path === "admin/groups/list") {
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+  const groups = [];
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const group = JSON.parse(data);
+      // 兼容处理：确保 classes 字段存在
+      if (!group.classes && group.classNames) {
+        group.classes = group.classNames;
       }
-      return json({ success: true, groups });
+      // 计算学生数
+      const studentCount = await getGroupStudentCount(env, group.classes || []);
+      group.studentCount = studentCount;
+      groups.push(group);
     }
+  }
+  return json({ success: true, groups });
+}
+
+// 辅助函数：获取分组学生数
+async function getGroupStudentCount(env, classList) {
+  if (!classList || classList.length === 0) return 0;
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+  let count = 0;
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const user = JSON.parse(data);
+      if (classList.includes(user.className)) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
 
 
-    // 创建 / 更新分组 ✅ 修复版
+
+  // 创建 / 更新分组 - 修复版
 if (path === "admin/groups/save") {
-  const { id, name, classes } = await request.json();
+  const { id, name, classes, classNames } = await request.json();
 
   if (!name) {
     return json({ success: false, message: "分组名称不能为空" });
@@ -269,17 +298,22 @@ if (path === "admin/groups/save") {
     }
   }
 
+  // 兼容处理：优先使用 classes，如果没有则用 classNames
+  const finalClasses = classes || classNames || [];
+
   const groupData = {
     id: groupId,
     name,
-    classes: classes || [],      // ✅ 统一字段名
-    createdAt,                  // ✅ 新增：创建时间
+    classes: finalClasses,      // 统一使用 classes
+    classNames: finalClasses,   // 同时保存 classNames 兼容旧代码
+    createdAt,
     updatedAt: new Date().toISOString()
   };
 
   await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
   return json({ success: true, group: groupData });
 }
+
 
     // 删除分组
     if (path === "admin/groups/delete") {
@@ -654,7 +688,7 @@ if (path === "content/reading") {
 }
 
 
-    /* ========================= 获取打字练习内容（支持新旧格式） ========================== */
+/* ========================= 获取打字练习内容 ========================== */
 if (path === "content/typing") {
   const body = await request.json().catch(() => ({}));
   const className = body.className || "";
@@ -667,7 +701,9 @@ if (path === "content/typing") {
       const data = await env.TYPEREADING_KV.get(key.name);
       if (data) {
         const group = JSON.parse(data);
-        if (group.classNames && group.classNames.includes(className)) {
+        // 兼容 classes 和 classNames
+        const groupClasses = group.classes || group.classNames || [];
+        if (groupClasses.includes(className)) {
           groupNames.push(group.name);
         }
       }
@@ -676,15 +712,14 @@ if (path === "content/typing") {
   
   const contents = [];
   
-  // 读取新格式内容（统一内容池）
+  // 只读取新格式内容（统一内容池），不再读取旧格式
   const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
   for (const key of itemKeys) {
     const data = await env.TYPEREADING_KV.get(key.name);
     if (data) {
       const content = JSON.parse(data);
       
-      // ========== 与 content/reading 的唯一区别 ==========
-      // 检查 useForTyping 而不是 useForReading
+      // 必须启用且可用于打字
       if (!content.isActive || !content.useForTyping) continue;
       
       // 匹配逻辑
@@ -694,29 +729,18 @@ if (path === "content/typing") {
       } else if (content.targetType === "group") {
         isMatch = groupNames.includes(content.targetGroup);
       } else if (content.targetType === "class") {
-        isMatch = content.targetClasses && content.targetClasses.includes(className);
+        const targetClasses = content.targetClasses || [];
+        isMatch = targetClasses.includes(className);
       }
       
       if (isMatch) {
-        contents.push(content);
-      }
-    }
-  }
-  
-  // 兼容旧格式：读取旧的 typing 内容
-  const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "content:typing:" });
-  for (const key of typingKeys) {
-    const data = await env.TYPEREADING_KV.get(key.name);
-    if (data) {
-      const content = JSON.parse(data);
-      if (content.isActive) {
-        const classMatch = !content.targetClass || content.targetClass === className;
-        const groupMatch = !content.targetGroup || groupNames.includes(content.targetGroup);
-        const noRestriction = !content.targetClass && !content.targetGroup;
-        
-        if (noRestriction || classMatch || groupMatch) {
-          contents.push(content);
-        }
+        contents.push({
+          id: content.id,
+          title: content.title || "未命名",  // 确保返回标题
+          content: content.content,
+          wordCount: content.wordCount || content.content.length,
+          difficulty: content.difficulty || "medium"
+        });
       }
     }
   }
@@ -728,91 +752,40 @@ if (path === "content/typing") {
   return json({ success: true, content: selectedContent });
 }
 
-    /* ========================= 排行榜 ========================== */
-    if (path === "rank/typing") {
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
-      const results = [];
+   /* ========================= 排行榜 ========================== */
+if (path === "rank/typing") {
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+  const results = [];
 
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (!data) continue;
-        const record = JSON.parse(data);
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (!data) continue;
+    const record = JSON.parse(data);
 
-        const userKey = "user:" + record.nickname;
-        const userData = await env.TYPEREADING_KV.get(userKey);
-        if (!userData) continue;
+    const userKey = "user:" + record.nickname;
+    const userData = await env.TYPEREADING_KV.get(userKey);
+    if (!userData) continue;
 
-        const user = JSON.parse(userData);
-        if (user.realName) {
-          results.push({
-            ...record,
-            realName: user.realName,
-            className: user.className || ""
-          });
-        }
-      }
-
-      results.sort((a, b) => b.wpm - a.wpm);
-      return json({ success: true, rank: results.slice(0, 20) });
-    }
-
-    return json({ success: false, message: "接口不存在：" + path });
-
-  } catch (err) {
-    console.error("API Error:", err);
-    return json({ success: false, message: err.message });
-  }
-
-  function getWeekStart(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff)).toISOString().split("T")[0];
-  }
-
-  function calcStats(records, period, type) {
-    const filtered = records.filter(r => {
-      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
-      if (!recordDate) return false;
-      if (type === 'date') return recordDate === period;
-      if (type === 'week') return recordDate >= period;
-      if (type === 'month') return recordDate.startsWith(period);
-      if (type === 'year') return recordDate.startsWith(period);
-      return false;
+    const user = JSON.parse(userData);
+    // 修改：只要有昵称就显示，不要求必须有 realName
+    results.push({
+      nickname: record.nickname,
+      realName: user.realName || record.nickname, // 如果没有实名，用昵称
+      className: user.className || "",
+      wpm: record.wpm || 0,
+      accuracy: record.accuracy || 0,
+      timestamp: record.timestamp
     });
-
-    return {
-      count: filtered.length,
-      words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
-    };
   }
 
-  function calcTypingStats(records, period, type) {
-    const filtered = records.filter(r => {
-      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
-      if (!recordDate) return false;
-      if (type === 'date') return recordDate === period;
-      if (type === 'week') return recordDate >= period;
-      if (type === 'month') return recordDate.startsWith(period);
-      if (type === 'year') return recordDate.startsWith(period);
-      return false;
-    });
-
-    const avgWpm = filtered.length > 0 
-      ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
-      : 0;
-    const avgAccuracy = filtered.length > 0
-      ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
-      : 0;
-
-    return {
-      count: filtered.length,
-      avgWpm,
-      avgAccuracy
-    };
-  }
-
-  function json(data) {
-    return new Response(JSON.stringify(data), { headers });
-  }
+  // 按 WPM 降序排序
+  results.sort((a, b) => b.wpm - a.wpm);
+  
+  // 取前20条，并添加排名
+  const ranked = results.slice(0, 20).map((item, index) => ({
+    rank: index + 1,
+    ...item
+  }));
+  
+  return json({ success: true, rank: ranked });
 }
