@@ -1071,23 +1071,24 @@
   </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  const tabs = document.querySelectorAll('.nav-tabs .nav-link');
+// 修复：标签刷新后保持当前页面（专为你真实1000行dashboard编写）
+document.addEventListener('DOMContentLoaded', function() {
+  // 读取URL hash
   const hash = window.location.hash;
 
-  // 刷新时自动激活对应标签
+  // 页面加载时，根据hash自动激活对应标签
   if (hash) {
-    const tab = document.querySelector(`.nav-tabs a[href="${hash}"]`);
-    if (tab) {
-      tab.click();
+    const targetTab = document.querySelector('.nav-tabs a[href="' + hash + '"]');
+    if (targetTab) {
+      targetTab.click();
     }
   }
 
-  // 点击标签时同步 URL hash
-  tabs.forEach(tab => {
-    tab.addEventListener('click', function () {
-      const h = this.getAttribute('href');
-      history.replaceState(null, null, h);
+  // 点击标签时，自动同步hash到URL
+  document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function() {
+      const target = this.getAttribute('href');
+      window.history.replaceState(null, null, target);
     });
   });
 });
