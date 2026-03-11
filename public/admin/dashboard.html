@@ -247,11 +247,11 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('students', this)">👥 学生管理</div>
-    <div class="tab" onclick="switchTab('classes', this)">📚 班级管理</div>
-    <div class="tab" onclick="switchTab('groups', this)">📂 分组管理</div>
-    <div class="tab" onclick="switchTab('content', this)">📝 内容管理</div>
-    <div class="tab" onclick="switchTab('rank', this)">🏆 排行榜</div>
+    <div class="tab active" onclick="switchTab('students', this)" data-tab="students">👥 学生管理</div>
+    <div class="tab" onclick="switchTab('classes', this)" data-tab="classes">📚 班级管理</div>
+    <div class="tab" onclick="switchTab('groups', this)" data-tab="groups">📂 分组管理</div>
+    <div class="tab" onclick="switchTab('content', this)" data-tab="content">📝 内容管理</div>
+    <div class="tab" onclick="switchTab('rank', this)" data-tab="rank">🏆 排行榜</div>
   </div>
 
   <div class="container">
@@ -509,6 +509,9 @@
     }
 
     function switchTab(tab, element) {
+      // 保存当前标签到 localStorage
+      localStorage.setItem('adminActiveTab', tab);
+      
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       
@@ -520,6 +523,17 @@
       if (tab === 'groups') loadGroups();
       if (tab === 'content') loadContentList();
       if (tab === 'rank') loadRank();
+    }
+
+    // 恢复上次打开的标签页
+    function restoreActiveTab() {
+      const savedTab = localStorage.getItem('adminActiveTab');
+      if (savedTab) {
+        const tabElement = document.querySelector('.tab[data-tab="' + savedTab + '"]');
+        if (tabElement) {
+          switchTab(savedTab, tabElement);
+        }
+      }
     }
 
     // ========== 学生管理 ==========
@@ -710,15 +724,27 @@
         document.getElementById('classes-list').innerHTML = '<p style="text-align: center; color: #999;">暂无班级</p>';
         return;
       }
+      
+      // 需要先加载分组数据才能显示所属分组
+      if (allGroups.length === 0) {
+        loadGroups().then(() => renderClassesTable());
+      } else {
+        renderClassesTable();
+      }
+    }
+
+    function renderClassesTable() {
       let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>学生数</th><th>所属分组</th><th>创建时间</th></tr></thead><tbody>';
       allClasses.forEach(c => {
         const count = allStudents.filter(s => s.className === c.name).length;
-        // 查找班级所属的分组
+        
+        // 查找班级所属的分组 - 修复：正确匹配班级名
         const classGroups = allGroups
           .filter(g => g.classes && g.classes.includes(c.name))
           .map(g => '<span class="tag tag-group">' + g.name + '</span>')
           .join(' ');
-        const date = new Date(c.createdAt).toLocaleDateString();
+        
+        const date = formatDate(c.createdAt);
         html += '<tr><td>' + c.name + '</td><td>' + count + '</td><td>' + (classGroups || '-') + '</td><td>' + date + '</td></tr>';
       });
       html += '</tbody></table>';
@@ -806,7 +832,9 @@
           // 计算分组内的学生数
           const studentCount = allStudents.filter(s => groupClasses.includes(s.className)).length;
           const classesHtml = groupClasses.map(c => '<span class="group-class-tag">' + c + '</span>').join('');
-          const date = new Date(g.createdAt).toLocaleDateString();
+          
+          // 修复：使用安全的日期格式化
+          const date = formatDate(g.createdAt);
           
           html += '<tr>' +
             '<td>' + g.name + '</td>' +
@@ -824,6 +852,23 @@
       } catch (e) {
         console.error('渲染分组列表出错:', e);
         document.getElementById('groups-list').innerHTML = '<p style="color: red;">渲染失败: ' + e.message + '</p>';
+      }
+    }
+
+    // 修复：安全的日期格式化函数
+    function formatDate(dateValue) {
+      if (!dateValue) return '-';
+      
+      try {
+        const date = new Date(dateValue);
+        // 检查是否为有效日期
+        if (isNaN(date.getTime())) {
+          return '-';
+        }
+        return date.toLocaleDateString();
+      } catch (e) {
+        console.error('日期格式化错误:', dateValue, e);
+        return '-';
       }
     }
 
@@ -906,8 +951,8 @@
         if (result.success) {
           closeGroupModal();
           await loadGroups();
-          // 刷新学生列表以更新分组显示
-          await loadStudents();
+          // 刷新班级列表以更新分组显示
+          await loadClasses();
           alert(editingGroupId ? '分组更新成功！' : '分组创建成功！');
         } else {
           alert('保存失败: ' + (result.message || '未知错误'));
@@ -937,7 +982,7 @@
         
         if (result.success) {
           await loadGroups();
-          await loadStudents();
+          await loadClasses();
           alert('分组删除成功！');
         } else {
           alert('删除失败: ' + (result.message || '未知错误'));
@@ -990,7 +1035,7 @@
           }
           
           const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
-          const date = new Date(item.updatedAt).toLocaleDateString();
+          const date = formatDate(item.updatedAt);
           html += '<tr>' +
             '<td>' + typeTag + '</td>' +
             '<td>' + item.title + '</td>' +
@@ -1226,8 +1271,11 @@
       document.getElementById('rank-list').innerHTML = html;
     }
 
-    // 初始化
+    // 初始化 - 加载学生数据并恢复上次打开的标签页
     loadStudents();
+    
+    // 页面加载完成后恢复标签页状态
+    window.addEventListener('load', restoreActiveTab);
   </script>
 </body>
 </html>
