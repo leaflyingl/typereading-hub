@@ -450,33 +450,6 @@
     </div>
   </div>
 
-  /* ===== 缺失的函数补丁（必须有） ===== */
-
-function toggleDistributeTarget() {
-  const type = document.getElementById('content-distribute-type').value;
-  document.getElementById('target-class-group').style.display =
-    type === 'class' ? 'block' : 'none';
-  document.getElementById('target-group-group').style.display =
-    type === 'group' ? 'block' : 'none';
-}
-
-function closeContentModal() {
-  document.getElementById('content-modal').style.display = 'none';
-}
-
-async function saveContent() {
-  alert('saveContent 未实现（用于占位，防止 JS 崩溃）');
-}
-
-async function deleteContent() {
-  alert('deleteContent 未实现（用于占位，防止 JS 崩溃）');
-}
-
-async function loadRank() {
-  document.getElementById('rank-list').innerHTML =
-    '<p style="color:#999;">排行榜加载中（占位）</p>';
-}
-
   <script>
     let allStudents = [];
     let allClasses = [];
