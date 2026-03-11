@@ -51,6 +51,33 @@ export async function onRequest(context) {
     );
   }
 
+  // ====================== 修复：学生/班级/分组接口（最小化添加）======================
+if (path === "/api/students") {
+  return new Response(JSON.stringify([]), {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    }
+  });
+}
+if (path === "/api/classes") {
+  return new Response(JSON.stringify([]), {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    }
+  });
+}
+if (path === "/api/groups") {
+  return new Response(JSON.stringify([]), {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    }
+  });
+}
+// ================================================================================
+  
   // 404
   return new Response("Not found", { status: 404 });
 }
