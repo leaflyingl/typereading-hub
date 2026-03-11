@@ -365,6 +365,12 @@
         </select>
       </div>
       <div class="form-group">
+        <label>适用班级（留空表示所有班级）</label>
+        <select id="content-targetclass" class="form-control">
+          <option value="">所有班级</option>
+        </select>
+      </div>
+      <div class="form-group">
         <label>
           <input type="checkbox" id="content-active" checked> 启用
         </label>
@@ -427,6 +433,7 @@
       const options = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
       document.getElementById('class-filter').innerHTML = '<option value="">全部班级</option>' + options;
       document.getElementById('edit-class').innerHTML = '<option value="">未分班</option>' + options;
+      document.getElementById('content-targetclass').innerHTML = '<option value="">所有班级</option>' + options;
     }
 
     function renderStudents() {
@@ -447,7 +454,7 @@
       html += '<th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th><th>阅读单词数</th><th>打字单词数</th><th>注册时间</th><th>操作</th>';
       html += '</tr></thead><tbody>';
 
-        filtered.forEach(s => {
+      filtered.forEach(s => {
         const date = new Date(s.createdAt).toLocaleDateString();
         html += '<tr>' +
           '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
@@ -458,9 +465,7 @@
           '<td>' + (s.totalReadingWords || 0) + '</td>' +
           '<td>' + (s.totalTypingWords || 0) + '</td>' +
           '<td>' + date + '</td>' +
-          '<td>' +
-            '<button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button>' +
-          '</td>' +
+          '<td><button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button></td>' +
         '</tr>';
       });
 
@@ -624,18 +629,19 @@
         document.getElementById('content-list').innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无内容</p>';
         return;
       }
-      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>适用班级</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
       contents.forEach(item => {
         const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
         const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
+        const targetClass = item.targetClass || '所有班级';
         const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
         const date = new Date(item.updatedAt).toLocaleDateString();
-        // 使用 data 属性存储内容数据，避免复杂的字符串转义
         html += '<tr>' +
           '<td>' + typeTag + '</td>' +
           '<td>' + item.title + '</td>' +
           '<td>' + (item.wordCount || 0) + '</td>' +
           '<td>' + diff + '</td>' +
+          '<td>' + targetClass + '</td>' +
           '<td>' + status + '</td>' +
           '<td>' + date + '</td>' +
           '<td>' +
@@ -646,13 +652,11 @@
       });
       html += '</tbody></table>';
       document.getElementById('content-list').innerHTML = html;
+      window.currentContents = contents;
     }
 
-    // 全局变量存储内容列表，用于编辑时查找
-    let currentContents = [];
-
     function editContentById(id) {
-      const item = currentContents.find(c => c.id === id);
+      const item = window.currentContents.find(c => c.id === id);
       if (item) editContent(item);
     }
 
@@ -664,6 +668,7 @@
       document.getElementById('content-text').value = '';
       document.getElementById('content-wordcount').value = '';
       document.getElementById('content-difficulty').value = 'medium';
+      document.getElementById('content-targetclass').value = '';
       document.getElementById('content-active').checked = true;
       document.getElementById('content-modal').style.display = 'flex';
     }
@@ -676,6 +681,7 @@
       document.getElementById('content-text').value = content.content;
       document.getElementById('content-wordcount').value = content.wordCount || '';
       document.getElementById('content-difficulty').value = content.difficulty || 'medium';
+      document.getElementById('content-targetclass').value = content.targetClass || '';
       document.getElementById('content-active').checked = content.isActive !== false;
       document.getElementById('content-modal').style.display = 'flex';
     }
@@ -693,6 +699,7 @@
         content: document.getElementById('content-text').value.trim(),
         wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
         difficulty: document.getElementById('content-difficulty').value,
+        targetClass: document.getElementById('content-targetclass').value,
         isActive: document.getElementById('content-active').checked
       };
       if (!data.title || !data.content) {
