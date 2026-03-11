@@ -248,25 +248,38 @@ export async function onRequest(context) {
       return json({ success: true, groups });
     }
 
-    // 创建/更新分组
-    if (path === "admin/groups/save") {
-      const { id, name, classNames } = await request.json();
-      
-      if (!name) {
-        return json({ success: false, message: "分组名称不能为空" });
-      }
 
-      const groupId = id || "group:" + Date.now();
-      const groupData = {
-        id: groupId,
-        name,
-        classNames: classNames || [],
-        updatedAt: new Date().toISOString()
-      };
+    // 创建 / 更新分组 ✅ 修复版
+if (path === "admin/groups/save") {
+  const { id, name, classes } = await request.json();
 
-      await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
-      return json({ success: true, group: groupData });
+  if (!name) {
+    return json({ success: false, message: "分组名称不能为空" });
+  }
+
+  const groupId = id || "group:" + Date.now();
+
+  // 如果是更新，先读旧数据，保留 createdAt
+  let createdAt = new Date().toISOString();
+  if (id) {
+    const oldData = await env.TYPEREADING_KV.get(id);
+    if (oldData) {
+      const oldGroup = JSON.parse(oldData);
+      createdAt = oldGroup.createdAt || createdAt;
     }
+  }
+
+  const groupData = {
+    id: groupId,
+    name,
+    classes: classes || [],      // ✅ 统一字段名
+    createdAt,                  // ✅ 新增：创建时间
+    updatedAt: new Date().toISOString()
+  };
+
+  await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
+  return json({ success: true, group: groupData });
+}
 
     // 删除分组
     if (path === "admin/groups/delete") {
