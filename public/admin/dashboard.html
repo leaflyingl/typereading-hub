@@ -98,6 +98,7 @@
       color: #666;
     }
     .btn-small { padding: 6px 12px; font-size: 12px; }
+    .btn-danger { background: #ff4d4f; color: white; }
     
     .filter-select {
       padding: 10px 15px;
@@ -184,11 +185,31 @@
     .tag-typing { background: #f6ffed; color: #52c41a; }
     .tag-active { background: #f6ffed; color: #52c41a; }
     .tag-inactive { background: #f5f5f5; color: #999; }
+    
+    /* 分组管理样式 */
+    .class-checkbox-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .class-checkbox-item {
+      margin-bottom: 8px;
+    }
+    .class-checkbox-item label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+    .class-checkbox-item input {
+      margin-right: 8px;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>👨 🏫 教师管理后台</h1>
+    <h1>👨‍🏫 教师管理后台</h1>
     <div>
       <a href="/" style="color: white; text-decoration: none; margin-right: 20px;">学生端首页</a>
       <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -198,6 +219,7 @@
   <div class="tabs">
     <div class="tab active" onclick="switchTab('students', this)">👥 学生管理</div>
     <div class="tab" onclick="switchTab('classes', this)">📚 班级管理</div>
+    <div class="tab" onclick="switchTab('groups', this)">📂 分组管理</div>
     <div class="tab" onclick="switchTab('content', this)">📝 内容管理</div>
     <div class="tab" onclick="switchTab('rank', this)">🏆 排行榜</div>
   </div>
@@ -248,6 +270,15 @@
         <h3 style="margin-bottom: 20px;">班级管理</h3>
         <button class="btn btn-primary" onclick="showClassModal()" style="margin-bottom: 20px;">➕ 创建班级</button>
         <div id="classes-list">正在加载班级数据...</div>
+      </div>
+    </div>
+
+    <!-- 分组管理 -->
+    <div id="groups-tab" class="tab-content">
+      <div class="card">
+        <h3 style="margin-bottom: 20px;">📂 分组管理</h3>
+        <button class="btn btn-primary" onclick="showGroupModal()" style="margin-bottom: 20px;">➕ 创建分组</button>
+        <div id="groups-list">正在加载分组数据...</div>
       </div>
     </div>
 
@@ -330,6 +361,30 @@
     </div>
   </div>
 
+  <!-- 创建/编辑分组弹窗 -->
+  <div id="group-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="group-modal-title">创建分组</h3>
+        <span class="close-btn" onclick="closeGroupModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label>分组名称</label>
+        <input type="text" id="group-name" class="form-control" placeholder="例如：KET冲刺班、四年级组">
+      </div>
+      <div class="form-group">
+        <label>包含班级</label>
+        <div id="group-classes-list" class="class-checkbox-list">
+          <p style="color: #999;">请先创建班级</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeGroupModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveGroup()">保存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 内容编辑弹窗 -->
   <div id="content-modal" class="modal">
     <div class="modal-content" style="max-width: 700px;">
@@ -365,9 +420,23 @@
         </select>
       </div>
       <div class="form-group">
-        <label>适用班级（留空表示所有班级）</label>
+        <label>分发方式</label>
+        <select id="content-distribute-type" class="form-control" onchange="toggleDistributeTarget()">
+          <option value="">所有学生</option>
+          <option value="class">指定班级</option>
+          <option value="group">指定分组</option>
+        </select>
+      </div>
+      <div class="form-group" id="target-class-group" style="display: none;">
+        <label>指定班级</label>
         <select id="content-targetclass" class="form-control">
-          <option value="">所有班级</option>
+          <option value="">请选择班级</option>
+        </select>
+      </div>
+      <div class="form-group" id="target-group-group" style="display: none;">
+        <label>指定分组</label>
+        <select id="content-targetgroup" class="form-control">
+          <option value="">请选择分组</option>
         </select>
       </div>
       <div class="form-group">
@@ -385,8 +454,10 @@
   <script>
     let allStudents = [];
     let allClasses = [];
+    let allGroups = [];
     let selectedStudents = new Set();
     let editingContentId = null;
+    let editingGroupId = null;
 
     function logout() {
       localStorage.removeItem('teacherLoggedIn');
@@ -402,6 +473,7 @@
       
       if (tab === 'students') loadStudents();
       if (tab === 'classes') loadClasses();
+      if (tab === 'groups') loadGroups();
       if (tab === 'content') loadContentList();
       if (tab === 'rank') loadRank();
     }
@@ -433,7 +505,7 @@
       const options = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
       document.getElementById('class-filter').innerHTML = '<option value="">全部班级</option>' + options;
       document.getElementById('edit-class').innerHTML = '<option value="">未分班</option>' + options;
-      document.getElementById('content-targetclass').innerHTML = '<option value="">所有班级</option>' + options;
+      document.getElementById('content-targetclass').innerHTML = '<option value="">请选择班级</option>' + options;
     }
 
     function renderStudents() {
@@ -556,6 +628,7 @@
           updateStats();
           renderClasses();
           updateClassFilter();
+          updateGroupClassList();
         }
       } catch (e) {
         document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败</p>';
@@ -608,6 +681,140 @@
       }
     }
 
+    // ========== 分组管理（新增） ==========
+    async function loadGroups() {
+      try {
+        const res = await fetch('/api/admin/groups/list');
+        const result = await res.json();
+        if (result.success) {
+          allGroups = result.groups || [];
+          renderGroups();
+          updateGroupSelect();
+        }
+      } catch (e) {
+        document.getElementById('groups-list').innerHTML = '<p style="color: red;">加载失败</p>';
+      }
+    }
+
+    function renderGroups() {
+      if (allGroups.length === 0) {
+        document.getElementById('groups-list').innerHTML = '<p style="text-align: center; color: #999;">暂无分组</p>';
+        return;
+      }
+      let html = '<table class="data-table"><thead><tr><th>分组名称</th><th>包含班级</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+      allGroups.forEach(g => {
+        const classNames = g.classNames ? g.classNames.join('、') : '无';
+        const date = new Date(g.updatedAt).toLocaleDateString();
+        html += '<tr>' +
+          '<td>' + g.name + '</td>' +
+          '<td>' + classNames + '</td>' +
+          '<td>' + date + '</td>' +
+          '<td>' +
+            '<button class="btn btn-small btn-secondary" onclick="editGroup(\'' + g.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small btn-danger" onclick="deleteGroup(\'' + g.id + '\')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('groups-list').innerHTML = html;
+    }
+
+    function updateGroupClassList() {
+      const container = document.getElementById('group-classes-list');
+      if (allClasses.length === 0) {
+        container.innerHTML = '<p style="color: #999;">请先创建班级</p>';
+        return;
+      }
+      let html = '';
+      allClasses.forEach(c => {
+        html += '<div class="class-checkbox-item">' +
+          '<label><input type="checkbox" value="' + c.name + '" class="group-class-checkbox"> ' + c.name + '</label>' +
+        '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function updateGroupSelect() {
+      const options = allGroups.map(g => '<option value="' + g.name + '">' + g.name + '</option>').join('');
+      document.getElementById('content-targetgroup').innerHTML = '<option value="">请选择分组</option>' + options;
+    }
+
+    function showGroupModal() {
+      editingGroupId = null;
+      document.getElementById('group-modal-title').textContent = '创建分组';
+      document.getElementById('group-name').value = '';
+      document.querySelectorAll('.group-class-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('group-modal').style.display = 'flex';
+    }
+
+    function editGroup(id) {
+      const group = allGroups.find(g => g.id === id);
+      if (!group) return;
+      
+      editingGroupId = id;
+      document.getElementById('group-modal-title').textContent = '编辑分组';
+      document.getElementById('group-name').value = group.name;
+      
+      document.querySelectorAll('.group-class-checkbox').forEach(cb => {
+        cb.checked = group.classNames && group.classNames.includes(cb.value);
+      });
+      
+      document.getElementById('group-modal').style.display = 'flex';
+    }
+
+    function closeGroupModal() {
+      document.getElementById('group-modal').style.display = 'none';
+    }
+
+    async function saveGroup() {
+      const name = document.getElementById('group-name').value.trim();
+      if (!name) {
+        alert('请输入分组名称');
+        return;
+      }
+
+      const checkboxes = document.querySelectorAll('.group-class-checkbox:checked');
+      const classNames = Array.from(checkboxes).map(cb => cb.value);
+
+      try {
+        const res = await fetch('/api/admin/groups/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingGroupId,
+            name,
+            classNames
+          })
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeGroupModal();
+          loadGroups();
+        } else {
+          alert(result.message || '保存失败');
+        }
+      } catch (e) {
+        alert('保存失败');
+      }
+    }
+
+    async function deleteGroup(id) {
+      if (!confirm('确定删除这个分组吗？')) return;
+      try {
+        const res = await fetch('/api/admin/groups/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const result = await res.json();
+        if (result.success) {
+          loadGroups();
+        }
+      } catch (e) {
+        alert('删除失败');
+      }
+    }
+
     // ========== 内容管理 ==========
     async function loadContentList() {
       const filter = document.getElementById('content-filter').value;
@@ -629,11 +836,13 @@
         document.getElementById('content-list').innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无内容</p>';
         return;
       }
-      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>适用班级</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>适用对象</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
       contents.forEach(item => {
         const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
         const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
-        const targetClass = item.targetClass || '所有班级';
+        let target = '所有学生';
+        if (item.targetClass) target = '班级: ' + item.targetClass;
+        else if (item.targetGroup) target = '分组: ' + item.targetGroup;
         const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
         const date = new Date(item.updatedAt).toLocaleDateString();
         html += '<tr>' +
@@ -641,7 +850,7 @@
           '<td>' + item.title + '</td>' +
           '<td>' + (item.wordCount || 0) + '</td>' +
           '<td>' + diff + '</td>' +
-          '<td>' + targetClass + '</td>' +
+          '<td>' + target + '</td>' +
           '<td>' + status + '</td>' +
           '<td>' + date + '</td>' +
           '<td>' +
@@ -668,7 +877,10 @@
       document.getElementById('content-text').value = '';
       document.getElementById('content-wordcount').value = '';
       document.getElementById('content-difficulty').value = 'medium';
+      document.getElementById('content-distribute-type').value = '';
       document.getElementById('content-targetclass').value = '';
+      document.getElementById('content-targetgroup').value = '';
+      toggleDistributeTarget();
       document.getElementById('content-active').checked = true;
       document.getElementById('content-modal').style.display = 'flex';
     }
@@ -681,91 +893,11 @@
       document.getElementById('content-text').value = content.content;
       document.getElementById('content-wordcount').value = content.wordCount || '';
       document.getElementById('content-difficulty').value = content.difficulty || 'medium';
-      document.getElementById('content-targetclass').value = content.targetClass || '';
-      document.getElementById('content-active').checked = content.isActive !== false;
-      document.getElementById('content-modal').style.display = 'flex';
-    }
-
-    function closeContentModal() {
-      document.getElementById('content-modal').style.display = 'none';
-      editingContentId = null;
-    }
-
-    async function saveContent() {
-      const data = {
-        id: editingContentId,
-        type: document.getElementById('content-type').value,
-        title: document.getElementById('content-title').value.trim(),
-        content: document.getElementById('content-text').value.trim(),
-        wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
-        difficulty: document.getElementById('content-difficulty').value,
-        targetClass: document.getElementById('content-targetclass').value,
-        isActive: document.getElementById('content-active').checked
-      };
-      if (!data.title || !data.content) {
-        alert('请填写标题和内容');
-        return;
-      }
-      try {
-        const res = await fetch('/api/admin/content/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        if (result.success) {
-          closeContentModal();
-          loadContentList();
-        } else {
-          alert(result.message || '保存失败');
-        }
-      } catch (e) {
-        alert('网络错误');
-      }
-    }
-
-    async function deleteContent(id, type) {
-      if (!confirm('确定删除此内容？')) return;
-      try {
-        const res = await fetch('/api/admin/content/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, type })
-        });
-        const result = await res.json();
-        if (result.success) loadContentList();
-        else alert(result.message || '删除失败');
-      } catch (e) {
-        alert('网络错误');
-      }
-    }
-
-    // ========== 排行榜 ==========
-    async function loadRank() {
-      try {
-        const res = await fetch('/api/rank/typing');
-        const result = await res.json();
-        if (result.success) renderRank(result.rank);
-      } catch (e) {
-        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
-      }
-    }
-
-    function renderRank(rank) {
-      if (rank.length === 0) {
-        document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
-        return;
-      }
-      let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
-      rank.forEach((r, i) => {
-        html += '<tr><td>' + (i + 1) + '</td><td>' + (r.realName || '-') + '</td><td>' + (r.className || '-') + '</td><td>' + r.wpm + '</td><td>' + r.accuracy + '%</td></tr>';
-      });
-      html += '</tbody></table>';
-      document.getElementById('rank-list').innerHTML = html;
-    }
-
-    // 初始化
-    loadStudents();
-  </script>
-</body>
-</html>
+      
+      if (content.targetClass) {
+        document.getElementById('content-distribute-type').value = 'class';
+        document.getElementById('content-targetclass').value = content.targetClass;
+      } else if (content.targetGroup) {
+        document.getElementById('content-distribute-type').value = 'group';
+        document.getElementById('content-targetgroup').value = content.targetGroup;
+      } else
