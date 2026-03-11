@@ -496,19 +496,44 @@
       window.location.href = '/admin/';
     }
 
+    // 页面加载时恢复标签状态
+function restoreTabState() {
+  const hash = window.location.hash.replace('#', '');
+  const validTabs = ['students', 'classes', 'groups', 'content', 'rank'];
+  
+  if (hash && validTabs.includes(hash)) {
+    const tabs = document.querySelectorAll('.tab');
+    let found = false;
+    tabs.forEach(tab => {
+      const onclick = tab.getAttribute('onclick');
+      if (onclick && onclick.includes("'" + hash + "'")) {
+        switchTab(hash, tab);
+        found = true;
+      }
+    });
+    if (!found) loadStudents();
+  } else {
+    loadStudents();
+  }
+}
+
     function switchTab(tab, element) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      
-      element.classList.add('active');
-      document.getElementById(tab + '-tab').classList.add('active');
-      
-      if (tab === 'students') loadStudents();
-      if (tab === 'classes') loadClasses();
-      if (tab === 'groups') loadGroups();
-      if (tab === 'content') loadContentList();
-      if (tab === 'rank') loadRank();
-    }
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  
+  element.classList.add('active');
+  document.getElementById(tab + '-tab').classList.add('active');
+  
+  // 保存当前标签到 URL hash
+  window.location.hash = tab;
+  
+  if (tab === 'students') loadStudents();
+  if (tab === 'classes') loadClasses();
+  if (tab === 'groups') loadGroups();    // ← 新增分组管理
+  if (tab === 'content') loadContentList();
+  if (tab === 'rank') loadRank();
+}
+
 
     // ========== 学生管理 ==========
     async function loadStudents() {
@@ -1067,42 +1092,8 @@
     }
 
     // 初始化
-    loadStudents();
+restoreTabState();
   </script>
-
-<script>
-// 最终修复：标签刷新保留 + 不影响退出登录
-document.addEventListener('DOMContentLoaded', () => {
-  const hash = window.location.hash;
-  if (!hash) return;
-
-  // 等待 Bootstrap 完全初始化后强制覆盖标签
-  setTimeout(() => {
-    const tab = document.querySelector(`.nav-tabs a[href="${hash}"]`);
-    const pane = document.querySelector(hash);
-
-    if (tab && pane) {
-      // 清除 Bootstrap 默认激活
-      document.querySelectorAll('.nav-link.active').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-pane.show.active').forEach(el => {
-        el.classList.remove('show', 'active');
-      });
-      // 激活正确标签
-      tab.classList.add('active');
-      pane.classList.add('show', 'active');
-    }
-  }, 1);
-
-  // 点击标签时保存 hash（不干扰任何原有逻辑）
-  document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(tab => {
-    tab.addEventListener('click', () => {
-      setTimeout(() => {
-        history.replaceState(null, null, tab.getAttribute('href'));
-      }, 1);
-    });
-  });
-});
-</script>
   
 </body>
 </html>
