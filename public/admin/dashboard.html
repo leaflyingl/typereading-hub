@@ -571,7 +571,7 @@
       // 按分组筛选
       if (groupFilter) {
         const group = allGroups.find(g => g.id === groupFilter);
-        if (group) {
+        if (group && group.classes) {
           filtered = filtered.filter(s => group.classes.includes(s.className));
         }
       }
@@ -593,7 +593,7 @@
         const date = new Date(s.createdAt).toLocaleDateString();
         // 查找学生所属的分组
         const studentGroups = allGroups
-          .filter(g => g.classes.includes(s.className))
+          .filter(g => g.classes && g.classes.includes(s.className))
           .map(g => g.name)
           .join(', ');
         
@@ -694,7 +694,7 @@
         const res = await fetch('/api/admin/classes');
         const result = await res.json();
         if (result.success) {
-          allClasses = result.classes;
+          allClasses = result.classes || [];
           updateStats();
           renderClasses();
           updateFilters();
@@ -715,7 +715,7 @@
         const count = allStudents.filter(s => s.className === c.name).length;
         // 查找班级所属的分组
         const classGroups = allGroups
-          .filter(g => g.classes.includes(c.name))
+          .filter(g => g.classes && g.classes.includes(c.name))
           .map(g => '<span class="tag tag-group">' + g.name + '</span>')
           .join(' ');
         const date = new Date(c.createdAt).toLocaleDateString();
@@ -773,8 +773,14 @@
       try {
         const res = await fetch('/api/admin/groups/list');
         const result = await res.json();
+        console.log('加载分组响应:', result);
+        
         if (result.success) {
-          allGroups = result.groups || [];
+          // 确保每个分组都有 classes 数组
+          allGroups = (result.groups || []).map(g => ({
+            ...g,
+            classes: g.classes || []
+          }));
           updateStats();
           renderGroups();
           updateFilters();
@@ -790,25 +796,35 @@
         document.getElementById('groups-list').innerHTML = '<p style="text-align: center; color: #999;">暂无分组</p>';
         return;
       }
-      let html = '<table class="data-table"><thead><tr><th>分组名称</th><th>包含班级</th><th>学生数</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
-      allGroups.forEach(g => {
-        // 计算分组内的学生数
-        const studentCount = allStudents.filter(s => g.classes.includes(s.className)).length;
-        const classesHtml = g.classes.map(c => '<span class="group-class-tag">' + c + '</span>').join('');
-        const date = new Date(g.createdAt).toLocaleDateString();
-        html += '<tr>' +
-          '<td>' + g.name + '</td>' +
-          '<td><div class="group-classes">' + classesHtml + '</div></td>' +
-          '<td>' + studentCount + '</td>' +
-          '<td>' + date + '</td>' +
-          '<td>' +
-            '<button class="btn btn-small btn-secondary" onclick="editGroup(\'' + g.id + '\')">编辑</button> ' +
-            '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteGroup(\'' + g.id + '\')">删除</button>' +
-          '</td>' +
-        '</tr>';
-      });
-      html += '</tbody></table>';
-      document.getElementById('groups-list').innerHTML = html;
+      
+      try {
+        let html = '<table class="data-table"><thead><tr><th>分组名称</th><th>包含班级</th><th>学生数</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
+        allGroups.forEach(g => {
+          // 确保 classes 是数组
+          const groupClasses = g.classes || [];
+          
+          // 计算分组内的学生数
+          const studentCount = allStudents.filter(s => groupClasses.includes(s.className)).length;
+          const classesHtml = groupClasses.map(c => '<span class="group-class-tag">' + c + '</span>').join('');
+          const date = new Date(g.createdAt).toLocaleDateString();
+          
+          html += '<tr>' +
+            '<td>' + g.name + '</td>' +
+            '<td><div class="group-classes">' + (classesHtml || '-') + '</div></td>' +
+            '<td>' + studentCount + '</td>' +
+            '<td>' + date + '</td>' +
+            '<td>' +
+              '<button class="btn btn-small btn-secondary" onclick="editGroup(\'' + g.id + '\')">编辑</button> ' +
+              '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteGroup(\'' + g.id + '\')">删除</button>' +
+            '</td>' +
+          '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('groups-list').innerHTML = html;
+      } catch (e) {
+        console.error('渲染分组列表出错:', e);
+        document.getElementById('groups-list').innerHTML = '<p style="color: red;">渲染失败: ' + e.message + '</p>';
+      }
     }
 
     function showGroupModal() {
@@ -825,7 +841,7 @@
       editingGroupId = groupId;
       document.getElementById('group-modal-title').textContent = '编辑分组';
       document.getElementById('group-name').value = group.name;
-      renderGroupClassSelection(group.classes);
+      renderGroupClassSelection(group.classes || []);
       document.getElementById('group-modal').style.display = 'flex';
     }
 
@@ -835,9 +851,12 @@
         container.innerHTML = '<p style="color: #999;">请先创建班级</p>';
         return;
       }
+      // 确保 selectedClasses 是数组
+      const selected = selectedClasses || [];
+      
       let html = '';
       allClasses.forEach(c => {
-        const checked = selectedClasses.includes(c.name) ? 'checked' : '';
+        const checked = selected.includes(c.name) ? 'checked' : '';
         html += '<label class="checkbox-item">' +
           '<input type="checkbox" value="' + c.name + '" ' + checked + '> ' +
           c.name +
@@ -951,42 +970,48 @@
         document.getElementById('content-list').innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无内容</p>';
         return;
       }
-      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>分发目标</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-      contents.forEach(item => {
-        const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
-        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
-        
-        // 显示分发目标
-        let targetDisplay = '所有班级';
-        if (item.targetType === 'class' && item.targetClasses && item.targetClasses.length > 0) {
-          targetDisplay = '班级: ' + item.targetClasses.join(', ');
-        } else if (item.targetType === 'group' && item.targetGroups && item.targetGroups.length > 0) {
-          const groupNames = item.targetGroups.map(gid => {
-            const g = allGroups.find(grp => grp.id === gid);
-            return g ? g.name : gid;
-          });
-          targetDisplay = '分组: ' + groupNames.join(', ');
-        }
-        
-        const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
-        const date = new Date(item.updatedAt).toLocaleDateString();
-        html += '<tr>' +
-          '<td>' + typeTag + '</td>' +
-          '<td>' + item.title + '</td>' +
-          '<td>' + (item.wordCount || 0) + '</td>' +
-          '<td>' + diff + '</td>' +
-          '<td>' + targetDisplay + '</td>' +
-          '<td>' + status + '</td>' +
-          '<td>' + date + '</td>' +
-          '<td>' +
-            '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
-            '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent(\'' + item.id + '\', \'' + item.type + '\')">删除</button>' +
-          '</td>' +
-        '</tr>';
-      });
-      html += '</tbody></table>';
-      document.getElementById('content-list').innerHTML = html;
-      window.currentContents = contents;
+      
+      try {
+        let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>分发目标</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+        contents.forEach(item => {
+          const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
+          const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
+          
+          // 显示分发目标
+          let targetDisplay = '所有班级';
+          if (item.targetType === 'class' && item.targetClasses && item.targetClasses.length > 0) {
+            targetDisplay = '班级: ' + item.targetClasses.join(', ');
+          } else if (item.targetType === 'group' && item.targetGroups && item.targetGroups.length > 0) {
+            const groupNames = item.targetGroups.map(gid => {
+              const g = allGroups.find(grp => grp.id === gid);
+              return g ? g.name : gid;
+            });
+            targetDisplay = '分组: ' + groupNames.join(', ');
+          }
+          
+          const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
+          const date = new Date(item.updatedAt).toLocaleDateString();
+          html += '<tr>' +
+            '<td>' + typeTag + '</td>' +
+            '<td>' + item.title + '</td>' +
+            '<td>' + (item.wordCount || 0) + '</td>' +
+            '<td>' + diff + '</td>' +
+            '<td>' + targetDisplay + '</td>' +
+            '<td>' + status + '</td>' +
+            '<td>' + date + '</td>' +
+            '<td>' +
+              '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
+              '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent(\'' + item.id + '\', \'' + item.type + '\')">删除</button>' +
+            '</td>' +
+          '</tr>';
+        });
+        html += '</tbody></table>';
+        document.getElementById('content-list').innerHTML = html;
+        window.currentContents = contents;
+      } catch (e) {
+        console.error('渲染内容列表出错:', e);
+        document.getElementById('content-list').innerHTML = '<p style="color: red;">渲染失败: ' + e.message + '</p>';
+      }
     }
 
     function editContentById(id) {
