@@ -485,15 +485,11 @@
       const savedTab = localStorage.getItem('adminActiveTab');
       if (savedTab) {
         const tabs = document.querySelectorAll('.tab');
-        let tabElement = null;
-        tabs.forEach(t => {
-          if (t.getAttribute('onclick').includes("'" + savedTab + "'")) {
-            tabElement = t;
+        for (let i = 0; i < tabs.length; i++) {
+          if (tabs[i].getAttribute('onclick').includes("'" + savedTab + "'")) {
+            switchTab(savedTab, tabs[i]);
+            return;
           }
-        });
-        if (tabElement) {
-          switchTab(savedTab, tabElement);
-          return;
         }
       }
       // 默认加载学生管理
@@ -750,15 +746,15 @@
       document.getElementById('groups-list').innerHTML = html;
     }
 
-    function renderClassCheckboxes(selectedClasses = []) {
+    function renderClassCheckboxes(selectedClasses) {
       const container = document.getElementById('group-class-checkboxes');
       if (allClasses.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center;">请先创建班级</p>';
         return;
       }
       let html = '';
-      allClasses.forEach(c => {
-        const checked = selectedClasses.includes(c.name) ? 'checked' : '';
+      allClasses.forEach(function(c) {
+        const checked = selectedClasses && selectedClasses.indexOf(c.name) >= 0 ? 'checked' : '';
         html += '<div class="class-checkbox-item">' +
           '<input type="checkbox" id="class-' + c.name + '" value="' + c.name + '" ' + checked + '>' +
           '<label for="class-' + c.name + '" style="cursor: pointer;">' + c.name + '</label>' +
@@ -771,12 +767,12 @@
       editingGroupId = null;
       document.getElementById('group-modal-title').textContent = '创建分组';
       document.getElementById('group-name').value = '';
-      renderClassCheckboxes();
+      renderClassCheckboxes([]);
       document.getElementById('group-modal').style.display = 'flex';
     }
 
     function editGroup(groupId) {
-      const group = allGroups.find(g => g.id === groupId);
+      const group = allGroups.find(function(g) { return g.id === groupId; });
       if (!group) return;
       editingGroupId = groupId;
       document.getElementById('group-modal-title').textContent = '编辑分组';
@@ -799,7 +795,7 @@
       }
 
       const selectedClasses = [];
-      document.querySelectorAll('#group-class-checkboxes input[type="checkbox"]:checked').forEach(cb => {
+      document.querySelectorAll('#group-class-checkboxes input[type="checkbox"]:checked').forEach(function(cb) {
         selectedClasses.push(cb.value);
       });
 
@@ -868,9 +864,10 @@
         return;
       }
       let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>适用班级</th><th>适用分组</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-      contents.forEach(item => {
+      contents.forEach(function(item) {
         const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
-        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
+        const diffMap = { easy: '简单', medium: '中等', hard: '困难' };
+        const diff = diffMap[item.difficulty] || '中等';
         const targetClass = item.targetClass || '所有班级';
         const targetGroup = item.targetGroup || '不限制';
         const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
@@ -896,7 +893,7 @@
     }
 
     function editContentById(id) {
-      const item = window.currentContents.find(c => c.id === id);
+      const item = window.currentContents.find(function(c) { return c.id === id; });
       if (item) editContent(item);
     }
 
@@ -905,8 +902,4 @@
       document.getElementById('content-modal-title').textContent = '添加内容';
       document.getElementById('content-type').value = 'reading';
       document.getElementById('content-title').value = '';
-      document.getElementById('content-text').value = '';
-      document.getElementById('content-wordcount').value = '';
-      document.getElementById('content-difficulty').value = 'medium';
-      document.getElementById('content-targetclass').value = '';
-      document.getElementById
+      document.get
