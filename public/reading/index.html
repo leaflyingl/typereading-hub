@@ -166,12 +166,10 @@
       <h1>📖 阅读打卡</h1>
       <a href="/" class="back-btn">← 返回首页</a>
     </div>
-
     <div id="content-area">
       <div class="card loading">加载中...</div>
     </div>
   </div>
-
   <script>
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     
@@ -181,7 +179,7 @@
 
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
-      toast.className = `toast `;
+      toast.className = `toast ${type}`;
       toast.textContent = message;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 3000);
@@ -200,9 +198,14 @@
       }
     }
 
+    // 修改：添加 className 参数
     async function getTodayContent() {
       try {
-        const response = await fetch('/api/content/reading');
+        const response = await fetch('/api/content/reading', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ className: currentUser.className || '' })
+        });
         return await response.json();
       } catch (err) {
         return { success: false, content: null };
@@ -231,10 +234,10 @@
         <div class="card checked-in">
           <div class="checked-in-icon">✅</div>
           <h2>今日已完成阅读打卡</h2>
-          <p>文章：《》</p>
+          <p>文章：《${record.articleTitle || '未知'}》</p>
           <div class="stats-grid">
             <div class="stat-item">
-              <div class="stat-value"></div>
+              <div class="stat-value">${record.wordCount || 0}</div>
               <div class="stat-label">阅读字数</div>
             </div>
             <div class="stat-item">
@@ -263,11 +266,11 @@
       contentArea.innerHTML = `
         <div class="card">
           <div class="article-card">
-            <div class="article-title"></div>
-            <div class="article-content"></div>
-            <div class="word-count">字数：</div>
+            <div class="article-title">${content.title}</div>
+            <div class="article-content">${content.content}</div>
+            <div class="word-count">字数：${content.wordCount}</div>
           </div>
-          <button class="checkin-btn" onclick="handleCheckin('', )">
+          <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount})">
             完成阅读，立即打卡
           </button>
         </div>
