@@ -224,11 +224,11 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('students', this)" data-tab="students">👥 学生管理</div>
-    <div class="tab" onclick="switchTab('classes', this)" data-tab="classes">📚 班级管理</div>
-    <div class="tab" onclick="switchTab('groups', this)" data-tab="groups">📂 分组管理</div>
-    <div class="tab" onclick="switchTab('content', this)" data-tab="content">📝 内容管理</div>
-    <div class="tab" onclick="switchTab('rank', this)" data-tab="rank">🏆 排行榜</div>
+    <div class="tab active" onclick="switchTab('students', this)">👥 学生管理</div>
+    <div class="tab" onclick="switchTab('classes', this)">📚 班级管理</div>
+    <div class="tab" onclick="switchTab('groups', this)">📂 分组管理</div>
+    <div class="tab" onclick="switchTab('content', this)">📝 内容管理</div>
+    <div class="tab" onclick="switchTab('rank', this)">🏆 排行榜</div>
   </div>
 
   <div class="container">
@@ -484,7 +484,13 @@
     function restoreActiveTab() {
       const savedTab = localStorage.getItem('adminActiveTab');
       if (savedTab) {
-        const tabElement = document.querySelector('.tab[data-tab="' + savedTab + '"]');
+        const tabs = document.querySelectorAll('.tab');
+        let tabElement = null;
+        tabs.forEach(t => {
+          if (t.getAttribute('onclick').includes("'" + savedTab + "'")) {
+            tabElement = t;
+          }
+        });
         if (tabElement) {
           switchTab(savedTab, tabElement);
           return;
@@ -901,4 +907,6 @@
       document.getElementById('content-title').value = '';
       document.getElementById('content-text').value = '';
       document.getElementById('content-wordcount').value = '';
-      document.getElementById('content-difficulty
+      document.getElementById('content-difficulty').value = 'medium';
+      document.getElementById('content-targetclass').value = '';
+      document.getElementById
