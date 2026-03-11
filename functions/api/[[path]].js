@@ -244,45 +244,35 @@ export async function onRequest(context) {
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
--  groups.push(JSON.parse(data));
-+  const group = JSON.parse(data);
-+  group.classNames = Array.isArray(group.classNames) ? group.classNames : [];
-+  groups.push(group);
-}
+          const group = JSON.parse(data);
+          group.classNames = Array.isArray(group.classNames) ? group.classNames : [];
+          groups.push(group);
+        }
       }
       return json({ success: true, groups });
     }
 
+    // 创建/更新分组
+    if (path === "admin/groups/save") {
+      const { id, name, classNames } = await request.json();
+      
+      if (!name) {
+        return json({ success: false, message: "分组名称不能为空" });
+      }
 
-    // 创建 / 更新分组 ✅ 修复版
-if (path === "admin/groups/save") {
-  const { id, name, classes } = await request.json();
+      const groupId = id || Date.now().toString();
+      const groupKey = "group:" + groupId;
+      
+      const groupData = {
+        id: groupId,
+        name,
+        classNames: Array.isArray(classNames) ? classNames : [],
+        updatedAt: new Date().toISOString()
+      };
 
-  if (!name) {
-    return json({ success: false, message: "分组名称不能为空" });
-  }
-
-- const groupId = id || "group:" + Date.now();
-+ const groupId = id || Date.now().toString();
-+ const groupKey = "group:" + groupId;
-
-const groupData = {
-  id: groupId,
-  name,
-- classNames: classNames || [],
-+ classNames: Array.isArray(classNames) ? classNames : [],
-  updatedAt: new Date().toISOString()
-};
-
-+ if (!id) {
-+   groupData.createdAt = new Date().toISOString();
-+ }
-
-- await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
-+ await env.TYPEREADING_KV.put(groupKey, JSON.stringify(groupData));
-
-  return json({ success: true, group: groupData });
-}
+      await env.TYPEREADING_KV.put(groupKey, JSON.stringify(groupData));
+      return json({ success: true, group: groupData });
+    }
 
     // 删除分组
     if (path === "admin/groups/delete") {
