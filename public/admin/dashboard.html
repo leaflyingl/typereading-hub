@@ -1069,5 +1069,27 @@
     // 初始化
     loadStudents();
   </script>
+
+  <script>
+// 仅修复：标签页刷新保持状态（不改动任何原有代码）
+document.addEventListener('DOMContentLoaded', () => {
+  const tabEl = document.querySelector('button[data-bs-toggle="tab"], a[data-bs-toggle="tab"]');
+  if (!tabEl) return;
+
+  // 读取 hash 自动激活标签
+  const hash = window.location.hash;
+  if (hash) {
+    const activeTab = document.querySelector(hash + '-tab');
+    if (activeTab) bootstrap.Tab.getOrCreateInstance(activeTab).show();
+  }
+
+  // 点击标签时同步 hash
+  document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', () => {
+      history.replaceState(null, null, tab.getAttribute('data-bs-target') || tab.getAttribute('href'));
+    });
+  });
+});
+</script>
 </body>
 </html>
