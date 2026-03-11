@@ -535,7 +535,8 @@
           updateFilters();
         }
       } catch (err) {
-        document.getElementById('students-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载学生失败:', err);
+        document.getElementById('students-list').innerHTML = '<p style="color: red;">加载失败: ' + err.message + '</p>';
       }
     }
 
@@ -699,7 +700,8 @@
           updateFilters();
         }
       } catch (e) {
-        document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载班级失败:', e);
+        document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
       }
     }
 
@@ -738,19 +740,31 @@
         alert('请输入班级名称');
         return;
       }
+      
+      console.log('正在创建班级:', name);
+      
       try {
         const res = await fetch('/api/admin/class/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ className: name })
         });
+        
+        console.log('创建班级响应状态:', res.status);
+        
         const result = await res.json();
+        console.log('创建班级响应数据:', result);
+        
         if (result.success) {
           closeClassModal();
-          loadClasses();
+          await loadClasses();
+          alert('班级创建成功！');
+        } else {
+          alert('创建失败: ' + (result.message || '未知错误'));
         }
       } catch (e) {
-        alert('创建失败');
+        console.error('创建班级出错:', e);
+        alert('创建失败: ' + e.message);
       }
     }
 
@@ -766,7 +780,8 @@
           updateFilters();
         }
       } catch (e) {
-        document.getElementById('groups-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载分组失败:', e);
+        document.getElementById('groups-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
       }
     }
 
@@ -855,43 +870,62 @@
         classes: selectedClasses
       };
       
+      console.log('正在保存分组:', data);
+      
       try {
         const res = await fetch('/api/admin/groups/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        
+        console.log('保存分组响应状态:', res.status);
+        
         const result = await res.json();
+        console.log('保存分组响应数据:', result);
+        
         if (result.success) {
           closeGroupModal();
           await loadGroups();
           // 刷新学生列表以更新分组显示
           await loadStudents();
+          alert(editingGroupId ? '分组更新成功！' : '分组创建成功！');
         } else {
-          alert(result.message || '保存失败');
+          alert('保存失败: ' + (result.message || '未知错误'));
         }
       } catch (e) {
-        alert('网络错误');
+        console.error('保存分组出错:', e);
+        alert('网络错误: ' + e.message);
       }
     }
 
     async function deleteGroup(groupId) {
       if (!confirm('确定删除此分组？')) return;
+      
+      console.log('正在删除分组:', groupId);
+      
       try {
         const res = await fetch('/api/admin/groups/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: groupId })
         });
+        
+        console.log('删除分组响应状态:', res.status);
+        
         const result = await res.json();
+        console.log('删除分组响应数据:', result);
+        
         if (result.success) {
           await loadGroups();
           await loadStudents();
+          alert('分组删除成功！');
         } else {
-          alert(result.message || '删除失败');
+          alert('删除失败: ' + (result.message || '未知错误'));
         }
       } catch (e) {
-        alert('网络错误');
+        console.error('删除分组出错:', e);
+        alert('网络错误: ' + e.message);
       }
     }
 
@@ -907,7 +941,8 @@
         const result = await res.json();
         if (result.success) renderContentList(result.contents);
       } catch (e) {
-        document.getElementById('content-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载内容失败:', e);
+        document.getElementById('content-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
       }
     }
 
@@ -1085,37 +1120,59 @@
         return;
       }
       
+      console.log('正在保存内容:', data);
+      
       try {
         const res = await fetch('/api/admin/content/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        
+        console.log('保存内容响应状态:', res.status);
+        
         const result = await res.json();
+        console.log('保存内容响应数据:', result);
+        
         if (result.success) {
           closeContentModal();
           loadContentList();
+          alert('内容保存成功！');
         } else {
-          alert(result.message || '保存失败');
+          alert('保存失败: ' + (result.message || '未知错误'));
         }
       } catch (e) {
-        alert('网络错误');
+        console.error('保存内容出错:', e);
+        alert('网络错误: ' + e.message);
       }
     }
 
     async function deleteContent(id, type) {
       if (!confirm('确定删除此内容？')) return;
+      
+      console.log('正在删除内容:', id, type);
+      
       try {
         const res = await fetch('/api/admin/content/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, type })
         });
+        
+        console.log('删除内容响应状态:', res.status);
+        
         const result = await res.json();
-        if (result.success) loadContentList();
-        else alert(result.message || '删除失败');
+        console.log('删除内容响应数据:', result);
+        
+        if (result.success) {
+          loadContentList();
+          alert('内容删除成功！');
+        } else {
+          alert('删除失败: ' + (result.message || '未知错误'));
+        }
       } catch (e) {
-        alert('网络错误');
+        console.error('删除内容出错:', e);
+        alert('网络错误: ' + e.message);
       }
     }
 
@@ -1126,7 +1183,8 @@
         const result = await res.json();
         if (result.success) renderRank(result.rank);
       } catch (e) {
-        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载排行榜失败:', e);
+        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
       }
     }
 
@@ -1143,7 +1201,7 @@
       document.getElementById('rank-list').innerHTML = html;
     }
 
-    // 初始化 - 修复：直接调用 loadStudents 而不是不存在的 init()
+    // 初始化
     loadStudents();
   </script>
 </body>
