@@ -450,6 +450,33 @@
     </div>
   </div>
 
+  /* ===== 缺失的函数补丁（必须有） ===== */
+
+function toggleDistributeTarget() {
+  const type = document.getElementById('content-distribute-type').value;
+  document.getElementById('target-class-group').style.display =
+    type === 'class' ? 'block' : 'none';
+  document.getElementById('target-group-group').style.display =
+    type === 'group' ? 'block' : 'none';
+}
+
+function closeContentModal() {
+  document.getElementById('content-modal').style.display = 'none';
+}
+
+async function saveContent() {
+  alert('saveContent 未实现（用于占位，防止 JS 崩溃）');
+}
+
+async function deleteContent() {
+  alert('deleteContent 未实现（用于占位，防止 JS 崩溃）');
+}
+
+async function loadRank() {
+  document.getElementById('rank-list').innerHTML =
+    '<p style="color:#999;">排行榜加载中（占位）</p>';
+}
+
   <script>
     let allStudents = [];
     let allClasses = [];
@@ -476,6 +503,102 @@
       if (tab === 'content') loadContentList();
       if (tab === 'rank') loadRank();
     }
+
+        function toggleDistributeTarget() {
+      const type = document.getElementById('content-distribute-type').value;
+      document.getElementById('target-class-group').style.display = type === 'class' ? 'block' : 'none';
+      document.getElementById('target-group-group').style.display = type === 'group' ? 'block' : 'none';
+    }
+
+    function closeContentModal() {
+      document.getElementById('content-modal').style.display = 'none';
+    }
+
+    async function loadRank() {
+      try {
+        const res = await fetch('/api/rank/typing');
+        const result = await res.json();
+        if (result.success) {
+          let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>WPM</th><th>准确率</th></tr></thead><tbody>';
+          result.rank.forEach((r, i) => {
+            html += '<tr><td>' + (i + 1) + '</td><td>' + (r.realName || '-') + '</td><td>' + (r.className || '-') + '</td><td>' + r.wpm + '</td><td>' + r.accuracy + '%</td></tr>';
+          });
+          html += '</tbody></table>';
+          document.getElementById('rank-list').innerHTML = html;
+        }
+      } catch (e) {
+        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
+      }
+    }
+
+    async function saveContent() {
+      const distributeType = document.getElementById('content-distribute-type').value;
+      const targetClass = distributeType === 'class' ? document.getElementById('content-targetclass').value : '';
+      const targetGroup = distributeType === 'group' ? document.getElementById('content-targetgroup').value : '';
+      
+      const data = {
+        id: editingContentId,
+        type: document.getElementById('content-type').value,
+        title: document.getElementById('content-title').value.trim(),
+        content: document.getElementById('content-text').value.trim(),
+        wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
+        difficulty: document.getElementById('content-difficulty').value,
+        targetClass: targetClass,
+        targetGroup: targetGroup,
+        isActive: document.getElementById('content-active').checked
+      };
+      
+      if (!data.title || !data.content) {
+        alert('请填写标题和内容');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/content/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await res.json();
+        if (result.success) {
+          closeContentModal();
+          loadContentList();
+        } else {
+          alert(result.message || '保存失败');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
+    async function deleteContent(id, type) {
+      if (!confirm('确定删除此内容？')) return;
+      try {
+        const res = await fetch('/api/admin/content/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, type })
+        });
+        const result = await res.json();
+        if (result.success) {
+          loadContentList();
+        } else {
+          alert(result.message || '删除失败');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
+    }
+
+   // ========== 初始化 ==========
+    (async function init() {
+      await loadClasses();
+      await loadGroups();
+      await loadStudents();
+      loadContentList();
+      loadRank();
+    })();
+  </script>
 
     // ========== 学生管理 ==========
     async function loadStudents() {
