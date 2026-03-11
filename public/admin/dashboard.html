@@ -1071,26 +1071,15 @@
   </script>
 
 <script>
-// 修复：标签刷新后保持当前页面（专为你真实1000行dashboard编写）
-document.addEventListener('DOMContentLoaded', function() {
-  // 读取URL hash
-  const hash = window.location.hash;
-
-  // 页面加载时，根据hash自动激活对应标签
-  if (hash) {
-    const targetTab = document.querySelector('.nav-tabs a[href="' + hash + '"]');
-    if (targetTab) {
-      targetTab.click();
-    }
-  }
-
-  // 点击标签时，自动同步hash到URL
-  document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(tab => {
-    tab.addEventListener('shown.bs.tab', function() {
-      const target = this.getAttribute('href');
-      window.history.replaceState(null, null, target);
-    });
-  });
+// 专为你的真实1000行dashboard修复：刷新保持当前标签
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    let h=location.hash;
+    h&&document.querySelector('.nav-tabs a[href="'+h+'"]')?.click();
+    document.querySelectorAll('.nav-tabs a[data-bs-toggle="tab"]').forEach(t=>{
+      t.addEventListener('click',()=>history.replaceState(null,null,t.getAttribute('href')))
+    })
+  },50)
 });
 </script>
   
