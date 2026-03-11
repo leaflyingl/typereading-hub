@@ -184,56 +184,33 @@
     .tag-typing { background: #f6ffed; color: #52c41a; }
     .tag-active { background: #f6ffed; color: #52c41a; }
     .tag-inactive { background: #f5f5f5; color: #999; }
-    .tag-group { background: #fff7e6; color: #fa8c16; }
     
-    /* 分组相关样式 */
-    .group-classes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
+    /* 分组管理样式 */
+    .class-checkbox-list {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
     }
-    .group-class-tag {
-      background: #e6f7ff;
-      color: #1890ff;
-      padding: 4px 10px;
+    .class-checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      margin-bottom: 4px;
       border-radius: 4px;
-      font-size: 12px;
+      cursor: pointer;
     }
-    .checkbox-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-    .checkbox-item {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 8px 12px;
+    .class-checkbox-item:hover {
       background: #f5f5f5;
-      border-radius: 6px;
-      cursor: pointer;
     }
-    .checkbox-item:hover {
-      background: #e8e8e8;
+    .class-checkbox-item input {
+      margin-right: 8px;
     }
-    .checkbox-item input {
-      cursor: pointer;
-    }
-    .target-type-selector {
-      display: flex;
-      gap: 20px;
-      margin-bottom: 10px;
-    }
-    .target-type-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-    .target-section {
-      margin-top: 10px;
+    .group-classes {
+      color: #666;
+      font-size: 13px;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -247,11 +224,11 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" onclick="switchTab('students', this)" data-tab="students">👥 学生管理</div>
-    <div class="tab" onclick="switchTab('classes', this)" data-tab="classes">📚 班级管理</div>
-    <div class="tab" onclick="switchTab('groups', this)" data-tab="groups">📂 分组管理</div>
-    <div class="tab" onclick="switchTab('content', this)" data-tab="content">📝 内容管理</div>
-    <div class="tab" onclick="switchTab('rank', this)" data-tab="rank">🏆 排行榜</div>
+    <div class="tab active" onclick="switchTab('students', this)">👥 学生管理</div>
+    <div class="tab" onclick="switchTab('classes', this)">📚 班级管理</div>
+    <div class="tab" onclick="switchTab('groups', this)">📂 分组管理</div>
+    <div class="tab" onclick="switchTab('content', this)">📝 内容管理</div>
+    <div class="tab" onclick="switchTab('rank', this)">🏆 排行榜</div>
   </div>
 
   <div class="container">
@@ -281,9 +258,6 @@
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
           <select id="class-filter" class="filter-select" onchange="loadStudents()">
             <option value="">全部班级</option>
-          </select>
-          <select id="group-filter" class="filter-select" onchange="loadStudents()">
-            <option value="">全部分组</option>
           </select>
           <select id="gender-filter" class="filter-select" onchange="loadStudents()">
             <option value="">全部性别</option>
@@ -394,7 +368,7 @@
     </div>
   </div>
 
-  <!-- 创建/编辑分组弹窗 -->
+  <!-- 分组编辑弹窗 -->
   <div id="group-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -403,11 +377,11 @@
       </div>
       <div class="form-group">
         <label>分组名称</label>
-        <input type="text" id="group-name" class="form-control" placeholder="例如：KET冲刺班">
+        <input type="text" id="group-name" class="form-control" placeholder="例如：高年级组">
       </div>
       <div class="form-group">
-        <label>选择班级（可多选）</label>
-        <div id="group-classes-selection" class="checkbox-group">
+        <label>包含班级</label>
+        <div id="group-class-checkboxes" class="class-checkbox-list">
           <!-- 动态生成班级复选框 -->
         </div>
       </div>
@@ -452,37 +426,18 @@
           <option value="hard">困难</option>
         </select>
       </div>
-      
-      <!-- 目标选择：班级或分组 -->
       <div class="form-group">
-        <label>分发目标</label>
-        <div class="target-type-selector">
-          <label class="target-type-option">
-            <input type="radio" name="target-type" value="all" checked onchange="toggleTargetSection()"> 所有班级
-          </label>
-          <label class="target-type-option">
-            <input type="radio" name="target-type" value="class" onchange="toggleTargetSection()"> 指定班级
-          </label>
-          <label class="target-type-option">
-            <input type="radio" name="target-type" value="group" onchange="toggleTargetSection()"> 指定分组
-          </label>
-        </div>
-        
-        <div id="target-class-section" class="target-section" style="display: none;">
-          <label>选择班级（可多选）</label>
-          <div id="content-target-classes" class="checkbox-group">
-            <!-- 动态生成 -->
-          </div>
-        </div>
-        
-        <div id="target-group-section" class="target-section" style="display: none;">
-          <label>选择分组（可多选）</label>
-          <div id="content-target-groups" class="checkbox-group">
-            <!-- 动态生成 -->
-          </div>
-        </div>
+        <label>适用班级（留空表示所有班级）</label>
+        <select id="content-targetclass" class="form-control">
+          <option value="">所有班级</option>
+        </select>
       </div>
-      
+      <div class="form-group">
+        <label>适用分组（留空表示不限制分组）</label>
+        <select id="content-targetgroup" class="form-control">
+          <option value="">不限制分组</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>
           <input type="checkbox" id="content-active" checked> 启用
@@ -509,9 +464,6 @@
     }
 
     function switchTab(tab, element) {
-      // 保存当前标签到 localStorage
-      localStorage.setItem('adminActiveTab', tab);
-      
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       
@@ -525,17 +477,6 @@
       if (tab === 'rank') loadRank();
     }
 
-    // 恢复上次打开的标签页
-    function restoreActiveTab() {
-      const savedTab = localStorage.getItem('adminActiveTab');
-      if (savedTab) {
-        const tabElement = document.querySelector('.tab[data-tab="' + savedTab + '"]');
-        if (tabElement) {
-          switchTab(savedTab, tabElement);
-        }
-      }
-    }
-
     // ========== 学生管理 ==========
     async function loadStudents() {
       try {
@@ -546,11 +487,10 @@
           allStudents = result.students;
           updateStats();
           renderStudents();
-          updateFilters();
+          updateClassFilter();
         }
       } catch (err) {
-        console.error('加载学生失败:', err);
-        document.getElementById('students-list').innerHTML = '<p style="color: red;">加载失败: ' + err.message + '</p>';
+        document.getElementById('students-list').innerHTML = '<p style="color: red;">加载失败</p>';
       }
     }
 
@@ -561,36 +501,24 @@
       document.getElementById('total-groups').textContent = allGroups.length;
     }
 
-    function updateFilters() {
-      // 更新班级筛选器
-      const classOptions = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
-      document.getElementById('class-filter').innerHTML = '<option value="">全部班级</option>' + classOptions;
-      document.getElementById('edit-class').innerHTML = '<option value="">未分班</option>' + classOptions;
-      
-      // 更新分组筛选器
-      const groupOptions = allGroups.map(g => '<option value="' + g.id + '">' + g.name + '</option>').join('');
-      document.getElementById('group-filter').innerHTML = '<option value="">全部分组</option>' + groupOptions;
+    function updateClassFilter() {
+      const options = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
+      document.getElementById('class-filter').innerHTML = '<option value="">全部班级</option>' + options;
+      document.getElementById('edit-class').innerHTML = '<option value="">未分班</option>' + options;
+      document.getElementById('content-targetclass').innerHTML = '<option value="">所有班级</option>' + options;
+    }
+
+    function updateGroupFilter() {
+      const options = allGroups.map(g => '<option value="' + g.name + '">' + g.name + '</option>').join('');
+      document.getElementById('content-targetgroup').innerHTML = '<option value="">不限制分组</option>' + options;
     }
 
     function renderStudents() {
       const classFilter = document.getElementById('class-filter').value;
-      const groupFilter = document.getElementById('group-filter').value;
       const genderFilter = document.getElementById('gender-filter').value;
       
       let filtered = allStudents;
-      
-      // 按班级筛选
       if (classFilter) filtered = filtered.filter(s => s.className === classFilter);
-      
-      // 按分组筛选
-      if (groupFilter) {
-        const group = allGroups.find(g => g.id === groupFilter);
-        if (group && group.classes) {
-          filtered = filtered.filter(s => group.classes.includes(s.className));
-        }
-      }
-      
-      // 按性别筛选
       if (genderFilter) filtered = filtered.filter(s => s.gender === genderFilter);
 
       if (filtered.length === 0) {
@@ -600,24 +528,17 @@
 
       let html = '<table class="data-table"><thead><tr>';
       html += '<th><input type="checkbox" onchange="toggleSelectAll(this)"></th>';
-      html += '<th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th><th>分组</th><th>阅读单词数</th><th>打字单词数</th><th>注册时间</th><th>操作</th>';
+      html += '<th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th><th>阅读单词数</th><th>打字单词数</th><th>注册时间</th><th>操作</th>';
       html += '</tr></thead><tbody>';
 
       filtered.forEach(s => {
         const date = new Date(s.createdAt).toLocaleDateString();
-        // 查找学生所属的分组
-        const studentGroups = allGroups
-          .filter(g => g.classes && g.classes.includes(s.className))
-          .map(g => g.name)
-          .join(', ');
-        
         html += '<tr>' +
           '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
           '<td>' + (s.nickname || '') + '</td>' +
           '<td>' + (s.realName || '-') + '</td>' +
           '<td>' + (s.gender || '-') + '</td>' +
           '<td>' + (s.className || '-') + '</td>' +
-          '<td>' + (studentGroups || '-') + '</td>' +
           '<td>' + (s.totalReadingWords || 0) + '</td>' +
           '<td>' + (s.totalTypingWords || 0) + '</td>' +
           '<td>' + date + '</td>' +
@@ -708,14 +629,13 @@
         const res = await fetch('/api/admin/classes');
         const result = await res.json();
         if (result.success) {
-          allClasses = result.classes || [];
+          allClasses = result.classes;
           updateStats();
           renderClasses();
-          updateFilters();
+          updateClassFilter();
         }
       } catch (e) {
-        console.error('加载班级失败:', e);
-        document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
+        document.getElementById('classes-list').innerHTML = '<p style="color: red;">加载失败</p>';
       }
     }
 
@@ -724,28 +644,11 @@
         document.getElementById('classes-list').innerHTML = '<p style="text-align: center; color: #999;">暂无班级</p>';
         return;
       }
-      
-      // 需要先加载分组数据才能显示所属分组
-      if (allGroups.length === 0) {
-        loadGroups().then(() => renderClassesTable());
-      } else {
-        renderClassesTable();
-      }
-    }
-
-    function renderClassesTable() {
-      let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>学生数</th><th>所属分组</th><th>创建时间</th></tr></thead><tbody>';
+      let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>学生数</th><th>创建时间</th></tr></thead><tbody>';
       allClasses.forEach(c => {
         const count = allStudents.filter(s => s.className === c.name).length;
-        
-        // 查找班级所属的分组 - 修复：正确匹配班级名
-        const classGroups = allGroups
-          .filter(g => g.classes && g.classes.includes(c.name))
-          .map(g => '<span class="tag tag-group">' + g.name + '</span>')
-          .join(' ');
-        
-        const date = formatDate(c.createdAt);
-        html += '<tr><td>' + c.name + '</td><td>' + count + '</td><td>' + (classGroups || '-') + '</td><td>' + date + '</td></tr>';
+        const date = new Date(c.createdAt).toLocaleDateString();
+        html += '<tr><td>' + c.name + '</td><td>' + count + '</td><td>' + date + '</td></tr>';
       });
       html += '</tbody></table>';
       document.getElementById('classes-list').innerHTML = html;
@@ -766,31 +669,19 @@
         alert('请输入班级名称');
         return;
       }
-      
-      console.log('正在创建班级:', name);
-      
       try {
         const res = await fetch('/api/admin/class/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ className: name })
         });
-        
-        console.log('创建班级响应状态:', res.status);
-        
         const result = await res.json();
-        console.log('创建班级响应数据:', result);
-        
         if (result.success) {
           closeClassModal();
-          await loadClasses();
-          alert('班级创建成功！');
-        } else {
-          alert('创建失败: ' + (result.message || '未知错误'));
+          loadClasses();
         }
       } catch (e) {
-        console.error('创建班级出错:', e);
-        alert('创建失败: ' + e.message);
+        alert('创建失败');
       }
     }
 
@@ -799,21 +690,14 @@
       try {
         const res = await fetch('/api/admin/groups/list');
         const result = await res.json();
-        console.log('加载分组响应:', result);
-        
         if (result.success) {
-          // 确保每个分组都有 classes 数组
-          allGroups = (result.groups || []).map(g => ({
-            ...g,
-            classes: g.classes || []
-          }));
+          allGroups = result.groups;
           updateStats();
           renderGroups();
-          updateFilters();
+          updateGroupFilter();
         }
       } catch (e) {
-        console.error('加载分组失败:', e);
-        document.getElementById('groups-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
+        document.getElementById('groups-list').innerHTML = '<p style="color: red;">加载失败</p>';
       }
     }
 
@@ -822,61 +706,48 @@
         document.getElementById('groups-list').innerHTML = '<p style="text-align: center; color: #999;">暂无分组</p>';
         return;
       }
-      
-      try {
-        let html = '<table class="data-table"><thead><tr><th>分组名称</th><th>包含班级</th><th>学生数</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
-        allGroups.forEach(g => {
-          // 确保 classes 是数组
-          const groupClasses = g.classes || [];
-          
-          // 计算分组内的学生数
-          const studentCount = allStudents.filter(s => groupClasses.includes(s.className)).length;
-          const classesHtml = groupClasses.map(c => '<span class="group-class-tag">' + c + '</span>').join('');
-          
-          // 修复：使用安全的日期格式化
-          const date = formatDate(g.createdAt);
-          
-          html += '<tr>' +
-            '<td>' + g.name + '</td>' +
-            '<td><div class="group-classes">' + (classesHtml || '-') + '</div></td>' +
-            '<td>' + studentCount + '</td>' +
-            '<td>' + date + '</td>' +
-            '<td>' +
-              '<button class="btn btn-small btn-secondary" onclick="editGroup(\'' + g.id + '\')">编辑</button> ' +
-              '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteGroup(\'' + g.id + '\')">删除</button>' +
-            '</td>' +
-          '</tr>';
-        });
-        html += '</tbody></table>';
-        document.getElementById('groups-list').innerHTML = html;
-      } catch (e) {
-        console.error('渲染分组列表出错:', e);
-        document.getElementById('groups-list').innerHTML = '<p style="color: red;">渲染失败: ' + e.message + '</p>';
-      }
+      let html = '<table class="data-table"><thead><tr><th>分组名称</th><th>包含班级</th><th>班级数</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+      allGroups.forEach(g => {
+        const classNames = g.classNames || [];
+        const classList = classNames.length > 0 ? classNames.join('、') : '无';
+        const date = new Date(g.updatedAt).toLocaleDateString();
+        html += '<tr>' +
+          '<td>' + g.name + '</td>' +
+          '<td class="group-classes">' + classList + '</td>' +
+          '<td>' + classNames.length + '</td>' +
+          '<td>' + date + '</td>' +
+          '<td>' +
+            '<button class="btn btn-small btn-secondary" onclick="editGroup(\'' + g.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteGroup(\'' + g.id + '\')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('groups-list').innerHTML = html;
     }
 
-    // 修复：安全的日期格式化函数
-    function formatDate(dateValue) {
-      if (!dateValue) return '-';
-      
-      try {
-        const date = new Date(dateValue);
-        // 检查是否为有效日期
-        if (isNaN(date.getTime())) {
-          return '-';
-        }
-        return date.toLocaleDateString();
-      } catch (e) {
-        console.error('日期格式化错误:', dateValue, e);
-        return '-';
+    function renderClassCheckboxes(selectedClasses = []) {
+      const container = document.getElementById('group-class-checkboxes');
+      if (allClasses.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center;">请先创建班级</p>';
+        return;
       }
+      let html = '';
+      allClasses.forEach(c => {
+        const checked = selectedClasses.includes(c.name) ? 'checked' : '';
+        html += '<div class="class-checkbox-item">' +
+          '<input type="checkbox" id="class-' + c.name + '" value="' + c.name + '" ' + checked + '>' +
+          '<label for="class-' + c.name + '" style="cursor: pointer;">' + c.name + '</label>' +
+        '</div>';
+      });
+      container.innerHTML = html;
     }
 
     function showGroupModal() {
       editingGroupId = null;
       document.getElementById('group-modal-title').textContent = '创建分组';
       document.getElementById('group-name').value = '';
-      renderGroupClassSelection([]);
+      renderClassCheckboxes();
       document.getElementById('group-modal').style.display = 'flex';
     }
 
@@ -886,28 +757,8 @@
       editingGroupId = groupId;
       document.getElementById('group-modal-title').textContent = '编辑分组';
       document.getElementById('group-name').value = group.name;
-      renderGroupClassSelection(group.classes || []);
+      renderClassCheckboxes(group.classNames || []);
       document.getElementById('group-modal').style.display = 'flex';
-    }
-
-    function renderGroupClassSelection(selectedClasses) {
-      const container = document.getElementById('group-classes-selection');
-      if (allClasses.length === 0) {
-        container.innerHTML = '<p style="color: #999;">请先创建班级</p>';
-        return;
-      }
-      // 确保 selectedClasses 是数组
-      const selected = selectedClasses || [];
-      
-      let html = '';
-      allClasses.forEach(c => {
-        const checked = selected.includes(c.name) ? 'checked' : '';
-        html += '<label class="checkbox-item">' +
-          '<input type="checkbox" value="' + c.name + '" ' + checked + '> ' +
-          c.name +
-        '</label>';
-      });
-      container.innerHTML = html;
     }
 
     function closeGroupModal() {
@@ -921,75 +772,52 @@
         alert('请输入分组名称');
         return;
       }
-      
-      // 获取选中的班级
+
       const selectedClasses = [];
-      document.querySelectorAll('#group-classes-selection input:checked').forEach(cb => {
+      document.querySelectorAll('#group-class-checkboxes input[type="checkbox"]:checked').forEach(cb => {
         selectedClasses.push(cb.value);
       });
-      
+
       const data = {
         id: editingGroupId,
         name: name,
-        classes: selectedClasses
+        classNames: selectedClasses
       };
-      
-      console.log('正在保存分组:', data);
-      
+
       try {
         const res = await fetch('/api/admin/groups/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
-        console.log('保存分组响应状态:', res.status);
-        
         const result = await res.json();
-        console.log('保存分组响应数据:', result);
-        
         if (result.success) {
           closeGroupModal();
-          await loadGroups();
-          // 刷新班级列表以更新分组显示
-          await loadClasses();
-          alert(editingGroupId ? '分组更新成功！' : '分组创建成功！');
+          loadGroups();
         } else {
-          alert('保存失败: ' + (result.message || '未知错误'));
+          alert(result.message || '保存失败');
         }
       } catch (e) {
-        console.error('保存分组出错:', e);
-        alert('网络错误: ' + e.message);
+        alert('网络错误');
       }
     }
 
     async function deleteGroup(groupId) {
-      if (!confirm('确定删除此分组？')) return;
-      
-      console.log('正在删除分组:', groupId);
-      
+      if (!confirm('确定删除此分组吗？')) return;
       try {
         const res = await fetch('/api/admin/groups/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: groupId })
         });
-        
-        console.log('删除分组响应状态:', res.status);
-        
         const result = await res.json();
-        console.log('删除分组响应数据:', result);
-        
         if (result.success) {
-          await loadGroups();
-          await loadClasses();
-          alert('分组删除成功！');
+          loadGroups();
         } else {
-          alert('删除失败: ' + (result.message || '未知错误'));
+          alert(result.message || '删除失败');
         }
       } catch (e) {
-        console.error('删除分组出错:', e);
-        alert('网络错误: ' + e.message);
+        alert('网络错误');
       }
     }
 
@@ -1005,8 +833,7 @@
         const result = await res.json();
         if (result.success) renderContentList(result.contents);
       } catch (e) {
-        console.error('加载内容失败:', e);
-        document.getElementById('content-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
+        document.getElementById('content-list').innerHTML = '<p style="color: red;">加载失败</p>';
       }
     }
 
@@ -1015,48 +842,32 @@
         document.getElementById('content-list').innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无内容</p>';
         return;
       }
-      
-      try {
-        let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>分发目标</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
-        contents.forEach(item => {
-          const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
-          const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
-          
-          // 显示分发目标
-          let targetDisplay = '所有班级';
-          if (item.targetType === 'class' && item.targetClasses && item.targetClasses.length > 0) {
-            targetDisplay = '班级: ' + item.targetClasses.join(', ');
-          } else if (item.targetType === 'group' && item.targetGroups && item.targetGroups.length > 0) {
-            const groupNames = item.targetGroups.map(gid => {
-              const g = allGroups.find(grp => grp.id === gid);
-              return g ? g.name : gid;
-            });
-            targetDisplay = '分组: ' + groupNames.join(', ');
-          }
-          
-          const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
-          const date = formatDate(item.updatedAt);
-          html += '<tr>' +
-            '<td>' + typeTag + '</td>' +
-            '<td>' + item.title + '</td>' +
-            '<td>' + (item.wordCount || 0) + '</td>' +
-            '<td>' + diff + '</td>' +
-            '<td>' + targetDisplay + '</td>' +
-            '<td>' + status + '</td>' +
-            '<td>' + date + '</td>' +
-            '<td>' +
-              '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
-              '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent(\'' + item.id + '\', \'' + item.type + '\')">删除</button>' +
-            '</td>' +
-          '</tr>';
-        });
-        html += '</tbody></table>';
-        document.getElementById('content-list').innerHTML = html;
-        window.currentContents = contents;
-      } catch (e) {
-        console.error('渲染内容列表出错:', e);
-        document.getElementById('content-list').innerHTML = '<p style="color: red;">渲染失败: ' + e.message + '</p>';
-      }
+      let html = '<table class="data-table"><thead><tr><th>类型</th><th>标题</th><th>字数</th><th>难度</th><th>适用班级</th><th>适用分组</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>';
+      contents.forEach(item => {
+        const typeTag = item.type === 'reading' ? '<span class="tag tag-reading">📖 阅读</span>' : '<span class="tag tag-typing">⌨️ 打字</span>';
+        const diff = { easy: '简单', medium: '中等', hard: '困难' }[item.difficulty] || '中等';
+        const targetClass = item.targetClass || '所有班级';
+        const targetGroup = item.targetGroup || '不限制';
+        const status = item.isActive ? '<span class="tag tag-active">启用</span>' : '<span class="tag tag-inactive">禁用</span>';
+        const date = new Date(item.updatedAt).toLocaleDateString();
+        html += '<tr>' +
+          '<td>' + typeTag + '</td>' +
+          '<td>' + item.title + '</td>' +
+          '<td>' + (item.wordCount || 0) + '</td>' +
+          '<td>' + diff + '</td>' +
+          '<td>' + targetClass + '</td>' +
+          '<td>' + targetGroup + '</td>' +
+          '<td>' + status + '</td>' +
+          '<td>' + date + '</td>' +
+          '<td>' +
+            '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small" style="background: #ff4d4f; color: white;" onclick="deleteContent(\'' + item.id + '\', \'' + item.type + '\')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('content-list').innerHTML = html;
+      window.currentContents = contents;
     }
 
     function editContentById(id) {
@@ -1072,11 +883,8 @@
       document.getElementById('content-text').value = '';
       document.getElementById('content-wordcount').value = '';
       document.getElementById('content-difficulty').value = 'medium';
-      
-      // 重置目标选择
-      document.querySelector('input[name="target-type"][value="all"]').checked = true;
-      toggleTargetSection();
-      
+      document.getElementById('content-targetclass').value = '';
+      document.getElementById('content-targetgroup').value = '';
       document.getElementById('content-active').checked = true;
       document.getElementById('content-modal').style.display = 'flex';
     }
@@ -1089,56 +897,10 @@
       document.getElementById('content-text').value = content.content;
       document.getElementById('content-wordcount').value = content.wordCount || '';
       document.getElementById('content-difficulty').value = content.difficulty || 'medium';
-      
-      // 设置目标选择
-      const targetType = content.targetType || 'all';
-      document.querySelector('input[name="target-type"][value="' + targetType + '"]').checked = true;
-      toggleTargetSection();
-      
-      if (targetType === 'class' && content.targetClasses) {
-        document.querySelectorAll('#content-target-classes input').forEach(cb => {
-          cb.checked = content.targetClasses.includes(cb.value);
-        });
-      } else if (targetType === 'group' && content.targetGroups) {
-        document.querySelectorAll('#content-target-groups input').forEach(cb => {
-          cb.checked = content.targetGroups.includes(cb.value);
-        });
-      }
-      
+      document.getElementById('content-targetclass').value = content.targetClass || '';
+      document.getElementById('content-targetgroup').value = content.targetGroup || '';
       document.getElementById('content-active').checked = content.isActive !== false;
       document.getElementById('content-modal').style.display = 'flex';
-    }
-
-    function toggleTargetSection() {
-      const targetType = document.querySelector('input[name="target-type"]:checked').value;
-      document.getElementById('target-class-section').style.display = targetType === 'class' ? 'block' : 'none';
-      document.getElementById('target-group-section').style.display = targetType === 'group' ? 'block' : 'none';
-      
-      // 渲染班级选择
-      if (targetType === 'class') {
-        const container = document.getElementById('content-target-classes');
-        let html = '';
-        allClasses.forEach(c => {
-          html += '<label class="checkbox-item">' +
-            '<input type="checkbox" value="' + c.name + '"> ' +
-            c.name +
-          '</label>';
-        });
-        container.innerHTML = html;
-      }
-      
-      // 渲染分组选择
-      if (targetType === 'group') {
-        const container = document.getElementById('content-target-groups');
-        let html = '';
-        allGroups.forEach(g => {
-          html += '<label class="checkbox-item">' +
-            '<input type="checkbox" value="' + g.id + '"> ' +
-            g.name +
-          '</label>';
-        });
-        container.innerHTML = html;
-      }
     }
 
     function closeContentModal() {
@@ -1147,21 +909,6 @@
     }
 
     async function saveContent() {
-      const targetType = document.querySelector('input[name="target-type"]:checked').value;
-      
-      let targetClasses = [];
-      let targetGroups = [];
-      
-      if (targetType === 'class') {
-        document.querySelectorAll('#content-target-classes input:checked').forEach(cb => {
-          targetClasses.push(cb.value);
-        });
-      } else if (targetType === 'group') {
-        document.querySelectorAll('#content-target-groups input:checked').forEach(cb => {
-          targetGroups.push(cb.value);
-        });
-      }
-      
       const data = {
         id: editingContentId,
         type: document.getElementById('content-type').value,
@@ -1169,80 +916,45 @@
         content: document.getElementById('content-text').value.trim(),
         wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
         difficulty: document.getElementById('content-difficulty').value,
-        targetType: targetType,
-        targetClasses: targetClasses,
-        targetGroups: targetGroups,
+        targetClass: document.getElementById('content-targetclass').value,
+        targetGroup: document.getElementById('content-targetgroup').value,
         isActive: document.getElementById('content-active').checked
       };
-      
       if (!data.title || !data.content) {
         alert('请填写标题和内容');
         return;
       }
-      
-      if (targetType === 'class' && targetClasses.length === 0) {
-        alert('请至少选择一个班级');
-        return;
-      }
-      
-      if (targetType === 'group' && targetGroups.length === 0) {
-        alert('请至少选择一个分组');
-        return;
-      }
-      
-      console.log('正在保存内容:', data);
-      
       try {
         const res = await fetch('/api/admin/content/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
-        console.log('保存内容响应状态:', res.status);
-        
         const result = await res.json();
-        console.log('保存内容响应数据:', result);
-        
         if (result.success) {
           closeContentModal();
           loadContentList();
-          alert('内容保存成功！');
         } else {
-          alert('保存失败: ' + (result.message || '未知错误'));
+          alert(result.message || '保存失败');
         }
       } catch (e) {
-        console.error('保存内容出错:', e);
-        alert('网络错误: ' + e.message);
+        alert('网络错误');
       }
     }
 
     async function deleteContent(id, type) {
       if (!confirm('确定删除此内容？')) return;
-      
-      console.log('正在删除内容:', id, type);
-      
       try {
         const res = await fetch('/api/admin/content/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, type })
         });
-        
-        console.log('删除内容响应状态:', res.status);
-        
         const result = await res.json();
-        console.log('删除内容响应数据:', result);
-        
-        if (result.success) {
-          loadContentList();
-          alert('内容删除成功！');
-        } else {
-          alert('删除失败: ' + (result.message || '未知错误'));
-        }
+        if (result.success) loadContentList();
+        else alert(result.message || '删除失败');
       } catch (e) {
-        console.error('删除内容出错:', e);
-        alert('网络错误: ' + e.message);
+        alert('网络错误');
       }
     }
 
@@ -1253,8 +965,7 @@
         const result = await res.json();
         if (result.success) renderRank(result.rank);
       } catch (e) {
-        console.error('加载排行榜失败:', e);
-        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败: ' + e.message + '</p>';
+        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
       }
     }
 
@@ -1271,11 +982,8 @@
       document.getElementById('rank-list').innerHTML = html;
     }
 
-    // 初始化 - 加载学生数据并恢复上次打开的标签页
+    // 初始化
     loadStudents();
-    
-    // 页面加载完成后恢复标签页状态
-    window.addEventListener('load', restoreActiveTab);
   </script>
 </body>
 </html>
