@@ -354,6 +354,24 @@
     </div>
   </div>
 
+  <!-- 编辑班级弹窗 -->
+<div id="edit-class-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>编辑班级</h3>
+            <span class="close-btn" onclick="closeEditClassModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label>班级名称</label>
+            <input type="text" id="edit-class-name" class="form-control">
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeEditClassModal()">取消</button>
+            <button class="btn btn-primary" onclick="updateClass()">保存</button>
+        </div>
+    </div>
+</div>
+
   <!-- 创建/编辑分组弹窗 -->
   <div id="group-modal" class="modal">
     <div class="modal-content">
@@ -634,21 +652,31 @@
     }
 
     function renderClasses() {
-      if (allClasses.length === 0) {
+    if (allClasses.length === 0) {
         document.getElementById('classes-list').innerHTML = '<p style="text-align: center; color: #999;">暂无班级</p>';
         return;
-      }
-      let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>所属分组</th><th>学生数</th><th>创建时间</th></tr></thead><tbody>';
-      allClasses.forEach(c => {
+    }
+    let html = '<table class="data-table"><thead><tr><th>班级名称</th><th>所属分组</th><th>学生数</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
+    allClasses.forEach(c => {
         const count = allStudents.filter(s => s.className === c.name).length;
         const group = allGroups.find(g => g.classNames && g.classNames.includes(c.name));
         const groupName = group ? group.name : '-';
         const date = formatDate(c.createdAt);
-        html += '<tr><td>' + c.name + '</td><td>' + groupName + '</td><td>' + count + '</td><td>' + date + '</td></tr>';
-      });
-      html += '</tbody></table>';
-      document.getElementById('classes-list').innerHTML = html;
-    }
+        html += '<tr>' +
+            '<td>' + c.name + '</td>' +
+            '<td>' + groupName + '</td>' +
+            '<td>' + count + '</td>' +
+            '<td>' + date + '</td>' +
+            '<td>' +
+                '<button class="btn btn-small btn-secondary" onclick="editClass(\'' + c.name + '\')">编辑</button> ' +
+                '<button class="btn btn-small btn-danger" onclick="deleteClass(\'' + c.name + '\')">删除</button>' +
+            '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('classes-list').innerHTML = html;
+}
+
 
     function showClassModal() {
       document.getElementById('class-name').value = '';
@@ -674,6 +702,83 @@
         }
       } catch (e) { alert('创建失败'); }
     }
+
+    let editingClassName = null;
+
+// 编辑班级
+function editClass(className) {
+    const classData = allClasses.find(c => c.name === className);
+    if (!classData) return;
+    
+    editingClassName = className;
+    document.getElementById('edit-class-name').value = classData.name;
+    document.getElementById('edit-class-modal').style.display = 'flex';
+}
+
+function closeEditClassModal() {
+    document.getElementById('edit-class-modal').style.display = 'none';
+    editingClassName = null;
+}
+
+async function updateClass() {
+    const newName = document.getElementById('edit-class-name').value.trim();
+    
+    if (!newName) {
+        alert('请输入班级名称');
+        return;
+    }
+    
+    if (newName !== editingClassName && allClasses.find(c => c.name === newName)) {
+        alert('班级名称已存在');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/api/admin/class/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                oldClassName: editingClassName,
+                newClassName: newName
+            })
+        });
+        const result = await res.json();
+        if (result.success) {
+            closeEditClassModal();
+            loadClasses();
+            // 如果班级名称变了，刷新学生列表
+            if (newName !== editingClassName) {
+                loadStudents();
+            }
+        } else {
+            alert(result.message || '更新失败');
+        }
+    } catch (e) {
+        alert('网络错误');
+    }
+}
+
+// 删除班级
+async function deleteClass(className) {
+    if (!confirm('确定删除班级 "' + className + '"？\n删除后该班级的学生将变为未分班状态。')) return;
+    
+    try {
+        const res = await fetch('/api/admin/class/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ className: className })
+        });
+        const result = await res.json();
+        if (result.success) {
+            loadClasses();
+            loadStudents(); // 刷新学生列表，更新班级信息
+        } else {
+            alert(result.message || '删除失败');
+        }
+    } catch (e) {
+        alert('网络错误');
+    }
+}
 
         // ========== 分组管理 ==========
     async function loadGroups() {
