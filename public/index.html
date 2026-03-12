@@ -66,6 +66,7 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
             cursor: pointer;
         }
+        
         .feature-card:hover { transform: translateY(-5px); }
         .feature-icon { font-size: 48px; margin-bottom: 15px; }
         .feature-card h3 { font-size: 20px; margin-bottom: 10px; color: #333; }
@@ -144,6 +145,13 @@
                 <h3>阅读打卡</h3>
                 <p>每日阅读任务打卡记录</p>
             </div>
+            <!-- 在现有的 feature-card 后添加 -->
+           <div class="feature-card" onclick="goTo('/history/')">
+                <div class="feature-icon">📚</div>
+                <h3>阅读历史</h3>
+                <p>查看已读文章，随时复习巩固</p>
+            </div>
+
             <div class="feature-card" onclick="goTo('/typing/')">
                 <div class="feature-icon">⌨️</div>
                 <h3>打字练习</h3>
