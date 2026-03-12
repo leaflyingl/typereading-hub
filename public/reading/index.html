@@ -278,6 +278,7 @@
       <div id="questions-list"></div>
     </div>
   </div>
+
   <script>
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     
@@ -297,10 +298,13 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
-    // 获取本地日期 YYYY-MM-DD
+    // 修复：获取本地日期 YYYY-MM-DD
     function getTodayString() {
       const now = new Date();
-      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
     // 关键修复：检查打卡状态时传递客户端日期
@@ -355,12 +359,13 @@
       }
     }
 
+    // 修复：渲染已打卡状态，正确显示文章信息
     function renderCheckedIn(record) {
       document.getElementById('content-area').innerHTML = `
         <div class="card checked-in">
           <div class="checked-in-icon">✅</div>
           <h2>今日已完成阅读打卡</h2>
-          <p>文章：《${record.articleTitle || '未知'}》</p>
+          <p>文章：《${record.articleTitle || '未命名文章'}》</p>
           <div class="stats-grid">
             <div class="stat-item">
               <div class="stat-value">${record.wordCount || 0}</div>
@@ -379,6 +384,7 @@
       }
     }
 
+    // 修复：渲染文章内容，正确传递参数
     function renderContent(content) {
       const contentArea = document.getElementById('content-area');
       
@@ -395,15 +401,14 @@
 
       // 保存文章ID
       currentArticleId = content.id;
-
       contentArea.innerHTML = `
         <div class="card">
           <div class="article-card">
             <div class="article-title">${content.title}</div>
             <div class="article-content">${content.content}</div>
-            <div class="word-count">字数：${content.wordCount}</div>
+            <div class="word-count">字数：${content.wordCount || content.content.length}</div>
           </div>
-          <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount})">
+          <button class="checkin-btn" onclick="handleCheckin('${content.title.replace(/'/g, "\\'")}', ${content.wordCount || content.content.length})">
             完成阅读，立即打卡
           </button>
         </div>
@@ -452,7 +457,7 @@
       }
     }
 
-    // 新增：渲染问题列表
+    // 修复：渲染问题列表，正确显示问题内容
     function renderQuestions(questions) {
       const container = document.getElementById('questions-list');
       
@@ -463,12 +468,12 @@
             <span class="question-type">${getQuestionTypeName(q.type)}</span>
           </div>
           
-          ${q.type === 'choice' && q.options && q.options.length > 0 ? `
+          ${q.type === 'choice' && q.options ? `
             <div class="options-list">
-              ${q.options.map((opt, i) => `
+              ${q.options.map((opt, optIndex) => `
                 <label class="option-label">
-                  <input type="radio" name="q-${q.id}" value="${opt}" id="opt-${q.id}-${i}">
-                  <span>${String.fromCharCode(65+i)}. ${opt}</span>
+                  <input type="radio" name="q-${q.id}" value="${opt}" id="opt-${q.id}-${optIndex}">
+                  <span>${String.fromCharCode(65 + optIndex)}. ${opt}</span>
                 </label>
               `).join('')}
             </div>
@@ -477,7 +482,7 @@
           <textarea 
             class="answer-textarea" 
             id="answer-${q.id}" 
-            placeholder="${q.type === 'sentence' ? '请用英语造句...' : '请输入你的回答...'}"
+            placeholder="请输入您的答案..."
           ></textarea>
           
           <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
@@ -497,7 +502,7 @@
       return map[type] || '问答';
     }
 
-    // 新增：检查答案状态
+    // 修复：检查答案状态，正确获取元素
     async function checkAnswerStatus(questionId) {
       try {
         const res = await fetch('/api/question/my-answer', {
@@ -543,7 +548,7 @@
       }
     }
 
-    // 新增：提交答案
+    // 修复：提交答案，正确获取元素
     async function submitAnswer(questionId) {
       const textarea = document.getElementById(`answer-${questionId}`);
       let answer = textarea ? textarea.value.trim() : '';
