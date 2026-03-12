@@ -235,6 +235,85 @@ export async function onRequest(context) {
       return json({ success: true, classes });
     }
 
+    /* ========================= 更新班级 ========================== */
+if (path === "admin/class/update") {
+    const { oldClassName, newClassName } = await request.json();
+    if (!oldClassName || !newClassName) {
+        return json({ success: false, message: "班级名称不能为空" });
+    }
+
+    // 如果班级名称有变化
+    if (oldClassName !== newClassName) {
+        // 删除旧班级
+        const oldClassKey = "class:" + oldClassName;
+        await env.TYPEREADING_KV.delete(oldClassKey);
+        
+        // 更新所有属于该班级的学生的班级信息
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+        for (const key of keys) {
+            const data = await env.TYPEREADING_KV.get(key.name);
+            if (data) {
+                const user = JSON.parse(data);
+                if (user.className === oldClassName) {
+                    user.className = newClassName;
+                    await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
+                }
+            }
+        }
+    }
+
+    // 创建/更新新班级
+    const classKey = "class:" + newClassName;
+    const classData = {
+        name: newClassName,
+        createdAt: new Date().toISOString()
+    };
+    await env.TYPEREADING_KV.put(classKey, JSON.stringify(classData));
+
+    return json({ success: true });
+}
+
+/* ========================= 删除班级 ========================== */
+if (path === "admin/class/delete") {
+    const { className } = await request.json();
+    if (!className) {
+        return json({ success: false, message: "班级名称不能为空" });
+    }
+
+    // 删除班级
+    const classKey = "class:" + className;
+    await env.TYPEREADING_KV.delete(classKey);
+
+    // 更新所有属于该班级的学生的班级信息（清空班级）
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+    for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+            const user = JSON.parse(data);
+            if (user.className === className) {
+                user.className = "";
+                await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
+            }
+        }
+    }
+
+    // 从所有分组中移除该班级
+    const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+    for (const key of groupKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+            const group = JSON.parse(data);
+            if (group.classNames && group.classNames.includes(className)) {
+                group.classNames = group.classNames.filter(c => c !== className);
+                group.updatedAt = new Date().toISOString();
+                await env.TYPEREADING_KV.put(key.name, JSON.stringify(group));
+            }
+        }
+    }
+
+    return json({ success: true });
+}
+
     /* ========================= 分组管理 API（修复版） ========================== */
     
     // 获取分组列表
