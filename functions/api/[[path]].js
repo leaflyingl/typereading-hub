@@ -236,87 +236,78 @@ export async function onRequest(context) {
     }
 
     /* ========================= 更新班级 ========================== */
-if (path === "admin/class/update") {
-    const { oldClassName, newClassName } = await request.json();
-    if (!oldClassName || !newClassName) {
+    if (path === "admin/class/update") {
+      const { oldClassName, newClassName } = await request.json();
+      if (!oldClassName || !newClassName) {
         return json({ success: false, message: "班级名称不能为空" });
-    }
+      }
 
-    // 如果班级名称有变化
-    if (oldClassName !== newClassName) {
-        // 删除旧班级
+      if (oldClassName !== newClassName) {
         const oldClassKey = "class:" + oldClassName;
         await env.TYPEREADING_KV.delete(oldClassKey);
         
-        // 更新所有属于该班级的学生的班级信息
         const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
         for (const key of keys) {
-            const data = await env.TYPEREADING_KV.get(key.name);
-            if (data) {
-                const user = JSON.parse(data);
-                if (user.className === oldClassName) {
-                    user.className = newClassName;
-                    await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
-                }
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const user = JSON.parse(data);
+            if (user.className === oldClassName) {
+              user.className = newClassName;
+              await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
             }
+          }
         }
-    }
+      }
 
-    // 创建/更新新班级
-    const classKey = "class:" + newClassName;
-    const classData = {
+      const classKey = "class:" + newClassName;
+      const classData = {
         name: newClassName,
         createdAt: new Date().toISOString()
-    };
-    await env.TYPEREADING_KV.put(classKey, JSON.stringify(classData));
+      };
+      await env.TYPEREADING_KV.put(classKey, JSON.stringify(classData));
 
-    return json({ success: true });
-}
+      return json({ success: true });
+    }
 
-/* ========================= 删除班级 ========================== */
-if (path === "admin/class/delete") {
-    const { className } = await request.json();
-    if (!className) {
+    /* ========================= 删除班级 ========================== */
+    if (path === "admin/class/delete") {
+      const { className } = await request.json();
+      if (!className) {
         return json({ success: false, message: "班级名称不能为空" });
-    }
+      }
 
-    // 删除班级
-    const classKey = "class:" + className;
-    await env.TYPEREADING_KV.delete(classKey);
+      const classKey = "class:" + className;
+      await env.TYPEREADING_KV.delete(classKey);
 
-    // 更新所有属于该班级的学生的班级信息（清空班级）
-    const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
-    for (const key of keys) {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+      for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
-            const user = JSON.parse(data);
-            if (user.className === className) {
-                user.className = "";
-                await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
-            }
+          const user = JSON.parse(data);
+          if (user.className === className) {
+            user.className = "";
+            await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
+          }
         }
-    }
+      }
 
-    // 从所有分组中移除该班级
-    const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-    for (const key of groupKeys) {
+      const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      for (const key of groupKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
-            const group = JSON.parse(data);
-            if (group.classNames && group.classNames.includes(className)) {
-                group.classNames = group.classNames.filter(c => c !== className);
-                group.updatedAt = new Date().toISOString();
-                await env.TYPEREADING_KV.put(key.name, JSON.stringify(group));
-            }
+          const group = JSON.parse(data);
+          if (group.classNames && group.classNames.includes(className)) {
+            group.classNames = group.classNames.filter(c => c !== className);
+            group.updatedAt = new Date().toISOString();
+            await env.TYPEREADING_KV.put(key.name, JSON.stringify(group));
+          }
         }
+      }
+
+      return json({ success: true });
     }
 
-    return json({ success: true });
-}
-
-    /* ========================= 分组管理 API（修复版） ========================== */
-    
-    // 获取分组列表
+    /* ========================= 分组管理 API ========================== */
     if (path === "admin/groups/list") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
       const groups = [];
@@ -333,7 +324,6 @@ if (path === "admin/class/delete") {
       return json({ success: true, groups });
     }
 
-    // 创建 / 更新分组
     if (path === "admin/groups/save") {
       const { id, name, classes, classNames } = await request.json();
 
@@ -367,7 +357,6 @@ if (path === "admin/class/delete") {
       return json({ success: true, group: groupData });
     }
 
-    // 删除分组
     if (path === "admin/groups/delete") {
       const { id } = await request.json();
       if (!id) {
@@ -408,9 +397,9 @@ if (path === "admin/class/delete") {
       });
     }
 
-    /* ========================= 阅读打卡 ========================== */
+    /* ========================= 阅读打卡（已修改，支持历史回溯） ========================== */
     if (path === "checkin/reading") {
-      const { nickname, articleTitle, wordCount } = await request.json();
+      const { nickname, articleId, articleTitle, wordCount } = await request.json();
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
@@ -435,6 +424,7 @@ if (path === "admin/class/delete") {
         recordKey,
         JSON.stringify({
           nickname,
+          articleId: articleId || "",           // 新增：保存内容ID以便回溯
           articleTitle: articleTitle || "未命名文章",
           wordCount: Number(wordCount) || 0,
           date: today,
@@ -731,7 +721,7 @@ if (path === "admin/class/delete") {
       return json({ success: true, content: selectedContent });
     }
 
-    /* ========================= 获取打字练习内容（修复版） ========================== */
+    /* ========================= 获取打字练习内容 ========================== */
     if (path === "content/typing") {
       const body = await request.json().catch(() => ({}));
       const className = body.className || "";
@@ -753,7 +743,6 @@ if (path === "admin/class/delete") {
       
       const contents = [];
       
-      // 只读取新格式内容
       const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
       for (const key of itemKeys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -790,7 +779,7 @@ if (path === "admin/class/delete") {
       return json({ success: true, content: selectedContent });
     }
 
-    /* ========================= 排行榜（修复版） ========================== */
+    /* ========================= 排行榜 ========================== */
     if (path === "rank/typing") {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const results = [];
@@ -823,6 +812,227 @@ if (path === "admin/class/delete") {
       }));
       
       return json({ success: true, rank: ranked });
+    }
+
+    /* ========================= 新增：阅读历史与问答系统 API ========================== */
+
+    /* ---------------- 阅读历史相关 ---------------- */
+
+    /* ========================= 获取学生阅读历史（去重） ========================== */
+    if (path === "user/reading-history") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const records = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const r = JSON.parse(data);
+        if (r.nickname === nickname) {
+          records.push(r);
+        }
+      }
+      
+      records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      const uniqueMap = new Map();
+      records.forEach(r => {
+        const key = r.articleId || r.articleTitle;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            articleId: r.articleId,
+            articleTitle: r.articleTitle,
+            wordCount: r.wordCount,
+            lastReadAt: r.timestamp,
+            readCount: 1
+          });
+        } else {
+          uniqueMap.get(key).readCount++;
+        }
+      });
+      
+      return json({ 
+        success: true, 
+        history: Array.from(uniqueMap.values()),
+        totalReads: records.length
+      });
+    }
+
+    /* ========================= 获取文章详情（用于历史回溯） ========================== */
+    if (path === "content/detail") {
+      const { id } = await request.json();
+      if (!id) {
+        return json({ success: false, message: "缺少文章ID" });
+      }
+      
+      const contentKey = "content:item:" + id;
+      const data = await env.TYPEREADING_KV.get(contentKey);
+      
+      if (!data) {
+        return json({ success: false, message: "文章不存在或已下架" });
+      }
+      
+      return json({ success: true, content: JSON.parse(data) });
+    }
+
+    /* ---------------- 问答系统相关 ---------------- */
+
+    /* ========================= 添加/更新问题（教师） ========================== */
+    if (path === "admin/question/add") {
+      const { id, contentId, type, question, options, correctAnswer, maxScore } = await request.json();
+      
+      if (!contentId || !type || !question) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const questionId = id || `question:${contentId}:${Date.now()}`;
+      const questionData = {
+        id: questionId,
+        contentId,
+        type, // short_answer, sentence, choice
+        question,
+        options: options || [],
+        correctAnswer: correctAnswer || "",
+        maxScore: Number(maxScore) || 10,
+        createdAt: new Date().toISOString(),
+        isActive: true
+      };
+      
+      await env.TYPEREADING_KV.put(questionId, JSON.stringify(questionData));
+      return json({ success: true, question: questionData });
+    }
+
+    /* ========================= 获取内容的问题列表 ========================== */
+    if (path === "content/questions") {
+      const { contentId } = await request.json();
+      if (!contentId) {
+        return json({ success: false, message: "缺少内容ID" });
+      }
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `question:${contentId}:` });
+      const questions = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const q = JSON.parse(data);
+          if (q.isActive !== false) questions.push(q);
+        }
+      }
+      
+      questions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      return json({ success: true, questions });
+    }
+
+    /* ========================= 学生提交答案（单次模式） ========================== */
+    if (path === "question/submit") {
+      const { contentId, questionId, nickname, answer } = await request.json();
+      
+      if (!questionId || !nickname || !answer) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const existing = await env.TYPEREADING_KV.get(answerKey);
+      if (existing) {
+        return json({ success: false, message: "您已提交过答案，不可重复提交" });
+      }
+      
+      const answerData = {
+        questionId,
+        contentId,
+        nickname,
+        answer,
+        score: null,
+        feedback: "",
+        submittedAt: new Date().toISOString(),
+        gradedAt: null,
+        grader: null
+      };
+      
+      await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answerData));
+      return json({ success: true, message: "提交成功" });
+    }
+
+    /* ========================= 获取某问题的所有回答（教师查看） ========================== */
+    if (path === "admin/question/answers") {
+      const { questionId } = await request.json();
+      if (!questionId) {
+        return json({ success: false, message: "缺少问题ID" });
+      }
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `answer:${questionId}:` });
+      const answers = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const ans = JSON.parse(data);
+          const userKey = `user:${ans.nickname}`;
+          const userData = await env.TYPEREADING_KV.get(userKey);
+          if (userData) {
+            const user = JSON.parse(userData);
+            ans.realName = user.realName || ans.nickname;
+            ans.className = user.className || "";
+          }
+          answers.push(ans);
+        }
+      }
+      
+      answers.sort((a, b) => {
+        if (a.score === null && b.score !== null) return -1;
+        if (a.score !== null && b.score === null) return 1;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+      
+      return json({ success: true, answers });
+    }
+
+    /* ========================= 教师评分 ========================== */
+    if (path === "admin/question/grade") {
+      const { questionId, nickname, score, feedback, grader } = await request.json();
+      
+      if (!questionId || !nickname || score === undefined) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const data = await env.TYPEREADING_KV.get(answerKey);
+      
+      if (!data) {
+        return json({ success: false, message: "答案不存在" });
+      }
+      
+      const answer = JSON.parse(data);
+      answer.score = Number(score);
+      answer.feedback = feedback || "";
+      answer.gradedAt = new Date().toISOString();
+      answer.grader = grader || "教师";
+      
+      await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answer));
+      return json({ success: true });
+    }
+
+    /* ========================= 获取我的回答状态（学生） ========================== */
+    if (path === "question/my-answer") {
+      const { questionId, nickname } = await request.json();
+      
+      if (!questionId || !nickname) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const data = await env.TYPEREADING_KV.get(answerKey);
+      
+      return json({
+        success: true,
+        answered: !!data,
+        answer: data ? JSON.parse(data) : null
+      });
     }
 
     return json({ success: false, message: "接口不存在：" + path });
