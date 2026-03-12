@@ -177,7 +177,7 @@
       window.location.href = '/register/';
     }
 
-    // 新增：保存当前文章ID，用于打卡
+    // 全局变量保存当前文章信息
     let currentArticleId = null;
 
     function showToast(message, type = 'success') {
@@ -188,15 +188,26 @@
       setTimeout(() => toast.remove(), 3000);
     }
 
+    // 获取本地日期 YYYY-MM-DD
+    function getTodayString() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    // 关键修复：检查打卡状态时传递客户端日期
     async function checkTodayStatus() {
       try {
         const response = await fetch('/api/checkin/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nickname: currentUser.nickname })
+          body: JSON.stringify({ 
+            nickname: currentUser.nickname,
+            date: getTodayString() // 关键：传递本地日期
+          })
         });
         return await response.json();
       } catch (err) {
+        console.error('检查状态失败:', err);
         return { success: false, hasCheckedIn: false };
       }
     }
@@ -214,26 +225,23 @@
       }
     }
 
-    // 修改【1】：添加 articleId 和 date 参数
+    // 关键修复：打卡时传递 articleId 和 date
     async function doCheckin(articleId, articleTitle, wordCount) {
       try {
-        // 获取本地日期，避免时区问题
-        const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        
         const response = await fetch('/api/checkin/reading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nickname: currentUser.nickname,
-            articleId: articleId,        // 新增：传递文章ID
+            articleId: articleId,        // 传递文章ID
             articleTitle: articleTitle,
             wordCount: wordCount,
-            date: today                   // 新增：传递本地日期
+            date: getTodayString()        // 传递本地日期
           })
         });
         return await response.json();
       } catch (err) {
+        console.error('打卡失败:', err);
         return { success: false, message: '网络错误' };
       }
     }
@@ -258,7 +266,6 @@
       `;
     }
 
-    // 修改【2】：保存文章ID到全局变量
     function renderContent(content) {
       const contentArea = document.getElementById('content-area');
       
@@ -273,7 +280,7 @@
         return;
       }
 
-      // 保存文章ID到全局变量
+      // 保存文章ID
       currentArticleId = content.id;
 
       contentArea.innerHTML = `
@@ -290,13 +297,13 @@
       `;
     }
 
-    // 修改【3】：传递文章ID
+    // 关键修复：使用保存的 articleId
     async function handleCheckin(title, wordCount) {
       const btn = document.querySelector('.checkin-btn');
       btn.disabled = true;
       btn.textContent = '打卡中...';
 
-      // 使用保存的文章ID
+      // 使用全局保存的 articleId
       const result = await doCheckin(currentArticleId, title, wordCount);
       
       if (result.success) {
