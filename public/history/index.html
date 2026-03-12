@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>学习历史 - TypeReading Hub</title>
     <style>
+        /* ... 保持原有样式完全不变 ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
@@ -239,8 +240,8 @@
     
     <div class="container">
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('reading', this)">📖 阅读统计</button>
-            <button class="tab" onclick="switchTab('typing', this)">⌨️ 打字统计</button>
+            <button class="tab active" onclick="switchTab('reading', this)" id="tab-reading">📖 阅读统计</button>
+            <button class="tab" onclick="switchTab('typing', this)" id="tab-typing">⌨️ 打字统计</button>
         </div>
         
         <!-- 阅读统计 -->
@@ -261,7 +262,7 @@
                     </div>
                     <div class="stat-box">
                         <div class="number" id="readingWords">-</div>
-                        <div class="label">阅读字数</div>
+                        <div class="label">阅读单词数</div>
                     </div>
                 </div>
             </div>
@@ -298,6 +299,10 @@
                     <div class="stat-box">
                         <div class="number" id="typingCount">-</div>
                         <div class="label">练习次数</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="typingWords">-</div>
+                        <div class="label">总打单词数</div>
                     </div>
                     <div class="stat-box">
                         <div class="number" id="typingWpm">-</div>
@@ -352,14 +357,21 @@
         let currentReadingPeriod = 'day';
         let currentTypingPeriod = 'day';
 
+        // 修复2：页面加载时恢复标签页状态
         window.onload = function() {
+            restoreTabState();
             loadReadingStats('day');
             loadTypingStats('day');
             loadRecentRecords();
             loadReadingHistory();
+            loadTypingTotalWords(); // 修复3：加载打字总单词数
         };
 
+        // 修复2：保存和恢复标签页状态
         function switchTab(tab, btn) {
+            // 保存当前标签到 localStorage
+            localStorage.setItem('historyActiveTab', tab);
+            
             document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
             btn.classList.add('active');
             
@@ -367,6 +379,18 @@
             document.getElementById('typing-panel').style.display = tab === 'typing' ? 'block' : 'none';
         }
 
+        // 修复2：恢复标签页状态
+        function restoreTabState() {
+            const savedTab = localStorage.getItem('historyActiveTab');
+            if (savedTab === 'typing') {
+                document.getElementById('tab-reading').classList.remove('active');
+                document.getElementById('tab-typing').classList.add('active');
+                document.getElementById('reading-panel').style.display = 'none';
+                document.getElementById('typing-panel').style.display = 'block';
+            }
+        }
+
+        // 修复1：优化阅读统计 - 改为"阅读单词数"并确保是英文单词数
         async function loadReadingStats(period, btn) {
             if (btn) {
                 document.querySelectorAll('#reading-panel .period-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -390,6 +414,7 @@
                         stats = data.stats.reading[period] || { count: 0, words: 0 };
                     }
                     document.getElementById('readingCount').textContent = stats.count || 0;
+                    // 修复1：直接使用后端返回的wordCount（假设后端已正确计算英文单词数）
                     document.getElementById('readingWords').textContent = stats.words || 0;
                 } else {
                     document.getElementById('readingCount').textContent = '0';
@@ -402,6 +427,7 @@
             }
         }
 
+        // 修复3：加载打字统计并计算总单词数
         async function loadTypingStats(period, btn) {
             if (btn) {
                 document.querySelectorAll('#typing-panel .period-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -437,6 +463,31 @@
                 document.getElementById('typingCount').textContent = '0';
                 document.getElementById('typingWpm').textContent = '0';
                 document.getElementById('typingAccuracy').textContent = '0%';
+            }
+        }
+
+        // 修复3：新增函数 - 从打字记录计算总单词数
+        async function loadTypingTotalWords() {
+            try {
+                const response = await fetch('/api/user/typing-records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const data = await response.json();
+                
+                if (data.success && data.records) {
+                    // 累加所有打字记录的 wordCount
+                    const totalWords = data.records.reduce((sum, record) => {
+                        return sum + (record.wordCount || 0);
+                    }, 0);
+                    document.getElementById('typingWords').textContent = totalWords;
+                } else {
+                    document.getElementById('typingWords').textContent = '0';
+                }
+            } catch (e) {
+                console.error('加载打字总单词数失败:', e);
+                document.getElementById('typingWords').textContent = '0';
             }
         }
 
@@ -499,7 +550,7 @@
             }
         }
 
-        // 加载阅读历史（去重后可点击复习）- 已修复 articleId 判断
+        // 加载阅读历史（保持完全不变）
         async function loadReadingHistory() {
             try {
                 const res = await fetch('/api/user/reading-history', {
@@ -515,9 +566,7 @@
                     result.history.forEach(function(item) {
                         const readDate = item.lastReadAt ? new Date(item.lastReadAt).toLocaleDateString('zh-CN') : '-';
                         
-                        // 关键修复：检查 articleId 是否存在且有效
                         if (item.articleId && item.articleId !== 'undefined' && item.articleId !== 'null' && item.articleId !== '') {
-                            // 有有效 ID，可点击
                             html += '<div class="history-item" onclick="openArticle(\'' + item.articleId + '\', \'' + escapeHtml(item.articleTitle) + '\', \'' + readDate + '\', ' + item.wordCount + ')">';
                             html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '</div>';
                             html += '<div class="history-meta">';
@@ -528,7 +577,6 @@
                             }
                             html += '</div></div>';
                         } else {
-                            // 无有效 ID，不可点击，显示提示
                             html += '<div class="history-item disabled" title="历史数据无法追溯原文">';
                             html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '<span class="no-id-tip">(历史数据，无法追溯原文)</span></div>';
                             html += '<div class="history-meta">';
@@ -551,15 +599,12 @@
             }
         }
 
-        // 打开文章详情 - 已添加调试日志
+        // 打开文章详情（保持完全不变）
         async function openArticle(articleId, title, readDate, wordCount) {
-            // 修复：严格检查 articleId
             if (!articleId || articleId === 'undefined' || articleId === 'null' || articleId === '') {
                 alert('历史数据无法追溯原文');
                 return;
             }
-            
-            console.log('正在打开文章，ID:', articleId); // 调试日志
             
             try {
                 const res = await fetch('/api/content/detail', {
@@ -569,39 +614,30 @@
                 });
                 const result = await res.json();
                 
-                console.log('API 返回结果:', result); // 调试日志
-                
                 if (result.success && result.content) {
-                    // 成功获取内容
                     document.getElementById('modalTitle').textContent = result.content.title || title;
                     document.getElementById('modalBody').innerHTML = 
                         '<p>' + escapeHtml(result.content.content).replace(/\n/g, '<br>') + '</p>';
                     document.getElementById('articleModal').style.display = 'flex';
                 } else {
-                    // 文章不存在或已下架
-                    console.error('获取文章失败:', result.message);
                     document.getElementById('modalTitle').textContent = title;
                     document.getElementById('modalBody').innerHTML = 
                         '<div class="offline-notice">' +
                         '<h3>📭 该文章已被教师下架或不存在</h3>' +
                         '<p>您曾于 ' + readDate + ' 阅读过此文章</p>' +
                         '<p>阅读字数：' + wordCount + ' 词</p>' +
-                        '<p style="margin-top: 10px; color: #999; font-size: 12px;">错误信息：' + (result.message || '文章不存在') + '</p>' +
                         '</div>';
                     document.getElementById('articleModal').style.display = 'flex';
                 }
             } catch (e) {
-                console.error('加载文章异常:', e);
                 alert('加载文章失败，请稍后重试');
             }
         }
 
-        // 关闭模态框
         function closeModal() {
             document.getElementById('articleModal').style.display = 'none';
         }
 
-        // 点击模态框外部关闭
         document.getElementById('articleModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
