@@ -383,7 +383,7 @@ if (path === "checkin/status") {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    today = `${year}-${month}-${day}`;  // ✅ 修复：正确的模板字符串
+    today = year + "-" + month + "-" + day;  // ✅ 正确的字符串拼接
   }
   
   const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
@@ -424,7 +424,7 @@ if (path === "checkin/reading") {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    today = `${year}-${month}-${day}`;  // ✅ 修复：正确的模板字符串
+    today = year + "-" + month + "-" + day;  // ✅ 正确的字符串拼接
   }
   
   // 检查今日是否已打卡
