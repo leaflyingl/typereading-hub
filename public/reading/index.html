@@ -177,6 +177,9 @@
       window.location.href = '/register/';
     }
 
+    // 新增：保存当前文章ID，用于打卡
+    let currentArticleId = null;
+
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
       toast.className = `toast ${type}`;
@@ -198,7 +201,6 @@
       }
     }
 
-    // 修改：添加 className 参数
     async function getTodayContent() {
       try {
         const response = await fetch('/api/content/reading', {
@@ -212,15 +214,22 @@
       }
     }
 
-    async function doCheckin(articleTitle, wordCount) {
+    // 修改【1】：添加 articleId 和 date 参数
+    async function doCheckin(articleId, articleTitle, wordCount) {
       try {
+        // 获取本地日期，避免时区问题
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        
         const response = await fetch('/api/checkin/reading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nickname: currentUser.nickname,
-            articleTitle,
-            wordCount
+            articleId: articleId,        // 新增：传递文章ID
+            articleTitle: articleTitle,
+            wordCount: wordCount,
+            date: today                   // 新增：传递本地日期
           })
         });
         return await response.json();
@@ -249,6 +258,7 @@
       `;
     }
 
+    // 修改【2】：保存文章ID到全局变量
     function renderContent(content) {
       const contentArea = document.getElementById('content-area');
       
@@ -262,6 +272,9 @@
         `;
         return;
       }
+
+      // 保存文章ID到全局变量
+      currentArticleId = content.id;
 
       contentArea.innerHTML = `
         <div class="card">
@@ -277,12 +290,14 @@
       `;
     }
 
+    // 修改【3】：传递文章ID
     async function handleCheckin(title, wordCount) {
       const btn = document.querySelector('.checkin-btn');
       btn.disabled = true;
       btn.textContent = '打卡中...';
 
-      const result = await doCheckin(title, wordCount);
+      // 使用保存的文章ID
+      const result = await doCheckin(currentArticleId, title, wordCount);
       
       if (result.success) {
         showToast('打卡成功！', 'success');
