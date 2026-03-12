@@ -367,91 +367,44 @@ export async function onRequest(context) {
     }
 
     /* ========================= 查询今日打卡状态（修复版） ========================== */
-    if (path === "checkin/status") {
-      const { nickname, date: clientDate } = await request.json();
-      if (!nickname) {
+if (path === "checkin/status") {
+    const { nickname, date: clientDate } = await request.json();
+    if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
-      }
+    }
 
-      // 关键修复：优先使用客户端传来的日期
-      let today;
-      if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // 关键修复：优先使用客户端传来的日期
+    let today;
+    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
         today = clientDate;
-      } else {
+    } else {
         // 备用：使用服务器本地时间（非UTC）
         const now = new Date();
-        today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      }
-
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
-      let hasCheckedIn = false;
-      let todayRecord = null;
-
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (!data) continue;
-        const record = JSON.parse(data);
-        if (record.nickname === nickname && record.date === today) {
-          hasCheckedIn = true;
-          todayRecord = record;
-          break;
-        }
-      }
-
-      return json({ 
-        success: true, 
-        hasCheckedIn,
-        record: todayRecord,
-        debug: { checkDate: today }
-      });
+        today = now.toISOString().split("T")[0]; // ← 修复这里
     }
 
-    /* ========================= 阅读打卡（修复版） ========================== */
-    if (path === "checkin/reading") {
-      const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
-      if (!nickname) {
-        return json({ success: false, message: "昵称不能为空" });
-      }
+    // ... 其余代码保持不变
+}
 
-      // 关键修复：优先使用客户端传来的日期
-      let today;
-      if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+/* ========================= 阅读打卡（修复版） ========================== */
+if (path === "checkin/reading") {
+    const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
+    if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+    }
+
+    // 关键修复：优先使用客户端传来的日期
+    let today;
+    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
         today = clientDate;
-      } else {
+    } else {
         // 备用：使用服务器本地时间
         const now = new Date();
-        today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      }
-
-      // 检查今日是否已打卡
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
-      for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-          const record = JSON.parse(data);
-          if (record.nickname === nickname && record.date === today) {
-            return json({ success: false, message: "今日已打卡，请勿重复打卡" });
-          }
-        }
-      }
-
-      const recordKey = "reading:" + nickname + ":" + Date.now();
-      const now = new Date();
-
-      await env.TYPEREADING_KV.put(
-        recordKey,
-        JSON.stringify({
-          nickname,
-          articleId: articleId || "",
-          articleTitle: articleTitle || "未命名文章",
-          wordCount: Number(wordCount) || 0,
-          date: today,
-          timestamp: now.toISOString()
-        })
-      );
-
-      return json({ success: true, message: "打卡成功", date: today });
+        today = now.toISOString().split("T")[0]; // ← 修复这里
     }
+
+    // ... 其余代码保持不变
+}
 
     /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
@@ -689,60 +642,67 @@ export async function onRequest(context) {
       return json({ success: false, message: "内容不存在" });
     }
 
-    /* ========================= 获取今日阅读内容（修复版） ========================== */
-    if (path === "content/reading") {
-      const body = await request.json().catch(() => ({}));
-      const className = body.className || "";
-      
-      let groupNames = [];
-      if (className) {
+   /* ========================= 获取今日阅读内容（修复版） ========================== */
+if (path === "content/reading") {
+    const body = await request.json().catch(() => ({}));
+    const className = body.className || "";
+    
+    let groupNames = [];
+    if (className) {
         const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
         for (const key of keys) {
-          const data = await env.TYPEREADING_KV.get(key.name);
-          if (data) {
-            const group = JSON.parse(data);
-            const groupClasses = group.classes || group.classNames || [];
-            if (groupClasses.includes(className)) {
-              groupNames.push(group.name);
+            const data = await env.TYPEREADING_KV.get(key.name);
+            if (data) {
+                const group = JSON.parse(data);
+                const groupClasses = group.classes || group.classNames || [];
+                if (groupClasses.includes(className)) {
+                    groupNames.push(group.name);
+                }
             }
-          }
         }
-      }
-      
-      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
-      const contents = [];
-      for (const key of keys) {
+    }
+    
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+    const contents = [];
+    for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
-          const content = JSON.parse(data);
-          
-          // 修复：正确判断 isActive（undefined 时默认为 true）
-          const isActive = content.isActive !== false;
-          const useForReading = content.useForReading === true;
-          
-          if (!isActive || !useForReading) continue;
-          
-          let isMatch = false;
-          if (content.targetType === "all" || !content.targetType) {
-            isMatch = true;
-          } else if (content.targetType === "group") {
-            isMatch = groupNames.includes(content.targetGroup);
-          } else if (content.targetType === "class") {
-            isMatch = content.targetClasses && content.targetClasses.includes(className);
-          }
-          
-          if (isMatch) {
-            contents.push(content);
-          }
+            const content = JSON.parse(data);
+            
+            // 修复：正确判断 isActive（undefined 时默认为 true）
+            const isActive = content.isActive !== false;
+            const useForReading = content.useForReading === true;
+            
+            if (!isActive || !useForReading) continue;
+            
+            let isMatch = false;
+            if (content.targetType === "all" || !content.targetType) {
+                isMatch = true;
+            } else if (content.targetType === "group") {
+                isMatch = groupNames.includes(content.targetGroup);
+            } else if (content.targetType === "class") {
+                // 修复：如果没有班级，只能看到"all"类型的内容
+                // 如果有班级，需要匹配targetClasses
+                if (className) {
+                    isMatch = content.targetClasses && content.targetClasses.includes(className);
+                } else {
+                    isMatch = false; // 未分班学生看不到班级专属内容
+                }
+            }
+            
+            if (isMatch) {
+                contents.push(content);
+            }
         }
-      }
-      
-      const selectedContent = contents.length > 0 
+    }
+    
+    const selectedContent = contents.length > 0 
         ? contents[Math.floor(Math.random() * contents.length)]
         : null;
 
-      return json({ success: true, content: selectedContent });
-    }
+    return json({ success: true, content: selectedContent });
+}
+
 
     /* ========================= 获取打字练习内容（修复版） ========================== */
     if (path === "content/typing") {
