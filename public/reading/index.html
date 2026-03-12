@@ -300,12 +300,13 @@
 
     // 修复：获取本地日期 YYYY-MM-DD
     function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `--`;  // ✅ 正确：这是模板字符串，会解析变量
+       const now = new Date();
+       const year = now.getFullYear();
+       const month = String(now.getMonth() + 1).padStart(2, '0');
+       const day = String(now.getDate()).padStart(2, '0');
+       return `--`;  // ✅ 正确：这是模板字符串，会解析变量
 }
+
 
 
 
