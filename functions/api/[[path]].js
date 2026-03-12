@@ -596,41 +596,56 @@ if (path === "checkin/reading") {
       return json({ success: true, stats });
     }
 
-    /* ========================= 保存内容 ========================== */
-    if (path === "admin/content/save") {
-      const { id, title, content, wordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
-      
-      if (!title) {
-        return json({ success: false, message: "标题不能为空" });
-      }
-      if (!content) {
-        return json({ success: false, message: "内容不能为空" });
-      }
-      if (!useForReading && !useForTyping) {
-        return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
-      }
+   /* ========================= 保存内容（统一内容池） ========================== */
+if (path === "admin/content/save") {
+  const { id, title, content, wordCount: inputWordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
+  
+  if (!title) {
+    return json({ success: false, message: "标题不能为空" });
+  }
+  if (!content) {
+    return json({ success: false, message: "内容不能为空" });
+  }
+  if (!useForReading && !useForTyping) {
+    return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
+  }
 
-      const contentId = id || Date.now().toString();
-      const contentKey = "content:item:" + contentId;
+  const contentId = id || Date.now().toString();
+  const contentKey = "content:item:" + contentId;
 
-      const contentData = {
-        id: contentId,
-        title,
-        content,
-        wordCount: Number(wordCount) || content.length,
-        difficulty: difficulty || "medium",
-        useForReading: useForReading === true,
-        useForTyping: useForTyping === true,
-        targetType: targetType || "all",
-        targetGroup: targetGroup || "",
-        targetClasses: targetClasses || [],
-        isActive: isActive !== false,
-        updatedAt: new Date().toISOString()
-      };
+  // 关键修复：正确计算英文单词数
+  let finalWordCount;
+  if (inputWordCount && !isNaN(inputWordCount)) {
+    // 如果教师手动输入了字数，优先使用
+    finalWordCount = Number(inputWordCount);
+  } else {
+    // 自动计算英文单词数（按空格分隔的单词）
+    // 方法1：简单按空格分割（适合纯英文文章）
+    finalWordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    // 方法2：更精确 - 只统计包含英文字母的单词（可选，如果方法1不够准确）
+    // finalWordCount = content.match(/[a-zA-Z]+/g)?.length || 0;
+  }
 
-      await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
-      return json({ success: true, content: contentData });
-    }
+  const contentData = {
+    id: contentId,
+    title,
+    content,
+    wordCount: finalWordCount, // 使用计算后的英文单词数
+    difficulty: difficulty || "medium",
+    useForReading: useForReading === true,
+    useForTyping: useForTyping === true,
+    targetType: targetType || "all",
+    targetGroup: targetGroup || "",
+    targetClasses: targetClasses || [],
+    isActive: isActive !== false,
+    updatedAt: new Date().toISOString()
+  };
+
+  await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
+  return json({ success: true, content: contentData });
+}
+
 
     /* ========================= 获取内容列表 ========================== */
     if (path === "admin/content/list") {
