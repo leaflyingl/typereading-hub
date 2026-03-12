@@ -1,1118 +1,1116 @@
 export async function onRequest(context) {
- const { request, env } = context;
- const url = new URL(request.url);
- const path = url.pathname.replace(/^\/api\//, '');
- const headers = {
- "Content-Type": "application/json",
- "Access-Control-Allow-Origin": "*",
- "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
- "Access-Control-Allow-Headers": "Content-Type"
- };
-
- if (request.method === "OPTIONS") {
- return new Response(null, { headers });
- }
-
- try {
- /* ========================= 学生注册 ========================== */
- if (path === "auth/register" && request.method === "POST") {
- const { nickname, password } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const userKey = "user:" + nickname;
- const exists = await env.TYPEREADING_KV.get(userKey);
- if (exists) {
- return json({ success: false, message: "该昵称已被注册" });
- }
-
- const userData = {
- nickname,
- password: password || null,
- realName: "",
- gender: "",
- className: "",
- createdAt: new Date().toISOString()
- };
-
- await env.TYPEREADING_KV.put(userKey, JSON.stringify(userData));
- return json({ 
- success: true, 
- user: {
- nickname,
- realName: "",
- gender: "",
- className: ""
- }
- });
- }
-
- /* ========================= 学生登录 ========================== */
- if (path === "auth/login" && request.method === "POST") {
- const { nickname, password } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const userKey = "user:" + nickname;
- const data = await env.TYPEREADING_KV.get(userKey);
- if (!data) {
- return json({ success: false, message: "用户不存在" });
- }
-
- const user = JSON.parse(data);
- if (user.password && user.password !== password) {
- return json({ success: false, message: "密码错误" });
- }
-
- return json({ success: true, user });
- }
-
- /* ========================= 教师登录 ========================== */
- if (path === "admin/login" && request.method === "POST") {
- const { password } = await request.json();
- if (password === "teacher123") {
- return json({ success: true });
- }
- return json({ success: false, message: "密码错误" });
- }
-
- /* ========================= 获取所有学生 ========================== */
- if (path === "admin/students") {
- const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- const readingRecords = [];
- for (const key of readingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) readingRecords.push(JSON.parse(data));
- }
-
- const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- const typingRecords = [];
- for (const key of typingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) typingRecords.push(JSON.parse(data));
- }
-
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
- const students = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const user = JSON.parse(data);
- user.totalReadingWords = readingRecords
- .filter(r => r.nickname === user.nickname)
- .reduce((sum, r) => sum + (r.wordCount || 0), 0);
- user.totalTypingWords = typingRecords
- .filter(r => r.nickname === user.nickname)
- .reduce((sum, r) => sum + (r.wordCount || r.content?.length || 0), 0);
- students.push(user);
- }
- }
- students.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
- return json({ success: true, students });
- }
-
- /* ========================= 更新学生信息 ========================== */
- if (path === "admin/student/update") {
- const { nickname, realName, gender, className } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const userKey = "user:" + nickname;
- const data = await env.TYPEREADING_KV.get(userKey);
- if (!data) return json({ success: false, message: "用户不存在" });
-
- const user = JSON.parse(data);
- user.realName = realName || "";
- user.gender = gender || "";
- user.className = className || "";
-
- await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
- return json({ success: true });
- }
-
- /* ========================= 删除单个学生 ========================== */
- if (path === "admin/student/delete") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const userKey = "user:" + nickname;
- await env.TYPEREADING_KV.delete(userKey);
-
- const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- for (const key of readingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const record = JSON.parse(data);
- if (record.nickname === nickname) {
- await env.TYPEREADING_KV.delete(key.name);
- }
- }
- }
-
- const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- for (const key of typingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const record = JSON.parse(data);
- if (record.nickname === nickname) {
- await env.TYPEREADING_KV.delete(key.name);
- }
- }
- }
-
- return json({ success: true });
- }
-
- /* ========================= 批量删除学生 ========================== */
- if (path === "admin/student/delete-batch") {
- const { nicknames } = await request.json();
- if (!nicknames || !Array.isArray(nicknames) || nicknames.length === 0) {
- return json({ success: false, message: "未选择学生" });
- }
-
- for (const nickname of nicknames) {
- const userKey = "user:" + nickname;
- await env.TYPEREADING_KV.delete(userKey);
-
- const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- for (const key of readingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const record = JSON.parse(data);
- if (record.nickname === nickname) {
- await env.TYPEREADING_KV.delete(key.name);
- }
- }
- }
-
- const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- for (const key of typingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const record = JSON.parse(data);
- if (record.nickname === nickname) {
- await env.TYPEREADING_KV.delete(key.name);
- }
- }
- }
- }
-
- return json({ success: true });
- }
-
- /* ========================= 创建班级 ========================== */
- if (path === "admin/class/create") {
- const { className } = await request.json();
- if (!className) {
- return json({ success: false, message: "班级名称不能为空" });
- }
-
- const classKey = "class:" + className;
- await env.TYPEREADING_KV.put(
- classKey,
- JSON.stringify({
- name: className,
- createdAt: new Date().toISOString()
- })
- );
-
- return json({ success: true });
- }
-
- /* ========================= 获取班级列表 ========================== */
- if (path === "admin/classes") {
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "class:" });
- const classes = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) classes.push(JSON.parse(data));
- }
- return json({ success: true, classes });
- }
-
- /* ========================= 更新班级 ========================== */
- if (path === "admin/class/update") {
- const { oldClassName, newClassName } = await request.json();
- if (!oldClassName || !newClassName) {
- return json({ success: false, message: "班级名称不能为空" });
- }
-
- if (oldClassName !== newClassName) {
- const oldClassKey = "class:" + oldClassName;
- await env.TYPEREADING_KV.delete(oldClassKey);
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const user = JSON.parse(data);
- if (user.className === oldClassName) {
- user.className = newClassName;
- await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
- }
- }
- }
- }
-
- const classKey = "class:" + newClassName;
- const classData = {
- name: newClassName,
- createdAt: new Date().toISOString()
- };
- await env.TYPEREADING_KV.put(classKey, JSON.stringify(classData));
-
- return json({ success: true });
- }
-
- /* ========================= 删除班级 ========================== */
- if (path === "admin/class/delete") {
- const { className } = await request.json();
- if (!className) {
- return json({ success: false, message: "班级名称不能为空" });
- }
-
- const classKey = "class:" + className;
- await env.TYPEREADING_KV.delete(classKey);
-
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const user = JSON.parse(data);
- if (user.className === className) {
- user.className = "";
- await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
- }
- }
- }
-
- const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
- for (const key of groupKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const group = JSON.parse(data);
- if (group.classNames && group.classNames.includes(className)) {
- group.classNames = group.classNames.filter(c => c !== className);
- group.updatedAt = new Date().toISOString();
- await env.TYPEREADING_KV.put(key.name, JSON.stringify(group));
- }
- }
- }
-
- return json({ success: true });
- }
-
- /* ========================= 分组管理 API ========================== */
- if (path === "admin/groups/list") {
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
- const groups = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const group = JSON.parse(data);
- if (!group.classes && group.classNames) {
- group.classes = group.classNames;
- }
- groups.push(group);
- }
- }
- return json({ success: true, groups });
- }
-
- if (path === "admin/groups/save") {
- const { id, name, classes, classNames } = await request.json();
-
- if (!name) {
- return json({ success: false, message: "分组名称不能为空" });
- }
-
- const groupId = id || "group:" + Date.now();
-
- let createdAt = new Date().toISOString();
- if (id) {
- const oldData = await env.TYPEREADING_KV.get(id);
- if (oldData) {
- const oldGroup = JSON.parse(oldData);
- createdAt = oldGroup.createdAt || createdAt;
- }
- }
-
- const finalClasses = classes || classNames || [];
-
- const groupData = {
- id: groupId,
- name,
- classes: finalClasses,
- classNames: finalClasses,
- createdAt,
- updatedAt: new Date().toISOString()
- };
-
- await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
- return json({ success: true, group: groupData });
- }
-
- if (path === "admin/groups/delete") {
- const { id } = await request.json();
- if (!id) {
- return json({ success: false, message: "Missing group ID" });
- }
- await env.TYPEREADING_KV.delete(id);
- return json({ success: true });
- }
-
- /* ========================= 查询今日打卡状态（已修复：使用本地日期） ========================== */
- if (path === "checkin/status") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- // 修复：使用本地时区日期，避免UTC时差问题
- const now = new Date();
- const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- 
- let hasCheckedIn = false;
- let todayRecord = null;
-
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (!data) continue;
- const record = JSON.parse(data);
- if (record.nickname === nickname && record.date === today) {
- hasCheckedIn = true;
- todayRecord = record;
- break;
- }
- }
-
- return json({ 
- success: true, 
- hasCheckedIn,
- record: todayRecord,
- debug: { serverDate: today } // 调试用，可删除
- });
- }
-
- /* ========================= 阅读打卡（已修改，支持历史回溯，修复日期） ========================== */
- if (path === "checkin/reading") {
- const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- // 修复：优先使用客户端传来的日期（避免时区问题），否则使用服务器本地日期
- let today;
- if (clientDate) {
- today = clientDate;
- } else {
- const now = new Date();
- today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
- }
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const record = JSON.parse(data);
- if (record.nickname === nickname && record.date === today) {
- return json({ success: false, message: "今日已打卡，请勿重复打卡" });
- }
- }
- }
-
- const recordKey = "reading:" + nickname + ":" + Date.now();
- const now = new Date();
-
- await env.TYPEREADING_KV.put(
- recordKey,
- JSON.stringify({
- nickname,
- articleId: articleId || "", // 新增：保存内容ID以便回溯
- articleTitle: articleTitle || "未命名文章",
- wordCount: Number(wordCount) || 0,
- date: today,
- timestamp: now.toISOString()
- })
- );
-
- return json({ success: true, message: "打卡成功" });
- }
-
- /* ========================= 获取阅读记录 ========================== */
- if (path === "user/reading-records") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- const records = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (!data) continue;
- const r = JSON.parse(data);
- if (r.nickname === nickname) {
- records.push(r);
- }
- }
- records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
- return json({ success: true, records });
- }
-
- /* ========================= 获取打字记录 ========================== */
- if (path === "user/typing-records") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- const records = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (!data) continue;
- const r = JSON.parse(data);
- if (r.nickname === nickname) {
- records.push(r);
- }
- }
- records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
- return json({ success: true, records });
- }
-
- /* ========================= 打字记录提交 ========================== */
- if (path === "typing/result") {
- const { nickname, wpm, accuracy, wordCount, content } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const recordKey = "typing:" + nickname + ":" + Date.now();
- const now = new Date();
- const dateStr = now.toISOString().split("T")[0];
-
- const finalWordCount = Number(wordCount) || (content ? content.length : 0);
-
- await env.TYPEREADING_KV.put(
- recordKey,
- JSON.stringify({
- nickname,
- wpm: Number(wpm) || 0,
- accuracy: Number(accuracy) || 0,
- wordCount: finalWordCount,
- content: content || "",
- date: dateStr,
- timestamp: now.toISOString()
- })
- );
-
- return json({ success: true });
- }
-
- /* ========================= 获取学习统计 ========================== */
- if (path === "user/stats") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const today = new Date().toISOString().split("T")[0];
- const weekStart = getWeekStart(new Date());
- const thisMonth = today.substring(0, 7);
- const thisYear = today.substring(0, 4);
-
- const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- const readingRecords = [];
- for (const key of readingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const r = JSON.parse(data);
- if (!r.date && r.timestamp) {
- r.date = r.timestamp.split("T")[0];
- }
- readingRecords.push(r);
- }
- }
-
- const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- const typingRecords = [];
- for (const key of typingKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const r = JSON.parse(data);
- if (!r.date && r.timestamp) {
- r.date = r.timestamp.split("T")[0];
- }
- typingRecords.push(r);
- }
- }
-
- const userReading = readingRecords.filter(r => r.nickname === nickname);
- const userTyping = typingRecords.filter(r => r.nickname === nickname);
-
- const stats = {
- reading: {
- day: calcStats(userReading, today, 'date'),
- week: calcStats(userReading, weekStart, 'week'),
- month: calcStats(userReading, thisMonth, 'month'),
- year: calcStats(userReading, thisYear, 'year'),
- total: {
- count: userReading.length,
- words: userReading.reduce((s, r) => s + (r.wordCount || 0), 0)
- }
- },
- typing: {
- day: calcTypingStats(userTyping, today, 'date'),
- week: calcTypingStats(userTyping, weekStart, 'week'),
- month: calcTypingStats(userTyping, thisMonth, 'month'),
- year: calcTypingStats(userTyping, thisYear, 'year'),
- total: {
- count: userTyping.length,
- avgWpm: userTyping.length > 0 
- ? Math.round(userTyping.reduce((s, r) => s + (r.wpm || 0), 0) / userTyping.length)
- : 0
- }
- }
- };
-
- return json({ success: true, stats });
- }
-
- /* ========================= 保存内容（统一内容池） ========================== */
- if (path === "admin/content/save") {
- const { id, title, content, wordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
- 
- if (!title) {
- return json({ success: false, message: "标题不能为空" });
- }
- if (!content) {
- return json({ success: false, message: "内容不能为空" });
- }
- if (!useForReading && !useForTyping) {
- return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
- }
-
- const contentId = id || Date.now().toString();
- const contentKey = "content:item:" + contentId;
-
- const contentData = {
- id: contentId,
- title,
- content,
- wordCount: Number(wordCount) || content.length,
- difficulty: difficulty || "medium",
- useForReading: useForReading === true,
- useForTyping: useForTyping === true,
- targetType: targetType || "all",
- targetGroup: targetGroup || "",
- targetClasses: targetClasses || [],
- isActive: isActive !== false,
- updatedAt: new Date().toISOString()
- };
-
- await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
- return json({ success: true, content: contentData });
- }
-
- /* ========================= 获取内容列表 ========================== */
- if (path === "admin/content/list") {
- const { useForReading, useForTyping } = await request.json();
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
- const contents = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const content = JSON.parse(data);
- if (useForReading && !content.useForReading) continue;
- if (useForTyping && !content.useForTyping) continue;
- contents.push(content);
- }
- }
- contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
- return json({ success: true, contents });
- }
-
- /* ========================= 删除内容 ========================== */
- if (path === "admin/content/delete") {
- const { id, type } = await request.json();
- if (!id) {
- return json({ success: false, message: "参数错误：缺少ID" });
- }
-
- const itemKey = "content:item:" + id;
- const itemExists = await env.TYPEREADING_KV.get(itemKey);
- if (itemExists) {
- await env.TYPEREADING_KV.delete(itemKey);
- return json({ success: true });
- }
- 
- if (type) {
- const oldKey = "content:" + type + ":" + id;
- const oldExists = await env.TYPEREADING_KV.get(oldKey);
- if (oldExists) {
- await env.TYPEREADING_KV.delete(oldKey);
- return json({ success: true });
- }
- }
- 
- const readingKey = "content:reading:" + id;
- const typingKey = "content:typing:" + id;
- 
- const readingExists = await env.TYPEREADING_KV.get(readingKey);
- if (readingExists) {
- await env.TYPEREADING_KV.delete(readingKey);
- return json({ success: true });
- }
- 
- const typingExists = await env.TYPEREADING_KV.get(typingKey);
- if (typingExists) {
- await env.TYPEREADING_KV.delete(typingKey);
- return json({ success: true });
- }
- 
- return json({ success: false, message: "内容不存在" });
- }
-
- /* ========================= 获取今日阅读内容（已修复：isActive判断） ========================== */
- if (path === "content/reading") {
- const body = await request.json().catch(() => ({}));
- const className = body.className || "";
- 
- let groupNames = [];
- if (className) {
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const group = JSON.parse(data);
- const groupClasses = group.classes || group.classNames || [];
- if (groupClasses.includes(className)) {
- groupNames.push(group.name);
- }
- }
- }
- }
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
- const contents = [];
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const content = JSON.parse(data);
- 
- // 修复关键BUG：isActive为undefined时，默认认为是true（启用状态）
- // 只有当isActive明确为false时才跳过
- const isActive = content.isActive !== false;
- const useForReading = content.useForReading === true;
- 
- if (!isActive || !useForReading) continue;
- 
- let isMatch = false;
- if (content.targetType === "all" || !content.targetType) {
- isMatch = true;
- } else if (content.targetType === "group") {
- isMatch = groupNames.includes(content.targetGroup);
- } else if (content.targetType === "class") {
- isMatch = content.targetClasses && content.targetClasses.includes(className);
- }
- 
- if (isMatch) {
- contents.push(content);
- }
- }
- }
- 
- const selectedContent = contents.length > 0 
- ? contents[Math.floor(Math.random() * contents.length)]
- : null;
-
- return json({ success: true, content: selectedContent });
- }
-
- /* ========================= 获取打字练习内容（已修复：isActive判断） ========================== */
- if (path === "content/typing") {
- const body = await request.json().catch(() => ({}));
- const className = body.className || "";
- 
- let groupNames = [];
- if (className) {
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const group = JSON.parse(data);
- const groupClasses = group.classes || group.classNames || [];
- if (groupClasses.includes(className)) {
- groupNames.push(group.name);
- }
- }
- }
- }
- 
- const contents = [];
- 
- const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
- for (const key of itemKeys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const content = JSON.parse(data);
- 
- // 修复关键BUG：isActive为undefined时，默认认为是true（启用状态）
- const isActive = content.isActive !== false;
- const useForTyping = content.useForTyping === true;
- 
- if (!isActive || !useForTyping) continue;
- 
- let isMatch = false;
- if (content.targetType === "all" || !content.targetType) {
- isMatch = true;
- } else if (content.targetType === "group") {
- isMatch = groupNames.includes(content.targetGroup);
- } else if (content.targetType === "class") {
- isMatch = content.targetClasses && content.targetClasses.includes(className);
- }
- 
- if (isMatch) {
- contents.push({
- id: content.id,
- title: content.title || "未命名",
- content: content.content,
- wordCount: content.wordCount || content.content.length,
- difficulty: content.difficulty || "medium"
- });
- }
- }
- }
- 
- const selectedContent = contents.length > 0 
- ? contents[Math.floor(Math.random() * contents.length)]
- : null;
-
- return json({ success: true, content: selectedContent });
- }
-
- /* ========================= 排行榜 ========================== */
- if (path === "rank/typing") {
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
- const results = [];
-
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (!data) continue;
- const record = JSON.parse(data);
-
- const userKey = "user:" + record.nickname;
- const userData = await env.TYPEREADING_KV.get(userKey);
- if (!userData) continue;
-
- const user = JSON.parse(userData);
- results.push({
- nickname: record.nickname,
- realName: user.realName || record.nickname,
- className: user.className || "",
- wpm: record.wpm || 0,
- accuracy: record.accuracy || 0,
- timestamp: record.timestamp
- });
- }
-
- results.sort((a, b) => b.wpm - a.wpm);
- 
- const ranked = results.slice(0, 20).map((item, index) => ({
- rank: index + 1,
- ...item
- }));
- 
- return json({ success: true, rank: ranked });
- }
-
- /* ========================= 新增：阅读历史与问答系统 API ========================== */
-
- /* ---------------- 阅读历史相关 ---------------- */
-
- /* ========================= 获取学生阅读历史（去重） ========================== */
- if (path === "user/reading-history") {
- const { nickname } = await request.json();
- if (!nickname) {
- return json({ success: false, message: "昵称不能为空" });
- }
-
- const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
- const records = [];
- 
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (!data) continue;
- const r = JSON.parse(data);
- if (r.nickname === nickname) {
- records.push(r);
- }
- }
- 
- records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
- 
- const uniqueMap = new Map();
- records.forEach(r => {
- const key = r.articleId || r.articleTitle;
- if (!uniqueMap.has(key)) {
- uniqueMap.set(key, {
- articleId: r.articleId,
- articleTitle: r.articleTitle,
- wordCount: r.wordCount,
- lastReadAt: r.timestamp,
- readCount: 1
- });
- } else {
- uniqueMap.get(key).readCount++;
- }
- });
- 
- return json({ 
- success: true, 
- history: Array.from(uniqueMap.values()),
- totalReads: records.length
- });
- }
-
- /* ========================= 获取文章详情（用于历史回溯） ========================== */
- if (path === "content/detail") {
- const { id } = await request.json();
- if (!id) {
- return json({ success: false, message: "缺少文章ID" });
- }
- 
- const contentKey = "content:item:" + id;
- const data = await env.TYPEREADING_KV.get(contentKey);
- 
- if (!data) {
- return json({ success: false, message: "文章不存在或已下架" });
- }
- 
- return json({ success: true, content: JSON.parse(data) });
- }
-
- /* ---------------- 问答系统相关 ---------------- */
-
- /* ========================= 添加/更新问题（教师） ========================== */
- if (path === "admin/question/add") {
- const { id, contentId, type, question, options, correctAnswer, maxScore } = await request.json();
- 
- if (!contentId || !type || !question) {
- return json({ success: false, message: "参数不完整" });
- }
- 
- const questionId = id || `question:${contentId}:${Date.now()}`;
- const questionData = {
- id: questionId,
- contentId,
- type, // short_answer, sentence, choice
- question,
- options: options || [],
- correctAnswer: correctAnswer || "",
- maxScore: Number(maxScore) || 10,
- createdAt: new Date().toISOString(),
- isActive: true
- };
- 
- await env.TYPEREADING_KV.put(questionId, JSON.stringify(questionData));
- return json({ success: true, question: questionData });
- }
-
- /* ========================= 获取内容的问题列表 ========================== */
- if (path === "content/questions") {
- const { contentId } = await request.json();
- if (!contentId) {
- return json({ success: false, message: "缺少内容ID" });
- }
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: `question:${contentId}:` });
- const questions = [];
- 
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const q = JSON.parse(data);
- if (q.isActive !== false) questions.push(q);
- }
- }
- 
- questions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
- return json({ success: true, questions });
- }
-
- /* ========================= 学生提交答案（单次模式） ========================== */
- if (path === "question/submit") {
- const { contentId, questionId, nickname, answer } = await request.json();
- 
- if (!questionId || !nickname || !answer) {
- return json({ success: false, message: "参数不完整" });
- }
- 
- const answerKey = `answer:${questionId}:${nickname}`;
- const existing = await env.TYPEREADING_KV.get(answerKey);
- if (existing) {
- return json({ success: false, message: "您已提交过答案，不可重复提交" });
- }
- 
- const answerData = {
- questionId,
- contentId,
- nickname,
- answer,
- score: null,
- feedback: "",
- submittedAt: new Date().toISOString(),
- gradedAt: null,
- grader: null
- };
- 
- await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answerData));
- return json({ success: true, message: "提交成功" });
- }
-
- /* ========================= 获取某问题的所有回答（教师查看） ========================== */
- if (path === "admin/question/answers") {
- const { questionId } = await request.json();
- if (!questionId) {
- return json({ success: false, message: "缺少问题ID" });
- }
- 
- const { keys } = await env.TYPEREADING_KV.list({ prefix: `answer:${questionId}:` });
- const answers = [];
- 
- for (const key of keys) {
- const data = await env.TYPEREADING_KV.get(key.name);
- if (data) {
- const ans = JSON.parse(data);
- const userKey = `user:${ans.nickname}`;
- const userData = await env.TYPEREADING_KV.get(userKey);
- if (userData) {
- const user = JSON.parse(userData);
- ans.realName = user.realName || ans.nickname;
- ans.className = user.className || "";
- }
- answers.push(ans);
- }
- }
- 
- answers.sort((a, b) => {
- if (a.score === null && b.score !== null) return -1;
- if (a.score !== null && b.score === null) return 1;
- return new Date(b.submittedAt) - new Date(a.submittedAt);
- });
- 
- return json({ success: true, answers });
- }
-
- /* ========================= 教师评分 ========================== */
- if (path === "admin/question/grade") {
- const { questionId, nickname, score, feedback, grader } = await request.json();
- 
- if (!questionId || !nickname || score === undefined) {
- return json({ success: false, message: "参数不完整" });
- }
- 
- const answerKey = `answer:${questionId}:${nickname}`;
- const data = await env.TYPEREADING_KV.get(answerKey);
- 
- if (!data) {
- return json({ success: false, message: "答案不存在" });
- }
- 
- const answer = JSON.parse(data);
- answer.score = Number(score);
- answer.feedback = feedback || "";
- answer.gradedAt = new Date().toISOString();
- answer.grader = grader || "教师";
- 
- await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answer));
- return json({ success: true });
- }
-
- /* ========================= 获取我的回答状态（学生） ========================== */
- if (path === "question/my-answer") {
- const { questionId, nickname } = await request.json();
- 
- if (!questionId || !nickname) {
- return json({ success: false, message: "参数不完整" });
- }
- 
- const answerKey = `answer:${questionId}:${nickname}`;
- const data = await env.TYPEREADING_KV.get(answerKey);
- 
- return json({
- success: true,
- answered: !!data,
- answer: data ? JSON.parse(data) : null
- });
- }
-
- return json({ success: false, message: "接口不存在：" + path });
-
- } catch (err) {
- console.error("API Error:", err);
- return json({ success: false, message: err.message });
- }
-
- function getWeekStart(date) {
- const d = new Date(date);
- const day = d.getDay();
- const diff = d.getDate() - day + (day === 0 ? -6 : 1);
- return new Date(d.setDate(diff)).toISOString().split("T")[0];
- }
-
- function calcStats(records, period, type) {
- const filtered = records.filter(r => {
- const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
- if (!recordDate) return false;
- if (type === 'date') return recordDate === period;
- if (type === 'week') return recordDate >= period;
- if (type === 'month') return recordDate.startsWith(period);
- if (type === 'year') return recordDate.startsWith(period);
- return false;
- });
-
- return {
- count: filtered.length,
- words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
- };
- }
-
- function calcTypingStats(records, period, type) {
- const filtered = records.filter(r => {
- const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
- if (!recordDate) return false;
- if (type === 'date') return recordDate === period;
- if (type === 'week') return recordDate >= period;
- if (type === 'month') return recordDate.startsWith(period);
- if (type === 'year') return recordDate.startsWith(period);
- return false;
- });
-
- const avgWpm = filtered.length > 0 
- ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
- : 0;
- const avgAccuracy = filtered.length > 0
- ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
- : 0;
-
- return {
- count: filtered.length,
- avgWpm,
- avgAccuracy
- };
- }
-
- function json(data) {
- return new Response(JSON.stringify(data), { headers });
- }
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/^\/api\//, '');
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type"
+  };
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers });
+  }
+
+  try {
+    /* ========================= 学生注册 ========================== */
+    if (path === "auth/register" && request.method === "POST") {
+      const { nickname, password } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const userKey = "user:" + nickname;
+      const exists = await env.TYPEREADING_KV.get(userKey);
+      if (exists) {
+        return json({ success: false, message: "该昵称已被注册" });
+      }
+
+      const userData = {
+        nickname,
+        password: password || null,
+        realName: "",
+        gender: "",
+        className: "",
+        createdAt: new Date().toISOString()
+      };
+
+      await env.TYPEREADING_KV.put(userKey, JSON.stringify(userData));
+      return json({ 
+        success: true, 
+        user: {
+          nickname,
+          realName: "",
+          gender: "",
+          className: ""
+        }
+      });
+    }
+
+    /* ========================= 学生登录 ========================== */
+    if (path === "auth/login" && request.method === "POST") {
+      const { nickname, password } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const userKey = "user:" + nickname;
+      const data = await env.TYPEREADING_KV.get(userKey);
+      if (!data) {
+        return json({ success: false, message: "用户不存在" });
+      }
+
+      const user = JSON.parse(data);
+      if (user.password && user.password !== password) {
+        return json({ success: false, message: "密码错误" });
+      }
+
+      return json({ success: true, user });
+    }
+
+    /* ========================= 教师登录 ========================== */
+    if (path === "admin/login" && request.method === "POST") {
+      const { password } = await request.json();
+      if (password === "teacher123") {
+        return json({ success: true });
+      }
+      return json({ success: false, message: "密码错误" });
+    }
+
+    /* ========================= 获取所有学生 ========================== */
+    if (path === "admin/students") {
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const readingRecords = [];
+      for (const key of readingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) readingRecords.push(JSON.parse(data));
+      }
+
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const typingRecords = [];
+      for (const key of typingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) typingRecords.push(JSON.parse(data));
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+      const students = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const user = JSON.parse(data);
+          user.totalReadingWords = readingRecords
+            .filter(r => r.nickname === user.nickname)
+            .reduce((sum, r) => sum + (r.wordCount || 0), 0);
+          user.totalTypingWords = typingRecords
+            .filter(r => r.nickname === user.nickname)
+            .reduce((sum, r) => sum + (r.wordCount || r.content?.length || 0), 0);
+          students.push(user);
+        }
+      }
+      students.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return json({ success: true, students });
+    }
+
+    /* ========================= 更新学生信息 ========================== */
+    if (path === "admin/student/update") {
+      const { nickname, realName, gender, className } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const userKey = "user:" + nickname;
+      const data = await env.TYPEREADING_KV.get(userKey);
+      if (!data) return json({ success: false, message: "用户不存在" });
+
+      const user = JSON.parse(data);
+      user.realName = realName || "";
+      user.gender = gender || "";
+      user.className = className || "";
+
+      await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
+      return json({ success: true });
+    }
+
+    /* ========================= 删除单个学生 ========================== */
+    if (path === "admin/student/delete") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const userKey = "user:" + nickname;
+      await env.TYPEREADING_KV.delete(userKey);
+
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      for (const key of readingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const record = JSON.parse(data);
+          if (record.nickname === nickname) {
+            await env.TYPEREADING_KV.delete(key.name);
+          }
+        }
+      }
+
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      for (const key of typingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const record = JSON.parse(data);
+          if (record.nickname === nickname) {
+            await env.TYPEREADING_KV.delete(key.name);
+          }
+        }
+      }
+
+      return json({ success: true });
+    }
+
+    /* ========================= 批量删除学生 ========================== */
+    if (path === "admin/student/delete-batch") {
+      const { nicknames } = await request.json();
+      if (!nicknames || !Array.isArray(nicknames) || nicknames.length === 0) {
+        return json({ success: false, message: "未选择学生" });
+      }
+
+      for (const nickname of nicknames) {
+        const userKey = "user:" + nickname;
+        await env.TYPEREADING_KV.delete(userKey);
+
+        const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+        for (const key of readingKeys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const record = JSON.parse(data);
+            if (record.nickname === nickname) {
+              await env.TYPEREADING_KV.delete(key.name);
+            }
+          }
+        }
+
+        const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+        for (const key of typingKeys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const record = JSON.parse(data);
+            if (record.nickname === nickname) {
+              await env.TYPEREADING_KV.delete(key.name);
+            }
+          }
+        }
+      }
+
+      return json({ success: true });
+    }
+
+    /* ========================= 创建班级 ========================== */
+    if (path === "admin/class/create") {
+      const { className } = await request.json();
+      if (!className) {
+        return json({ success: false, message: "班级名称不能为空" });
+      }
+
+      const classKey = "class:" + className;
+      await env.TYPEREADING_KV.put(
+        classKey,
+        JSON.stringify({
+          name: className,
+          createdAt: new Date().toISOString()
+        })
+      );
+
+      return json({ success: true });
+    }
+
+    /* ========================= 获取班级列表 ========================== */
+    if (path === "admin/classes") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "class:" });
+      const classes = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) classes.push(JSON.parse(data));
+      }
+      return json({ success: true, classes });
+    }
+
+    /* ========================= 更新班级 ========================== */
+    if (path === "admin/class/update") {
+      const { oldClassName, newClassName } = await request.json();
+      if (!oldClassName || !newClassName) {
+        return json({ success: false, message: "班级名称不能为空" });
+      }
+
+      if (oldClassName !== newClassName) {
+        const oldClassKey = "class:" + oldClassName;
+        await env.TYPEREADING_KV.delete(oldClassKey);
+        
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+        for (const key of keys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const user = JSON.parse(data);
+            if (user.className === oldClassName) {
+              user.className = newClassName;
+              await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
+            }
+          }
+        }
+      }
+
+      const classKey = "class:" + newClassName;
+      const classData = {
+        name: newClassName,
+        createdAt: new Date().toISOString()
+      };
+      await env.TYPEREADING_KV.put(classKey, JSON.stringify(classData));
+
+      return json({ success: true });
+    }
+
+    /* ========================= 删除班级 ========================== */
+    if (path === "admin/class/delete") {
+      const { className } = await request.json();
+      if (!className) {
+        return json({ success: false, message: "班级名称不能为空" });
+      }
+
+      const classKey = "class:" + className;
+      await env.TYPEREADING_KV.delete(classKey);
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const user = JSON.parse(data);
+          if (user.className === className) {
+            user.className = "";
+            await env.TYPEREADING_KV.put(key.name, JSON.stringify(user));
+          }
+        }
+      }
+
+      const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      for (const key of groupKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const group = JSON.parse(data);
+          if (group.classNames && group.classNames.includes(className)) {
+            group.classNames = group.classNames.filter(c => c !== className);
+            group.updatedAt = new Date().toISOString();
+            await env.TYPEREADING_KV.put(key.name, JSON.stringify(group));
+          }
+        }
+      }
+
+      return json({ success: true });
+    }
+
+    /* ========================= 分组管理 API ========================== */
+    if (path === "admin/groups/list") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      const groups = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const group = JSON.parse(data);
+          if (!group.classes && group.classNames) {
+            group.classes = group.classNames;
+          }
+          groups.push(group);
+        }
+      }
+      return json({ success: true, groups });
+    }
+
+    if (path === "admin/groups/save") {
+      const { id, name, classes, classNames } = await request.json();
+
+      if (!name) {
+        return json({ success: false, message: "分组名称不能为空" });
+      }
+
+      const groupId = id || "group:" + Date.now();
+
+      let createdAt = new Date().toISOString();
+      if (id) {
+        const oldData = await env.TYPEREADING_KV.get(id);
+        if (oldData) {
+          const oldGroup = JSON.parse(oldData);
+          createdAt = oldGroup.createdAt || createdAt;
+        }
+      }
+
+      const finalClasses = classes || classNames || [];
+
+      const groupData = {
+        id: groupId,
+        name,
+        classes: finalClasses,
+        classNames: finalClasses,
+        createdAt,
+        updatedAt: new Date().toISOString()
+      };
+
+      await env.TYPEREADING_KV.put(groupId, JSON.stringify(groupData));
+      return json({ success: true, group: groupData });
+    }
+
+    if (path === "admin/groups/delete") {
+      const { id } = await request.json();
+      if (!id) {
+        return json({ success: false, message: "Missing group ID" });
+      }
+      await env.TYPEREADING_KV.delete(id);
+      return json({ success: true });
+    }
+
+    /* ========================= 查询今日打卡状态（修复版） ========================== */
+    if (path === "checkin/status") {
+      const { nickname, date: clientDate } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      // 关键修复：优先使用客户端传来的日期
+      let today;
+      if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        today = clientDate;
+      } else {
+        // 备用：使用服务器本地时间（非UTC）
+        const now = new Date();
+        today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      let hasCheckedIn = false;
+      let todayRecord = null;
+
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const record = JSON.parse(data);
+        if (record.nickname === nickname && record.date === today) {
+          hasCheckedIn = true;
+          todayRecord = record;
+          break;
+        }
+      }
+
+      return json({ 
+        success: true, 
+        hasCheckedIn,
+        record: todayRecord,
+        debug: { checkDate: today }
+      });
+    }
+
+    /* ========================= 阅读打卡（修复版） ========================== */
+    if (path === "checkin/reading") {
+      const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      // 关键修复：优先使用客户端传来的日期
+      let today;
+      if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        today = clientDate;
+      } else {
+        // 备用：使用服务器本地时间
+        const now = new Date();
+        today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+
+      // 检查今日是否已打卡
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const record = JSON.parse(data);
+          if (record.nickname === nickname && record.date === today) {
+            return json({ success: false, message: "今日已打卡，请勿重复打卡" });
+          }
+        }
+      }
+
+      const recordKey = "reading:" + nickname + ":" + Date.now();
+      const now = new Date();
+
+      await env.TYPEREADING_KV.put(
+        recordKey,
+        JSON.stringify({
+          nickname,
+          articleId: articleId || "",
+          articleTitle: articleTitle || "未命名文章",
+          wordCount: Number(wordCount) || 0,
+          date: today,
+          timestamp: now.toISOString()
+        })
+      );
+
+      return json({ success: true, message: "打卡成功", date: today });
+    }
+
+    /* ========================= 获取阅读记录 ========================== */
+    if (path === "user/reading-records") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const records = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const r = JSON.parse(data);
+        if (r.nickname === nickname) {
+          records.push(r);
+        }
+      }
+      records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      return json({ success: true, records });
+    }
+
+    /* ========================= 获取打字记录 ========================== */
+    if (path === "user/typing-records") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const records = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const r = JSON.parse(data);
+        if (r.nickname === nickname) {
+          records.push(r);
+        }
+      }
+      records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      return json({ success: true, records });
+    }
+
+    /* ========================= 打字记录提交 ========================== */
+    if (path === "typing/result") {
+      const { nickname, wpm, accuracy, wordCount, content } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const recordKey = "typing:" + nickname + ":" + Date.now();
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0];
+
+      const finalWordCount = Number(wordCount) || (content ? content.length : 0);
+
+      await env.TYPEREADING_KV.put(
+        recordKey,
+        JSON.stringify({
+          nickname,
+          wpm: Number(wpm) || 0,
+          accuracy: Number(accuracy) || 0,
+          wordCount: finalWordCount,
+          content: content || "",
+          date: dateStr,
+          timestamp: now.toISOString()
+        })
+      );
+
+      return json({ success: true });
+    }
+
+    /* ========================= 获取学习统计 ========================== */
+    if (path === "user/stats") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const today = new Date().toISOString().split("T")[0];
+      const weekStart = getWeekStart(new Date());
+      const thisMonth = today.substring(0, 7);
+      const thisYear = today.substring(0, 4);
+
+      const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const readingRecords = [];
+      for (const key of readingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const r = JSON.parse(data);
+          if (!r.date && r.timestamp) {
+            r.date = r.timestamp.split("T")[0];
+          }
+          readingRecords.push(r);
+        }
+      }
+
+      const { keys: typingKeys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const typingRecords = [];
+      for (const key of typingKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const r = JSON.parse(data);
+          if (!r.date && r.timestamp) {
+            r.date = r.timestamp.split("T")[0];
+          }
+          typingRecords.push(r);
+        }
+      }
+
+      const userReading = readingRecords.filter(r => r.nickname === nickname);
+      const userTyping = typingRecords.filter(r => r.nickname === nickname);
+
+      const stats = {
+        reading: {
+          day: calcStats(userReading, today, 'date'),
+          week: calcStats(userReading, weekStart, 'week'),
+          month: calcStats(userReading, thisMonth, 'month'),
+          year: calcStats(userReading, thisYear, 'year'),
+          total: {
+            count: userReading.length,
+            words: userReading.reduce((s, r) => s + (r.wordCount || 0), 0)
+          }
+        },
+        typing: {
+          day: calcTypingStats(userTyping, today, 'date'),
+          week: calcTypingStats(userTyping, weekStart, 'week'),
+          month: calcTypingStats(userTyping, thisMonth, 'month'),
+          year: calcTypingStats(userTyping, thisYear, 'year'),
+          total: {
+            count: userTyping.length,
+            avgWpm: userTyping.length > 0 
+              ? Math.round(userTyping.reduce((s, r) => s + (r.wpm || 0), 0) / userTyping.length)
+              : 0
+          }
+        }
+      };
+
+      return json({ success: true, stats });
+    }
+
+    /* ========================= 保存内容 ========================== */
+    if (path === "admin/content/save") {
+      const { id, title, content, wordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
+      
+      if (!title) {
+        return json({ success: false, message: "标题不能为空" });
+      }
+      if (!content) {
+        return json({ success: false, message: "内容不能为空" });
+      }
+      if (!useForReading && !useForTyping) {
+        return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
+      }
+
+      const contentId = id || Date.now().toString();
+      const contentKey = "content:item:" + contentId;
+
+      const contentData = {
+        id: contentId,
+        title,
+        content,
+        wordCount: Number(wordCount) || content.length,
+        difficulty: difficulty || "medium",
+        useForReading: useForReading === true,
+        useForTyping: useForTyping === true,
+        targetType: targetType || "all",
+        targetGroup: targetGroup || "",
+        targetClasses: targetClasses || [],
+        isActive: isActive !== false,
+        updatedAt: new Date().toISOString()
+      };
+
+      await env.TYPEREADING_KV.put(contentKey, JSON.stringify(contentData));
+      return json({ success: true, content: contentData });
+    }
+
+    /* ========================= 获取内容列表 ========================== */
+    if (path === "admin/content/list") {
+      const { useForReading, useForTyping } = await request.json();
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+      const contents = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const content = JSON.parse(data);
+          if (useForReading && !content.useForReading) continue;
+          if (useForTyping && !content.useForTyping) continue;
+          contents.push(content);
+        }
+      }
+      contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+      return json({ success: true, contents });
+    }
+
+    /* ========================= 删除内容 ========================== */
+    if (path === "admin/content/delete") {
+      const { id, type } = await request.json();
+      if (!id) {
+        return json({ success: false, message: "参数错误：缺少ID" });
+      }
+
+      const itemKey = "content:item:" + id;
+      const itemExists = await env.TYPEREADING_KV.get(itemKey);
+      if (itemExists) {
+        await env.TYPEREADING_KV.delete(itemKey);
+        return json({ success: true });
+      }
+      
+      if (type) {
+        const oldKey = "content:" + type + ":" + id;
+        const oldExists = await env.TYPEREADING_KV.get(oldKey);
+        if (oldExists) {
+          await env.TYPEREADING_KV.delete(oldKey);
+          return json({ success: true });
+        }
+      }
+      
+      const readingKey = "content:reading:" + id;
+      const typingKey = "content:typing:" + id;
+      
+      const readingExists = await env.TYPEREADING_KV.get(readingKey);
+      if (readingExists) {
+        await env.TYPEREADING_KV.delete(readingKey);
+        return json({ success: true });
+      }
+      
+      const typingExists = await env.TYPEREADING_KV.get(typingKey);
+      if (typingExists) {
+        await env.TYPEREADING_KV.delete(typingKey);
+        return json({ success: true });
+      }
+      
+      return json({ success: false, message: "内容不存在" });
+    }
+
+    /* ========================= 获取今日阅读内容（修复版） ========================== */
+    if (path === "content/reading") {
+      const body = await request.json().catch(() => ({}));
+      const className = body.className || "";
+      
+      let groupNames = [];
+      if (className) {
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+        for (const key of keys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const group = JSON.parse(data);
+            const groupClasses = group.classes || group.classNames || [];
+            if (groupClasses.includes(className)) {
+              groupNames.push(group.name);
+            }
+          }
+        }
+      }
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+      const contents = [];
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const content = JSON.parse(data);
+          
+          // 修复：正确判断 isActive（undefined 时默认为 true）
+          const isActive = content.isActive !== false;
+          const useForReading = content.useForReading === true;
+          
+          if (!isActive || !useForReading) continue;
+          
+          let isMatch = false;
+          if (content.targetType === "all" || !content.targetType) {
+            isMatch = true;
+          } else if (content.targetType === "group") {
+            isMatch = groupNames.includes(content.targetGroup);
+          } else if (content.targetType === "class") {
+            isMatch = content.targetClasses && content.targetClasses.includes(className);
+          }
+          
+          if (isMatch) {
+            contents.push(content);
+          }
+        }
+      }
+      
+      const selectedContent = contents.length > 0 
+        ? contents[Math.floor(Math.random() * contents.length)]
+        : null;
+
+      return json({ success: true, content: selectedContent });
+    }
+
+    /* ========================= 获取打字练习内容（修复版） ========================== */
+    if (path === "content/typing") {
+      const body = await request.json().catch(() => ({}));
+      const className = body.className || "";
+      
+      let groupNames = [];
+      if (className) {
+        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+        for (const key of keys) {
+          const data = await env.TYPEREADING_KV.get(key.name);
+          if (data) {
+            const group = JSON.parse(data);
+            const groupClasses = group.classes || group.classNames || [];
+            if (groupClasses.includes(className)) {
+              groupNames.push(group.name);
+            }
+          }
+        }
+      }
+      
+      const contents = [];
+      
+      const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+      for (const key of itemKeys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const content = JSON.parse(data);
+          
+          // 修复：正确判断 isActive
+          const isActive = content.isActive !== false;
+          const useForTyping = content.useForTyping === true;
+          
+          if (!isActive || !useForTyping) continue;
+          
+          let isMatch = false;
+          if (content.targetType === "all" || !content.targetType) {
+            isMatch = true;
+          } else if (content.targetType === "group") {
+            isMatch = groupNames.includes(content.targetGroup);
+          } else if (content.targetType === "class") {
+            isMatch = content.targetClasses && content.targetClasses.includes(className);
+          }
+          
+          if (isMatch) {
+            contents.push({
+              id: content.id,
+              title: content.title || "未命名",
+              content: content.content,
+              wordCount: content.wordCount || content.content.length,
+              difficulty: content.difficulty || "medium"
+            });
+          }
+        }
+      }
+      
+      const selectedContent = contents.length > 0 
+        ? contents[Math.floor(Math.random() * contents.length)]
+        : null;
+
+      return json({ success: true, content: selectedContent });
+    }
+
+    /* ========================= 排行榜 ========================== */
+    if (path === "rank/typing") {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
+      const results = [];
+
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const record = JSON.parse(data);
+
+        const userKey = "user:" + record.nickname;
+        const userData = await env.TYPEREADING_KV.get(userKey);
+        if (!userData) continue;
+
+        const user = JSON.parse(userData);
+        results.push({
+          nickname: record.nickname,
+          realName: user.realName || record.nickname,
+          className: user.className || "",
+          wpm: record.wpm || 0,
+          accuracy: record.accuracy || 0,
+          timestamp: record.timestamp
+        });
+      }
+
+      results.sort((a, b) => b.wpm - a.wpm);
+      
+      const ranked = results.slice(0, 20).map((item, index) => ({
+        rank: index + 1,
+        ...item
+      }));
+      
+      return json({ success: true, rank: ranked });
+    }
+
+    /* ========================= 新增：阅读历史与问答系统 API ========================== */
+
+    /* ---------------- 阅读历史相关 ---------------- */
+
+    if (path === "user/reading-history") {
+      const { nickname } = await request.json();
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+      const records = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (!data) continue;
+        const r = JSON.parse(data);
+        if (r.nickname === nickname) {
+          records.push(r);
+        }
+      }
+      
+      records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      const uniqueMap = new Map();
+      records.forEach(r => {
+        const key = r.articleId || r.articleTitle;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            articleId: r.articleId,
+            articleTitle: r.articleTitle,
+            wordCount: r.wordCount,
+            lastReadAt: r.timestamp,
+            readCount: 1
+          });
+        } else {
+          uniqueMap.get(key).readCount++;
+        }
+      });
+      
+      return json({ 
+        success: true, 
+        history: Array.from(uniqueMap.values()),
+        totalReads: records.length
+      });
+    }
+
+    if (path === "content/detail") {
+      const { id } = await request.json();
+      if (!id) {
+        return json({ success: false, message: "缺少文章ID" });
+      }
+      
+      const contentKey = "content:item:" + id;
+      const data = await env.TYPEREADING_KV.get(contentKey);
+      
+      if (!data) {
+        return json({ success: false, message: "文章不存在或已下架" });
+      }
+      
+      return json({ success: true, content: JSON.parse(data) });
+    }
+
+    /* ---------------- 问答系统相关 ---------------- */
+
+    if (path === "admin/question/add") {
+      const { id, contentId, type, question, options, correctAnswer, maxScore } = await request.json();
+      
+      if (!contentId || !type || !question) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const questionId = id || `question:${contentId}:${Date.now()}`;
+      const questionData = {
+        id: questionId,
+        contentId,
+        type,
+        question,
+        options: options || [],
+        correctAnswer: correctAnswer || "",
+        maxScore: Number(maxScore) || 10,
+        createdAt: new Date().toISOString(),
+        isActive: true
+      };
+      
+      await env.TYPEREADING_KV.put(questionId, JSON.stringify(questionData));
+      return json({ success: true, question: questionData });
+    }
+
+    if (path === "content/questions") {
+      const { contentId } = await request.json();
+      if (!contentId) {
+        return json({ success: false, message: "缺少内容ID" });
+      }
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `question:${contentId}:` });
+      const questions = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const q = JSON.parse(data);
+          if (q.isActive !== false) questions.push(q);
+        }
+      }
+      
+      questions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      return json({ success: true, questions });
+    }
+
+    if (path === "question/submit") {
+      const { contentId, questionId, nickname, answer } = await request.json();
+      
+      if (!questionId || !nickname || !answer) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const existing = await env.TYPEREADING_KV.get(answerKey);
+      if (existing) {
+        return json({ success: false, message: "您已提交过答案，不可重复提交" });
+      }
+      
+      const answerData = {
+        questionId,
+        contentId,
+        nickname,
+        answer,
+        score: null,
+        feedback: "",
+        submittedAt: new Date().toISOString(),
+        gradedAt: null,
+        grader: null
+      };
+      
+      await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answerData));
+      return json({ success: true, message: "提交成功" });
+    }
+
+    if (path === "admin/question/answers") {
+      const { questionId } = await request.json();
+      if (!questionId) {
+        return json({ success: false, message: "缺少问题ID" });
+      }
+      
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: `answer:${questionId}:` });
+      const answers = [];
+      
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const ans = JSON.parse(data);
+          const userKey = `user:${ans.nickname}`;
+          const userData = await env.TYPEREADING_KV.get(userKey);
+          if (userData) {
+            const user = JSON.parse(userData);
+            ans.realName = user.realName || ans.nickname;
+            ans.className = user.className || "";
+          }
+          answers.push(ans);
+        }
+      }
+      
+      answers.sort((a, b) => {
+        if (a.score === null && b.score !== null) return -1;
+        if (a.score !== null && b.score === null) return 1;
+        return new Date(b.submittedAt) - new Date(a.submittedAt);
+      });
+      
+      return json({ success: true, answers });
+    }
+
+    if (path === "admin/question/grade") {
+      const { questionId, nickname, score, feedback, grader } = await request.json();
+      
+      if (!questionId || !nickname || score === undefined) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const data = await env.TYPEREADING_KV.get(answerKey);
+      
+      if (!data) {
+        return json({ success: false, message: "答案不存在" });
+      }
+      
+      const answer = JSON.parse(data);
+      answer.score = Number(score);
+      answer.feedback = feedback || "";
+      answer.gradedAt = new Date().toISOString();
+      answer.grader = grader || "教师";
+      
+      await env.TYPEREADING_KV.put(answerKey, JSON.stringify(answer));
+      return json({ success: true });
+    }
+
+    if (path === "question/my-answer") {
+      const { questionId, nickname } = await request.json();
+      
+      if (!questionId || !nickname) {
+        return json({ success: false, message: "参数不完整" });
+      }
+      
+      const answerKey = `answer:${questionId}:${nickname}`;
+      const data = await env.TYPEREADING_KV.get(answerKey);
+      
+      return json({
+        success: true,
+        answered: !!data,
+        answer: data ? JSON.parse(data) : null
+      });
+    }
+
+    return json({ success: false, message: "接口不存在：" + path });
+
+  } catch (err) {
+    console.error("API Error:", err);
+    return json({ success: false, message: err.message });
+  }
+
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff)).toISOString().split("T")[0];
+  }
+
+  function calcStats(records, period, type) {
+    const filtered = records.filter(r => {
+      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
+      if (!recordDate) return false;
+      if (type === 'date') return recordDate === period;
+      if (type === 'week') return recordDate >= period;
+      if (type === 'month') return recordDate.startsWith(period);
+      if (type === 'year') return recordDate.startsWith(period);
+      return false;
+    });
+
+    return {
+      count: filtered.length,
+      words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
+    };
+  }
+
+  function calcTypingStats(records, period, type) {
+    const filtered = records.filter(r => {
+      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
+      if (!recordDate) return false;
+      if (type === 'date') return recordDate === period;
+      if (type === 'week') return recordDate >= period;
+      if (type === 'month') return recordDate.startsWith(period);
+      if (type === 'year') return recordDate.startsWith(period);
+      return false;
+    });
+
+    const avgWpm = filtered.length > 0 
+      ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
+      : 0;
+    const avgAccuracy = filtered.length > 0
+      ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
+      : 0;
+
+    return {
+      count: filtered.length,
+      avgWpm,
+      avgAccuracy
+    };
+  }
+
+  function json(data) {
+    return new Response(JSON.stringify(data), { headers });
+  }
 }
