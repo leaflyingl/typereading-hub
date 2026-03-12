@@ -377,14 +377,16 @@ if (path === "checkin/status") {
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
-  } else {
-    // 备用：使用服务器本地时间（非UTC）
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;  // ✅ 正确的字符串拼接
-  }
+  // 修复后的代码（模板字符串版本）
+} else {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  today = `--`;  // ✅ 这才是正确的模板字符串用法
+}
+
+
   
   const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
   let hasCheckedIn = false;
@@ -424,7 +426,7 @@ if (path === "checkin/reading") {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;  // ✅ 正确的字符串拼接
+    today = `--`;  // ✅ 这才是正确的！
   }
   
   // 检查今日是否已打卡
