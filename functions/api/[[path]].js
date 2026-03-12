@@ -366,45 +366,95 @@ export async function onRequest(context) {
       return json({ success: true });
     }
 
-    /* ========================= 查询今日打卡状态（修复版） ========================== */
+ /* ========================= 查询今日打卡状态（修复版） ========================== */
 if (path === "checkin/status") {
-    const { nickname, date: clientDate } = await request.json();
-    if (!nickname) {
-        return json({ success: false, message: "昵称不能为空" });
+  const { nickname, date: clientDate } = await request.json();
+  if (!nickname) {
+    return json({ success: false, message: "昵称不能为空" });
+  }
+  
+  // 关键修复：优先使用客户端传来的日期
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    // 备用：使用服务器本地时间（非UTC）
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = `${year}-${month}-${day}`;  // ✅ 修复：正确的模板字符串
+  }
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+  let hasCheckedIn = false;
+  let todayRecord = null;
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (!data) continue;
+    const record = JSON.parse(data);
+    if (record.nickname === nickname && record.date === today) {
+      hasCheckedIn = true;
+      todayRecord = record;
+      break;
     }
-
-    // 关键修复：优先使用客户端传来的日期
-    let today;
-    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        today = clientDate;
-    } else {
-        // 备用：使用服务器本地时间（非UTC）
-        const now = new Date();
-        today = now.toISOString().split("T")[0]; // ← 修复这里
-    }
-
-    // ... 其余代码保持不变
+  }
+  return json({
+    success: true,
+    hasCheckedIn,
+    record: todayRecord,
+    debug: { checkDate: today }
+  });
 }
 
 /* ========================= 阅读打卡（修复版） ========================== */
 if (path === "checkin/reading") {
-    const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
-    if (!nickname) {
-        return json({ success: false, message: "昵称不能为空" });
+  const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
+  if (!nickname) {
+    return json({ success: false, message: "昵称不能为空" });
+  }
+  
+  // 关键修复：优先使用客户端传来的日期
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    // 备用：使用服务器本地时间
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = `${year}-${month}-${day}`;  // ✅ 修复：正确的模板字符串
+  }
+  
+  // 检查今日是否已打卡
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const record = JSON.parse(data);
+      if (record.nickname === nickname && record.date === today) {
+        return json({ success: false, message: "今日已打卡，请勿重复打卡" });
+      }
     }
-
-    // 关键修复：优先使用客户端传来的日期
-    let today;
-    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        today = clientDate;
-    } else {
-        // 备用：使用服务器本地时间
-        const now = new Date();
-        today = now.toISOString().split("T")[0]; // ← 修复这里
-    }
-
-    // ... 其余代码保持不变
+  }
+  
+  const recordKey = "reading:" + nickname + ":" + Date.now();
+  const now = new Date();
+  await env.TYPEREADING_KV.put(
+    recordKey,
+    JSON.stringify({
+      nickname,
+      articleId: articleId || "",
+      articleTitle: articleTitle || "未命名文章",
+      wordCount: Number(wordCount) || 0,
+      date: today,
+      timestamp: now.toISOString()
+    })
+  );
+  return json({ success: true, message: "打卡成功", date: today });
 }
+
 
     /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
