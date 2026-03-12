@@ -71,15 +71,15 @@
                     let html = '<table><thead><tr><th>排名</th><th>昵称</th><th>WPM</th><th>准确率</th></tr></thead><tbody>';
                     // 修复后的代码
                     data.rank.forEach((r, i) => {
-                         const rankClass = i3 ? `rank-${i+1}` : '';
+                         const rankClass = i < 3 ? `rank-${i+1}` : '';
                          const medal = ['🥇','🥈','🥉'][i] || (i+1);
-                         html +=tr>
-                            td class="${rankClass}">${medaltd>
-                            tdstrong>${r.nickname || r.realName || '未知'strongtd>
-                            td class="wpm">${r.wpm || 0td>
-                            td>${r.accuracy || 0}%</td>
-                          tr>`;
-                        });
+                         html += `<tr>
+                            <td class="${rankClass}"></td>
+                            <td><strong></strong></td>
+                            <td class="wpm"></td>
+                            <td>%</td>
+                        </tr>`;
+                    });
 
                     html += '</tbody></table>';
                     listDiv.innerHTML = html;
