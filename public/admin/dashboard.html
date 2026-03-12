@@ -198,124 +198,122 @@
       gap: 5px;
       cursor: pointer;
     }
+
+    /* 新增：模态框标签页样式 */
+    .modal-tabs {
+      display: flex;
+      border-bottom: 2px solid #e8e8e8;
+      margin: 0 -24px 20px -24px;
+      padding: 0 24px;
+    }
+    .modal-tab {
+      padding: 12px 24px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      color: #666;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    .modal-tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
+    }
+    .modal-tab:hover {
+      color: #667eea;
+    }
+
+    /* 问题设置面板样式 */
+    .question-item {
+      background: #f8f9fa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      position: relative;
+    }
+    .question-header {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .question-header select {
+      padding: 5px 10px;
+      border-radius: 4px;
+      border: 1px solid #d9d9d9;
+      font-size: 14px;
+    }
+    .delete-question-btn {
+      color: #ff4d4f;
+      cursor: pointer;
+      margin-left: auto;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .question-item input, .question-item textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #d9d9d9;
+      border-radius: 4px;
+      margin-top: 5px;
+      font-family: inherit;
+    }
+    .question-options {
+      margin-top: 10px;
+      padding-left: 10px;
+    }
+    .option-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 5px;
+      align-items: center;
+    }
+    .option-row input {
+      flex: 1;
+      margin-top: 0;
+    }
+    .remove-option-btn {
+      color: #999;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .add-option-btn {
+      color: #667eea;
+      cursor: pointer;
+      font-size: 13px;
+      margin-top: 5px;
+      display: inline-block;
+    }
+    .question-meta {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .question-meta label {
+      font-size: 12px;
+      color: #666;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .empty-questions {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      background: #fafafa;
+      border-radius: 8px;
+      border: 2px dashed #e8e8e8;
+    }
+    .badge {
+      background: #667eea;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      margin-left: 5px;
+    }
   </style>
-
-  <style>
-/* 新增：模态框标签页样式 */
-.modal-tabs {
-  display: flex;
-  border-bottom: 2px solid #e8e8e8;
-  margin: 0 -24px 20px -24px;
-  padding: 0 24px;
-}
-.modal-tab {
-  padding: 12px 24px;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  color: #666;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-.modal-tab.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-}
-.modal-tab:hover {
-  color: #667eea;
-}
-
-/* 问题设置面板样式 */
-.question-item {
-  background: #f8f9fa;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 15px;
-  position: relative;
-}
-.question-header {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  align-items: center;
-}
-.question-header select {
-  padding: 5px 10px;
-  border-radius: 4px;
-  border: 1px solid #d9d9d9;
-  font-size: 14px;
-}
-.delete-question-btn {
-  color: #ff4d4f;
-  cursor: pointer;
-  margin-left: auto;
-  font-size: 20px;
-  line-height: 1;
-}
-.question-item input, .question-item textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  margin-top: 5px;
-  font-family: inherit;
-}
-.question-options {
-  margin-top: 10px;
-  padding-left: 10px;
-}
-.option-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 5px;
-  align-items: center;
-}
-.option-row input {
-  flex: 1;
-  margin-top: 0;
-}
-.remove-option-btn {
-  color: #999;
-  cursor: pointer;
-  font-size: 18px;
-}
-.add-option-btn {
-  color: #667eea;
-  cursor: pointer;
-  font-size: 13px;
-  margin-top: 5px;
-  display: inline-block;
-}
-.question-meta {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
-  margin-top: 10px;
-}
-.question-meta label {
-  font-size: 12px;
-  color: #666;
-  display: block;
-  margin-bottom: 3px;
-}
-.empty-questions {
-  text-align: center;
-  padding: 40px;
-  color: #999;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 2px dashed #e8e8e8;
-}
-.badge {
-  background: #667eea;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin-left: 5px;
-}
-</style>
 
 </head>
 <body>
@@ -1160,19 +1158,9 @@ async function deleteClass(className) {
           '<td>' + status + '</td>' +
           '<td>' + date + '</td>' +
           '<td>' +
-            // '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
-           //  '<button class="btn btn-small btn-danger" onclick="deleteContent(\'' + item.id + '\')">删除</button>' +
-          // 在 renderContentList 函数的操作列中，添加查看回答按钮
-// 找到这一行附近：
-// <button class="btn btn-small btn-primary" onclick="editContentById('${item.id}')">编辑</button>
-
-// 修改为：
-html += `
-  <button class="btn btn-small btn-primary" onclick="editContentById('${item.id}')">编辑</button>
-  <button class="btn btn-small btn-secondary" onclick="viewAnswers('${item.id}')" style="margin-left: 5px;">查看回答</button>
-  <button class="btn btn-small btn-danger" onclick="deleteContent('${item.id}')" style="margin-left: 5px;">删除</button>
-`;
-
+            '<button class="btn btn-small btn-primary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small btn-secondary" onclick="viewAnswers(\'' + item.id + '\')" style="margin-left: 5px;">查看回答</button> ' +
+            '<button class="btn btn-small btn-danger" onclick="deleteContent(\'' + item.id + '\')" style="margin-left: 5px;">删除</button>' +
           '</td>' +
         '</tr>';
       });
@@ -1188,6 +1176,8 @@ html += `
 
     function showContentModal() {
       editingContentId = null;
+      currentQuestions = [];
+      
       document.getElementById('content-modal-title').textContent = '添加内容';
       document.getElementById('content-title').value = '';
       document.getElementById('content-text').value = '';
@@ -1206,46 +1196,51 @@ html += `
       document.getElementById('content-modal').style.display = 'flex';
       
       updateContentGroupFilter();
+      switchModalTab('content');
+      renderQuestionsInModal();
     }
 
+    // 声明 editContent 函数
     function editContent(content) {
-      editingContentId = content.id;
+      currentEditingContentId = content.id;
+      currentQuestions = [];
+      
+      // 填充内容表单（原有逻辑）
       document.getElementById('content-modal-title').textContent = '编辑内容';
       document.getElementById('content-title').value = content.title;
       document.getElementById('content-text').value = content.content;
       document.getElementById('content-wordcount').value = content.wordCount || '';
       document.getElementById('content-difficulty').value = content.difficulty || 'medium';
-      
       document.getElementById('content-use-reading').checked = content.useForReading !== false;
       document.getElementById('content-use-typing').checked = content.useForTyping === true;
+      document.getElementById('content-target-type').value = content.targetType || 'all';
+      document.getElementById('content-active').checked = content.isActive !== false;
       
-      const targetType = content.targetType || 'all';
-      document.getElementById('content-target-type').value = targetType;
-      toggleTargetSelect();
-      updateContentGroupFilter();
-      
-      if (targetType === 'group') {
-        document.getElementById('content-target-group').value = content.targetGroup || '';
-      }
-      
-      if (targetType === 'class') {
-        const selectedClasses = content.targetClasses || (content.targetClass ? [content.targetClass] : []);
+      // 处理班级选择
+      if (content.targetType === 'class' && content.targetClasses) {
         setTimeout(() => {
           document.querySelectorAll('.target-class-cb').forEach(cb => {
-            cb.checked = selectedClasses.includes(cb.value);
+            cb.checked = content.targetClasses.includes(cb.value);
           });
         }, 0);
       }
       
-      document.getElementById('content-active').checked = content.isActive !== false;
+      switchModalTab('content');
       document.getElementById('content-modal').style.display = 'flex';
+      updateContentGroupFilter();
+      
+      // 加载已有问题
+      loadExistingQuestions(content.id);
     }
 
     function closeContentModal() {
       document.getElementById('content-modal').style.display = 'none';
       editingContentId = null;
+      currentEditingContentId = null;
+      currentQuestions = [];
     }
 
+    // 保存内容（原有逻辑）
     async function saveContent() {
       const useForReading = document.getElementById('content-use-reading').checked;
       const useForTyping = document.getElementById('content-use-typing').checked;
@@ -1526,7 +1521,7 @@ async function saveContentWithQuestions() {
   }
   
   const contentData = {
-    id: currentEditingContentId,
+    id: editingContentId,
     title: title,
     content: content,
     wordCount: document.getElementById('content-wordcount').value || content.length,
@@ -1553,7 +1548,7 @@ async function saveContentWithQuestions() {
       return;
     }
     
-    const contentId = currentEditingContentId || contentResult.content.id;
+    const contentId = editingContentId || contentResult.content.id;
     
     // 2. 保存问题（过滤掉空问题）
     const validQuestions = currentQuestions.filter(q => q.question.trim());
@@ -1582,68 +1577,6 @@ async function saveContentWithQuestions() {
   } catch (e) {
     alert('保存失败: ' + e.message);
   }
-}
-
-// 修改原有函数以支持问题编辑
-function showContentModal() {
-  currentEditingContentId = null;
-  currentQuestions = [];
-  
-  document.getElementById('content-modal-title').textContent = '添加内容';
-  document.getElementById('content-title').value = '';
-  document.getElementById('content-text').value = '';
-  document.getElementById('content-wordcount').value = '';
-  document.getElementById('content-difficulty').value = 'medium';
-  document.getElementById('content-use-reading').checked = true;
-  document.getElementById('content-use-typing').checked = false;
-  document.getElementById('content-target-type').value = 'all';
-  document.getElementById('content-active').checked = true;
-  
-  toggleTargetSelect();
-  switchModalTab('content');
-  renderQuestionsInModal();
-  
-  document.getElementById('content-modal').style.display = 'flex';
-  updateContentGroupFilter();
-}
-
-// 修改 editContent 函数（在原有基础上增加问题加载）
-const originalEditContent = editContent;
-editContent = function(content) {
-  currentEditingContentId = content.id;
-  
-  // 填充原有表单
-  document.getElementById('content-modal-title').textContent = '编辑内容';
-  document.getElementById('content-title').value = content.title;
-  document.getElementById('content-text').value = content.content;
-  document.getElementById('content-wordcount').value = content.wordCount || '';
-  document.getElementById('content-difficulty').value = content.difficulty || 'medium';
-  document.getElementById('content-use-reading').checked = content.useForReading !== false;
-  document.getElementById('content-use-typing').checked = content.useForTyping === true;
-  document.getElementById('content-target-type').value = content.targetType || 'all';
-  document.getElementById('content-active').checked = content.isActive !== false;
-  
-  // 处理班级选择
-  if (content.targetType === 'class' && content.targetClasses) {
-    setTimeout(() => {
-      document.querySelectorAll('.target-class-cb').forEach(cb => {
-        cb.checked = content.targetClasses.includes(cb.value);
-      });
-    }, 0);
-  }
-  
-  switchModalTab('content');
-  document.getElementById('content-modal').style.display = 'flex';
-  updateContentGroupFilter();
-  
-  // 加载已有问题
-  loadExistingQuestions(content.id);
-};
-
-function closeContentModal() {
-  document.getElementById('content-modal').style.display = 'none';
-  currentEditingContentId = null;
-  currentQuestions = [];
 }
 
 // ========== 查看学生答案（新增） ==========
@@ -1779,4 +1712,3 @@ function closeAnswersModal() {
   </script>
 </body>
 </html>
-
