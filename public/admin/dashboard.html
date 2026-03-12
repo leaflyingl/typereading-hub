@@ -1453,9 +1453,10 @@ function renderQuestionField(q, index) {
   `;
 }
 
-// 添加新问题
+// 添加新问题 - 修复：添加临时唯一标识
 function addQuestionField() {
   currentQuestions.push({
+    tempId: Date.now() + '_' + currentQuestions.length, // 新增：临时唯一标识
     type: 'short_answer',
     question: '',
     options: [],
@@ -1465,6 +1466,7 @@ function addQuestionField() {
   renderQuestionsInModal();
   switchModalTab('questions');
 }
+
 
 // 更新问题字段
 function updateQuestionType(index, value) {
@@ -1550,29 +1552,48 @@ async function saveContentWithQuestions() {
     
     const contentId = editingContentId || contentResult.content.id;
     
-    // 2. 保存问题（过滤掉空问题）
-    const validQuestions = currentQuestions.filter(q => q.question.trim());
-    for (const q of validQuestions) {
-      const questionData = {
-        contentId: contentId,
-        type: q.type,
-        question: q.question,
-        options: q.type === 'choice' ? q.options : [],
-        correctAnswer: q.correctAnswer,
-        maxScore: q.maxScore
-      };
-      if (q.id) questionData.id = q.id; // 已有ID则更新
-      
-      await fetch('/api/admin/question/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(questionData)
-      });
+     // 2. 保存问题（过滤掉空问题）- 修复：循环中添加延迟
+  const validQuestions = currentQuestions.filter(q => q.question.trim());
+  
+  for (let i = 0; i < validQuestions.length; i++) {
+    const q = validQuestions[i];
+    const questionData = {
+      contentId: contentId,
+      type: q.type,
+      question: q.question,
+      options: q.type === 'choice' ? q.options : [],
+      correctAnswer: q.correctAnswer,
+      maxScore: q.maxScore
+    };
+    
+    // 关键修复：只有真正已存在的问题（有非临时ID）才更新
+    if (q.id && !q.tempId) {
+      questionData.id = q.id;
     }
     
-    closeContentModal();
-    loadContentList();
-    alert('保存成功！');
+    // 关键修复：添加微小延迟（50毫秒），确保时间戳递增
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    const saveRes = await fetch('/api/admin/question/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(questionData)
+    });
+    
+    const saveResult = await saveRes.json();
+    
+    // 关键修复：保存成功后更新ID，避免重复保存
+    if (saveResult.success && saveResult.question && !q.id) {
+      q.id = saveResult.question.id;
+      delete q.tempId;
+    }
+  }
+  
+  closeContentModal();
+  loadContentList();
+  alert('保存成功！共保存 ' + validQuestions.length + ' 个问题');
     
   } catch (e) {
     alert('保存失败: ' + e.message);
