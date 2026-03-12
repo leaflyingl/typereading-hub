@@ -158,6 +158,109 @@
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+    
+    /* 新增：课后练习区域样式 */
+    .qna-section {
+      display: none;
+      margin-top: 20px;
+    }
+    .qna-title {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .question-item {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 3px solid #667eea;
+    }
+    .question-header {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+    .question-type {
+      background: #e6f7ff;
+      color: #1890ff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+      font-weight: normal;
+    }
+    .options-list {
+      margin: 10px 0;
+      padding-left: 5px;
+    }
+    .option-label {
+      display: block;
+      padding: 8px;
+      margin: 5px 0;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .option-label:hover {
+      background: #e6f7ff;
+    }
+    .option-label input[type="radio"] {
+      margin-right: 8px;
+    }
+    .answer-textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      min-height: 100px;
+      resize: vertical;
+      font-family: inherit;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .answer-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .submit-answer-btn {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    .submit-answer-btn:hover {
+      background: #5a67d8;
+    }
+    .submit-answer-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .answer-status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .answer-status.submitted {
+      background: #f6ffed;
+      color: #52c41a;
+    }
+    .answer-status.pending {
+      background: #fff7e6;
+      color: #fa8c16;
+    }
   </style>
 </head>
 <body>
@@ -169,6 +272,11 @@
     <div id="content-area">
       <div class="card loading">加载中...</div>
     </div>
+    <!-- 新增：课后练习区域（初始隐藏，有内容时显示） -->
+    <div id="qna-section" class="card qna-section">
+      <div class="qna-title">📝 课后练习</div>
+      <div id="questions-list"></div>
+    </div>
   </div>
   <script>
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -179,6 +287,7 @@
 
     // 全局变量保存当前文章信息
     let currentArticleId = null;
+    let currentQuestions = [];
 
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
@@ -264,6 +373,10 @@
           </div>
         </div>
       `;
+      // 已打卡也加载问题（显示已提交状态）
+      if (currentArticleId) {
+        loadQuestions(currentArticleId);
+      }
     }
 
     function renderContent(content) {
@@ -295,6 +408,9 @@
           </button>
         </div>
       `;
+      
+      // 新增：加载课后练习问题
+      loadQuestions(content.id);
     }
 
     // 关键修复：使用保存的 articleId
@@ -316,11 +432,168 @@
       }
     }
 
+    // 新增：加载课后练习问题
+    async function loadQuestions(contentId) {
+      try {
+        const res = await fetch('/api/content/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contentId })
+        });
+        const result = await res.json();
+        
+        if (result.success && result.questions && result.questions.length > 0) {
+          currentQuestions = result.questions;
+          renderQuestions(result.questions);
+          document.getElementById('qna-section').style.display = 'block';
+        }
+      } catch (e) {
+        console.error('加载问题失败', e);
+      }
+    }
+
+    // 新增：渲染问题列表
+    function renderQuestions(questions) {
+      const container = document.getElementById('questions-list');
+      
+      container.innerHTML = questions.map((q, index) => `
+        <div class="question-item">
+          <div class="question-header">
+            ${index + 1}. ${q.question}
+            <span class="question-type">${getQuestionTypeName(q.type)}</span>
+          </div>
+          
+          ${q.type === 'choice' && q.options && q.options.length > 0 ? `
+            <div class="options-list">
+              ${q.options.map((opt, i) => `
+                <label class="option-label">
+                  <input type="radio" name="q-${q.id}" value="${opt}" id="opt-${q.id}-${i}">
+                  <span>${String.fromCharCode(65+i)}. ${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          <textarea 
+            class="answer-textarea" 
+            id="answer-${q.id}" 
+            placeholder="${q.type === 'sentence' ? '请用英语造句...' : '请输入你的回答...'}"
+          ></textarea>
+          
+          <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
+            提交答案
+          </button>
+          
+          <div id="status-${q.id}"></div>
+        </div>
+      `).join('');
+      
+      // 检查每道题的已回答状态
+      questions.forEach(q => checkAnswerStatus(q.id));
+    }
+
+    function getQuestionTypeName(type) {
+      const map = { short_answer: '简答', sentence: '造句', choice: '选择' };
+      return map[type] || '问答';
+    }
+
+    // 新增：检查答案状态
+    async function checkAnswerStatus(questionId) {
+      try {
+        const res = await fetch('/api/question/my-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionId, nickname: currentUser.nickname })
+        });
+        const result = await res.json();
+        
+        if (result.success && result.answered) {
+          const textarea = document.getElementById(`answer-${questionId}`);
+          const btn = document.getElementById(`btn-${questionId}`);
+          const statusDiv = document.getElementById(`status-${questionId}`);
+          
+          if (textarea) {
+            textarea.value = result.answer.answer;
+            textarea.disabled = true;
+          }
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = '已提交';
+          }
+          
+          if (statusDiv) {
+            if (result.answer.score !== null) {
+              statusDiv.innerHTML = `
+                <div class="answer-status submitted">
+                  ✓ 已评分：<strong>${result.answer.score}分</strong>
+                  ${result.answer.feedback ? `<br>评语：${result.answer.feedback}` : ''}
+                </div>
+              `;
+            } else {
+              statusDiv.innerHTML = `
+                <div class="answer-status pending">
+                  ⏳ 待教师评分
+                </div>
+              `;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('检查状态失败', e);
+      }
+    }
+
+    // 新增：提交答案
+    async function submitAnswer(questionId) {
+      const textarea = document.getElementById(`answer-${questionId}`);
+      let answer = textarea ? textarea.value.trim() : '';
+      
+      // 如果是选择题，获取选中的选项
+      const radioSelected = document.querySelector(`input[name="q-${questionId}"]:checked`);
+      if (radioSelected) {
+        answer = radioSelected.value + (answer ? '\n' + answer : '');
+      }
+      
+      if (!answer) {
+        alert('请输入答案');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/question/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contentId: currentArticleId,
+            questionId: questionId,
+            nickname: currentUser.nickname,
+            answer: answer
+          })
+        });
+        const result = await res.json();
+        
+        if (result.success) {
+          showToast('提交成功！');
+          checkAnswerStatus(questionId);
+        } else {
+          alert(result.message || '提交失败');
+        }
+      } catch (e) {
+        alert('提交失败，请重试');
+      }
+    }
+
     async function init() {
       const statusResult = await checkTodayStatus();
       
       if (statusResult.success && statusResult.hasCheckedIn) {
         renderCheckedIn(statusResult.record);
+        // 注意：currentArticleId 需要在 renderCheckedIn 中使用
+        // 如果有记录，尝试从记录中获取文章ID加载问题
+        if (statusResult.record && statusResult.record.articleId) {
+          currentArticleId = statusResult.record.articleId;
+          loadQuestions(currentArticleId);
+        }
       } else {
         const contentResult = await getTodayContent();
         renderContent(contentResult.success ? contentResult.content : null);
