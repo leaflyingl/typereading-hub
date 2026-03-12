@@ -588,22 +588,92 @@
       }
     }
 
-    async function init() {
-      const statusResult = await checkTodayStatus();
+    // 修改 init 函数逻辑 - 始终加载最新内容，根据打卡状态控制按钮
+async function init() {
+  // 1. 先获取最新内容（始终显示最新文章）
+  const contentResult = await getTodayContent();
+  
+  if (contentResult.success && contentResult.content) {
+    const content = contentResult.content;
+    currentArticleId = content.id;
+    
+    // 渲染内容（不管是否已打卡都显示内容）
+    renderContent(content);
+    
+    // 2. 检查今日打卡状态，控制按钮
+    const statusResult = await checkTodayStatus();
+    if (statusResult.success && statusResult.hasCheckedIn) {
+      // 已打卡：修改按钮为"已完成"状态
+      const btn = document.querySelector('.checkin-btn');
+      if (btn) {
+        btn.textContent = '✓ 今日已完成阅读打卡';
+        btn.disabled = true;
+        btn.style.background = '#52c41a'; // 绿色表示已完成
+        btn.style.cursor = 'default';
+      }
       
-      if (statusResult.success && statusResult.hasCheckedIn) {
-        renderCheckedIn(statusResult.record);
-        // 注意：currentArticleId 需要在 renderCheckedIn 中使用
-        // 如果有记录，尝试从记录中获取文章ID加载问题
-        if (statusResult.record && statusResult.record.articleId) {
-          currentArticleId = statusResult.record.articleId;
-          loadQuestions(currentArticleId);
-        }
-      } else {
-        const contentResult = await getTodayContent();
-        renderContent(contentResult.success ? contentResult.content : null);
+      // 可选：显示之前打卡的记录信息
+      if (statusResult.record) {
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = 'margin-top:15px;padding:10px;background:#f6ffed;border-radius:6px;color:#52c41a;font-size:14px;text-align:center;';
+        infoDiv.innerHTML = `您今日已打卡《${statusResult.record.articleTitle || '文章'}》，可以阅读新材料但不可重复打卡`;
+        document.querySelector('.article-card').appendChild(infoDiv);
       }
     }
+    // 3. 加载课后练习（如果有）
+    loadQuestions(content.id);
+  } else {
+    // 没有可用内容
+    renderNoContent();
+  }
+}
+
+// 修改 renderContent 函数 - 移除打卡按钮的 onclick 绑定，改为在 init 中控制
+function renderContent(content) {
+  const contentArea = document.getElementById('content-area');
+  
+  if (!content) {
+    renderNoContent();
+    return;
+  }
+
+  contentArea.innerHTML = `
+    <div class="card">
+      <div class="article-card">
+        <div class="article-title">${content.title}</div>
+        <div class="article-content">${content.content}</div>
+        <div class="word-count">字数：${content.wordCount || content.content.length}</div>
+      </div>
+      <button class="checkin-btn" id="checkinBtn">
+        完成阅读，立即打卡
+      </button>
+    </div>
+  `;
+  
+  // 绑定点击事件
+  document.getElementById('checkinBtn').addEventListener('click', () => {
+    handleCheckin(content.title, content.wordCount || content.content.length);
+  });
+}
+
+// 新增：没有内容时的显示
+function renderNoContent() {
+  document.getElementById('content-area').innerHTML = `
+    <div class="card no-content">
+      <div class="no-content-icon">📚</div>
+      <h3>暂无阅读内容</h3>
+      <p>请联系老师添加阅读材料</p>
+    </div>
+  `;
+}
+
+// 修改 renderCheckedIn 函数（现在只在特殊情况下使用，比如想专门查看打卡记录）
+function renderCheckedIn(record) {
+  // 这个函数现在可以保留，用于可能需要的"查看今日打卡详情"功能
+  // 但主流程不再默认使用它
+  console.log('今日已打卡记录:', record);
+}
+
 
     init();
   </script>
