@@ -692,66 +692,79 @@ if (path === "checkin/reading") {
       return json({ success: false, message: "内容不存在" });
     }
 
-   /* ========================= 获取今日阅读内容（修复版） ========================== */
+/* ========================= 获取今日阅读内容（修复版 - 显示最新） ========================== */
 if (path === "content/reading") {
-    const body = await request.json().catch(() => ({}));
-    const className = body.className || "";
-    
-    let groupNames = [];
-    if (className) {
-        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-        for (const key of keys) {
-            const data = await env.TYPEREADING_KV.get(key.name);
-            if (data) {
-                const group = JSON.parse(data);
-                const groupClasses = group.classes || group.classNames || [];
-                if (groupClasses.includes(className)) {
-                    groupNames.push(group.name);
-                }
-            }
-        }
-    }
-    
-    const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
-    const contents = [];
+  const body = await request.json().catch(() => ({}));
+  const className = body.className || "";
+  
+  let groupNames = [];
+  if (className) {
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
     for (const key of keys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-            const content = JSON.parse(data);
-            
-            // 修复：正确判断 isActive（undefined 时默认为 true）
-            const isActive = content.isActive !== false;
-            const useForReading = content.useForReading === true;
-            
-            if (!isActive || !useForReading) continue;
-            
-            let isMatch = false;
-            if (content.targetType === "all" || !content.targetType) {
-                isMatch = true;
-            } else if (content.targetType === "group") {
-                isMatch = groupNames.includes(content.targetGroup);
-            } else if (content.targetType === "class") {
-                // 修复：如果没有班级，只能看到"all"类型的内容
-                // 如果有班级，需要匹配targetClasses
-                if (className) {
-                    isMatch = content.targetClasses && content.targetClasses.includes(className);
-                } else {
-                    isMatch = false; // 未分班学生看不到班级专属内容
-                }
-            }
-            
-            if (isMatch) {
-                contents.push(content);
-            }
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const group = JSON.parse(data);
+        const groupClasses = group.classes || group.classNames || [];
+        if (groupClasses.includes(className)) {
+          groupNames.push(group.name);
         }
+      }
     }
-    
-    const selectedContent = contents.length > 0 
-        ? contents[Math.floor(Math.random() * contents.length)]
-        : null;
+  }
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+  const contents = [];
+  
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      
+      // 严格检查：禁用状态（兼容旧数据）
+      const isActive = content.isActive !== false;
+      const useForReading = content.useForReading === true;
+      
+      if (!isActive || !useForReading) continue;
+      
+      let isMatch = false;
+      if (content.targetType === "all" || !content.targetType) {
+        isMatch = true;
+      } else if (content.targetType === "group") {
+        isMatch = groupNames.includes(content.targetGroup);
+      } else if (content.targetType === "class") {
+        if (className) {
+          isMatch = content.targetClasses && content.targetClasses.includes(className);
+        } else {
+          // 未分班学生只能看到"全部分享"的内容
+          isMatch = false;
+        }
+      }
+      
+      if (isMatch) {
+        contents.push(content);
+      }
+    }
+  }
+  
+  // 🔥 关键修改：按更新时间排序，返回最新的文章（而不是随机）
+  // 这样学生每次看到的都是教师最新添加/修改的文章
+  let selectedContent = null;
+  if (contents.length > 0) {
+    contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    selectedContent = contents[0]; // 取最新的一篇
+  }
 
-    return json({ success: true, content: selectedContent });
+  return json({ 
+    success: true, 
+    content: selectedContent,
+    debug: {
+      totalFound: contents.length,
+      studentClass: className,
+      selectedId: selectedContent ? selectedContent.id : null
+    }
+  });
 }
+
 
 
     /* ========================= 获取打字练习内容（修复版） ========================== */
