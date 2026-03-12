@@ -304,8 +304,9 @@
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  return year + '-' + month + '-' + day;  // ✅ 正确：字符串拼接
+  return `--`;  // ✅ 正确：这是模板字符串，会解析变量
 }
+
 
 
     // 关键修复：检查打卡状态时传递客户端日期
