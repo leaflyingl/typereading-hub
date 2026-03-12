@@ -115,7 +115,7 @@
         .empty { text-align: center; padding: 60px; color: #999; }
         .error { color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px; }
         
-        /* 新增：阅读历史相关样式 */
+        /* 阅读历史样式 */
         .history-list {
             display: flex;
             flex-direction: column;
@@ -133,17 +133,30 @@
             background: #e6f7ff;
             transform: translateX(5px);
         }
+        .history-item.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+            border-left-color: #999;
+        }
+        .history-item.disabled:hover {
+            transform: none;
+            background: #f8f9fa;
+        }
         .history-title {
             font-weight: 600;
             color: #667eea;
             margin-bottom: 5px;
             font-size: 16px;
         }
+        .history-item.disabled .history-title {
+            color: #666;
+        }
         .history-meta {
             display: flex;
             gap: 20px;
             color: #666;
             font-size: 13px;
+            flex-wrap: wrap;
         }
         .read-count {
             background: #667eea;
@@ -152,8 +165,13 @@
             border-radius: 10px;
             font-size: 12px;
         }
+        .no-id-tip {
+            color: #999;
+            font-size: 12px;
+            margin-left: 10px;
+        }
         
-        /* 新增：模态框样式 */
+        /* 模态框样式 */
         .modal {
             display: none;
             position: fixed;
@@ -301,7 +319,7 @@
         </div>
     </div>
 
-    <!-- 新增：文章详情模态框 -->
+    <!-- 文章详情模态框 -->
     <div class="modal" id="articleModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -338,7 +356,7 @@
             loadReadingStats('day');
             loadTypingStats('day');
             loadRecentRecords();
-            loadReadingHistory(); // 新增：加载阅读历史
+            loadReadingHistory();
         };
 
         function switchTab(tab, btn) {
@@ -481,7 +499,7 @@
             }
         }
 
-        // 新增：加载阅读历史（去重后可点击复习）
+        // 加载阅读历史（去重后可点击复习）- 已修复 articleId 判断
         async function loadReadingHistory() {
             try {
                 const res = await fetch('/api/user/reading-history', {
@@ -496,15 +514,31 @@
                     let html = '<div class="history-list">';
                     result.history.forEach(function(item) {
                         const readDate = item.lastReadAt ? new Date(item.lastReadAt).toLocaleDateString('zh-CN') : '-';
-                        html += '<div class="history-item" onclick="openArticle(\'' + item.articleId + '\', \'' + escapeHtml(item.articleTitle) + '\', \'' + readDate + '\', ' + item.wordCount + ')">';
-                        html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '</div>';
-                        html += '<div class="history-meta">';
-                        html += '<span>📅 最近阅读：' + readDate + '</span>';
-                        html += '<span>📝 ' + item.wordCount + ' 词</span>';
-                        if (item.readCount > 1) {
-                            html += '<span class="read-count">读过 ' + item.readCount + ' 次</span>';
+                        
+                        // 关键修复：检查 articleId 是否存在且有效
+                        if (item.articleId && item.articleId !== 'undefined' && item.articleId !== 'null' && item.articleId !== '') {
+                            // 有有效 ID，可点击
+                            html += '<div class="history-item" onclick="openArticle(\'' + item.articleId + '\', \'' + escapeHtml(item.articleTitle) + '\', \'' + readDate + '\', ' + item.wordCount + ')">';
+                            html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '</div>';
+                            html += '<div class="history-meta">';
+                            html += '<span>📅 最近阅读：' + readDate + '</span>';
+                            html += '<span>📝 ' + item.wordCount + ' 词</span>';
+                            if (item.readCount > 1) {
+                                html += '<span class="read-count">读过 ' + item.readCount + ' 次</span>';
+                            }
+                            html += '</div></div>';
+                        } else {
+                            // 无有效 ID，不可点击，显示提示
+                            html += '<div class="history-item disabled" title="历史数据无法追溯原文">';
+                            html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '<span class="no-id-tip">(历史数据，无法追溯原文)</span></div>';
+                            html += '<div class="history-meta">';
+                            html += '<span>📅 最近阅读：' + readDate + '</span>';
+                            html += '<span>📝 ' + item.wordCount + ' 词</span>';
+                            if (item.readCount > 1) {
+                                html += '<span class="read-count">读过 ' + item.readCount + ' 次</span>';
+                            }
+                            html += '</div></div>';
                         }
-                        html += '</div></div>';
                     });
                     html += '</div>';
                     historyDiv.innerHTML = html;
@@ -517,12 +551,15 @@
             }
         }
 
-        // 新增：打开文章详情
+        // 打开文章详情 - 已添加调试日志
         async function openArticle(articleId, title, readDate, wordCount) {
-            if (!articleId) {
+            // 修复：严格检查 articleId
+            if (!articleId || articleId === 'undefined' || articleId === 'null' || articleId === '') {
                 alert('历史数据无法追溯原文');
                 return;
             }
+            
+            console.log('正在打开文章，ID:', articleId); // 调试日志
             
             try {
                 const res = await fetch('/api/content/detail', {
@@ -532,28 +569,34 @@
                 });
                 const result = await res.json();
                 
-                if (result.success) {
-                    document.getElementById('modalTitle').textContent = result.content.title;
+                console.log('API 返回结果:', result); // 调试日志
+                
+                if (result.success && result.content) {
+                    // 成功获取内容
+                    document.getElementById('modalTitle').textContent = result.content.title || title;
                     document.getElementById('modalBody').innerHTML = 
                         '<p>' + escapeHtml(result.content.content).replace(/\n/g, '<br>') + '</p>';
                     document.getElementById('articleModal').style.display = 'flex';
                 } else {
-                    // 文章已被删除，显示提示
+                    // 文章不存在或已下架
+                    console.error('获取文章失败:', result.message);
                     document.getElementById('modalTitle').textContent = title;
                     document.getElementById('modalBody').innerHTML = 
                         '<div class="offline-notice">' +
-                        '<h3>📭 该文章已被教师下架</h3>' +
+                        '<h3>📭 该文章已被教师下架或不存在</h3>' +
                         '<p>您曾于 ' + readDate + ' 阅读过此文章</p>' +
                         '<p>阅读字数：' + wordCount + ' 词</p>' +
+                        '<p style="margin-top: 10px; color: #999; font-size: 12px;">错误信息：' + (result.message || '文章不存在') + '</p>' +
                         '</div>';
                     document.getElementById('articleModal').style.display = 'flex';
                 }
             } catch (e) {
+                console.error('加载文章异常:', e);
                 alert('加载文章失败，请稍后重试');
             }
         }
 
-        // 新增：关闭模态框
+        // 关闭模态框
         function closeModal() {
             document.getElementById('articleModal').style.display = 'none';
         }
