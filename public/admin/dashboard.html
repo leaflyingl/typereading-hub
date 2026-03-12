@@ -199,6 +199,124 @@
       cursor: pointer;
     }
   </style>
+
+  <style>
+/* 新增：模态框标签页样式 */
+.modal-tabs {
+  display: flex;
+  border-bottom: 2px solid #e8e8e8;
+  margin: 0 -24px 20px -24px;
+  padding: 0 24px;
+}
+.modal-tab {
+  padding: 12px 24px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: #666;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+.modal-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+.modal-tab:hover {
+  color: #667eea;
+}
+
+/* 问题设置面板样式 */
+.question-item {
+  background: #f8f9fa;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  position: relative;
+}
+.question-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.question-header select {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #d9d9d9;
+  font-size: 14px;
+}
+.delete-question-btn {
+  color: #ff4d4f;
+  cursor: pointer;
+  margin-left: auto;
+  font-size: 20px;
+  line-height: 1;
+}
+.question-item input, .question-item textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  margin-top: 5px;
+  font-family: inherit;
+}
+.question-options {
+  margin-top: 10px;
+  padding-left: 10px;
+}
+.option-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px;
+  align-items: center;
+}
+.option-row input {
+  flex: 1;
+  margin-top: 0;
+}
+.remove-option-btn {
+  color: #999;
+  cursor: pointer;
+  font-size: 18px;
+}
+.add-option-btn {
+  color: #667eea;
+  cursor: pointer;
+  font-size: 13px;
+  margin-top: 5px;
+  display: inline-block;
+}
+.question-meta {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.question-meta label {
+  font-size: 12px;
+  color: #666;
+  display: block;
+  margin-bottom: 3px;
+}
+.empty-questions {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 2px dashed #e8e8e8;
+}
+.badge {
+  background: #667eea;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-left: 5px;
+}
+</style>
+
 </head>
 <body>
   <div class="header">
@@ -397,69 +515,134 @@
   </div>
 
   <!-- 添加/编辑内容弹窗 -->
-  <div id="content-modal" class="modal">
-    <div class="modal-content" style="max-width: 700px;">
-      <div class="modal-header">
-        <h3 id="content-modal-title">添加内容</h3>
-        <span class="close-btn" onclick="closeContentModal()">&times;</span>
+  <div class="modal" id="content-modal">
+  <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3 id="content-modal-title">添加内容</h3>
+      <span class="close-btn" onclick="closeContentModal()">&times;</span>
+    </div>
+    
+    <!-- 标签页导航 -->
+    <div class="modal-tabs">
+      <div class="modal-tab active" onclick="switchModalTab('content')" id="tab-content">
+        📄 内容设置
       </div>
-      <div class="form-group">
-        <label>标题</label>
-        <input type="text" id="content-title" class="form-control" placeholder="输入标题">
-      </div>
-      <div class="form-group">
-        <label>内容</label>
-        <textarea id="content-text" class="form-control" rows="8" placeholder="输入内容"></textarea>
-      </div>
-      <div class="form-group">
-        <label>字数（可选，留空自动计算）</label>
-        <input type="number" id="content-wordcount" class="form-control" placeholder="自动计算">
-      </div>
-      <div class="form-group">
-        <label>难度</label>
-        <select id="content-difficulty" class="form-control">
-          <option value="easy">简单</option>
-          <option value="medium" selected>中等</option>
-          <option value="hard">困难</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>使用方式（可多选）</label>
-        <div class="checkbox-group">
-          <label><input type="checkbox" id="content-use-reading" checked> 📖 作为阅读材料</label>
-          <label><input type="checkbox" id="content-use-typing"> ⌨️ 作为打字练习</label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>分配方式</label>
-        <select id="content-target-type" class="form-control" onchange="toggleTargetSelect()">
-          <option value="all">全部分享（所有班级可见）</option>
-          <option value="group">按分组分享</option>
-          <option value="class">按班级分享</option>
-        </select>
-      </div>
-      <div class="form-group" id="target-group-section" style="display:none;">
-        <label>选择分组</label>
-        <select id="content-target-group" class="form-control">
-          <option value="">请选择分组</option>
-        </select>
-      </div>
-      <div class="form-group" id="target-class-section" style="display:none;">
-        <label>选择班级（可多选）</label>
-        <div id="target-classes-checkboxes" class="checkbox-group">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>
-          <input type="checkbox" id="content-active" checked> 启用
-        </label>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeContentModal()">取消</button>
-        <button class="btn btn-primary" onclick="saveContent()">保存</button>
+      <div class="modal-tab" onclick="switchModalTab('questions')" id="tab-questions">
+        📝 问题设置 <span id="question-count-badge" class="badge" style="display: none;">0</span>
       </div>
     </div>
+    
+    <div class="modal-body">
+      
+      <!-- 内容设置面板 -->
+      <div id="panel-content">
+        <div class="form-group">
+          <label>标题 <span style="color: #ff4d4f;">*</span></label>
+          <input type="text" id="content-title" class="form-control" placeholder="请输入文章标题">
+        </div>
+        
+        <div class="form-group">
+          <label>内容 <span style="color: #ff4d4f;">*</span></label>
+          <textarea id="content-text" class="form-control" rows="8" placeholder="请输入阅读文章内容..." oninput="updateWordCount()"></textarea>
+          <div style="text-align: right; color: #999; font-size: 12px; margin-top: 5px;">
+            已输入 <span id="char-count">0</span> 字
+          </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div class="form-group">
+            <label>字数（可选，留空自动计算）</label>
+            <input type="number" id="content-wordcount" class="form-control" placeholder="自动计算">
+          </div>
+          <div class="form-group">
+            <label>难度</label>
+            <select id="content-difficulty" class="form-control">
+              <option value="easy">简单</option>
+              <option value="medium" selected>中等</option>
+              <option value="hard">困难</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>使用方式（可多选）</label>
+          <div class="checkbox-group">
+            <label><input type="checkbox" id="content-use-reading" checked> 📖 作为阅读材料</label>
+            <label><input type="checkbox" id="content-use-typing"> ⌨️ 作为打字练习</label>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>分配方式</label>
+          <select id="content-target-type" class="form-control" onchange="toggleTargetSelect()">
+            <option value="all">全部分享（所有班级可见）</option>
+            <option value="group">按分组分享</option>
+            <option value="class">按班级分享</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="target-group-section" style="display: none;">
+          <label>选择分组</label>
+          <select id="content-target-group" class="form-control">
+            <option value="">请选择分组</option>
+          </select>
+        </div>
+        
+        <div class="form-group" id="target-class-section" style="display: none;">
+          <label>选择班级（可多选）</label>
+          <div class="checkbox-group" id="target-classes-checkboxes">
+            <!-- 动态加载 -->
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="content-active" checked> 立即启用
+          </label>
+        </div>
+      </div>
+      
+      <!-- 问题设置面板 -->
+      <div id="panel-questions" style="display: none;">
+        <div style="background: #f6ffed; border: 1px solid #b7eb8f; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+          <strong style="color: #52c41a;">💡 提示：</strong>
+          <span style="color: #666;">设置问题后，学生阅读完文章可以作答。不设置问题则只进行阅读打卡。</span>
+        </div>
+        
+        <div id="questions-container">
+          <div class="empty-questions">
+            <p>暂无问题</p>
+            <p style="font-size: 14px; margin-top: 5px;">点击"添加问题"为此文章设置互动问题</p>
+          </div>
+        </div>
+        
+        <button type="button" class="btn btn-secondary" onclick="addQuestionField()" 
+          style="width: 100%; margin-top: 10px; border: 2px dashed #d9d9d9; background: #fafafa; height: 44px;">
+          ➕ 添加问题
+        </button>
+      </div>
+      
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeContentModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveContentWithQuestions()">保存内容</button>
+    </div>
   </div>
+</div>
+
+<!-- 查看学生答案弹窗（新增） -->
+<div class="modal" id="answers-modal">
+  <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header">
+      <h3>👀 学生回答</h3>
+      <span class="close-btn" onclick="closeAnswersModal()">&times;</span>
+    </div>
+    <div class="modal-body" id="answers-list" style="padding: 20px;">
+      加载中...
+    </div>
+  </div>
+</div>
 
   <script>
     let allStudents = [];
@@ -977,8 +1160,19 @@ async function deleteClass(className) {
           '<td>' + status + '</td>' +
           '<td>' + date + '</td>' +
           '<td>' +
-            '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
-            '<button class="btn btn-small btn-danger" onclick="deleteContent(\'' + item.id + '\')">删除</button>' +
+            // '<button class="btn btn-small btn-secondary" onclick="editContentById(\'' + item.id + '\')">编辑</button> ' +
+           //  '<button class="btn btn-small btn-danger" onclick="deleteContent(\'' + item.id + '\')">删除</button>' +
+          // 在 renderContentList 函数的操作列中，添加查看回答按钮
+// 找到这一行附近：
+// <button class="btn btn-small btn-primary" onclick="editContentById('${item.id}')">编辑</button>
+
+// 修改为：
+html += `
+  <button class="btn btn-small btn-primary" onclick="editContentById('${item.id}')">编辑</button>
+  <button class="btn btn-small btn-secondary" onclick="viewAnswers('${item.id}')" style="margin-left: 5px;">查看回答</button>
+  <button class="btn btn-small btn-danger" onclick="deleteContent('${item.id}')" style="margin-left: 5px;">删除</button>
+`;
+
           '</td>' +
         '</tr>';
       });
@@ -1146,6 +1340,432 @@ async function deleteClass(className) {
       html += '</tbody></table>';
       document.getElementById('rank-list').innerHTML = html;
     }
+
+    // ========== 问题管理相关变量和函数 ==========
+let currentQuestions = []; // 当前编辑的问题列表
+let currentEditingContentId = null;
+
+// 切换标签页
+function switchModalTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  
+  document.getElementById('panel-content').style.display = tab === 'content' ? 'block' : 'none';
+  document.getElementById('panel-questions').style.display = tab === 'questions' ? 'block' : 'none';
+  
+  if (tab === 'questions' && currentEditingContentId && currentQuestions.length === 0) {
+    loadExistingQuestions(currentEditingContentId);
+  }
+}
+
+// 更新字数统计
+function updateWordCount() {
+  const text = document.getElementById('content-text').value;
+  document.getElementById('char-count').textContent = text.length;
+}
+
+// 加载已有问题
+async function loadExistingQuestions(contentId) {
+  try {
+    const res = await fetch('/api/content/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentId })
+    });
+    const result = await res.json();
+    if (result.success) {
+      currentQuestions = result.questions || [];
+      renderQuestionsInModal();
+    }
+  } catch (e) {
+    console.error('加载问题失败', e);
+  }
+}
+
+// 在模态框中渲染问题
+function renderQuestionsInModal() {
+  const container = document.getElementById('questions-container');
+  const badge = document.getElementById('question-count-badge');
+  
+  if (currentQuestions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-questions">
+        <p>暂无问题</p>
+        <p style="font-size: 14px; margin-top: 5px;">点击"添加问题"为此文章设置互动问题</p>
+      </div>
+    `;
+    badge.style.display = 'none';
+    return;
+  }
+  
+  badge.textContent = currentQuestions.length;
+  badge.style.display = 'inline-block';
+  
+  container.innerHTML = currentQuestions.map((q, index) => renderQuestionField(q, index)).join('');
+}
+
+// 渲染单个问题编辑HTML
+function renderQuestionField(q, index) {
+  const type = q.type || 'short_answer';
+  const options = q.options || ['', ''];
+  
+  let optionsHtml = '';
+  if (type === 'choice') {
+    optionsHtml = `
+      <div class="question-options">
+        ${options.map((opt, i) => `
+          <div class="option-row">
+            <span style="color: #666; font-size: 14px;">${String.fromCharCode(65+i)}.</span>
+            <input type="text" value="${opt}" placeholder="选项 ${String.fromCharCode(65+i)}" 
+              onchange="updateQuestionOption(${index}, ${i}, this.value)">
+            ${options.length > 2 ? `<span class="remove-option-btn" onclick="removeOption(${index}, ${i})">×</span>` : ''}
+          </div>
+        `).join('')}
+        <span class="add-option-btn" onclick="addOption(${index})">+ 添加选项</span>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="question-item">
+      <div class="question-header">
+        <select onchange="updateQuestionType(${index}, this.value)">
+          <option value="short_answer" ${type === 'short_answer' ? 'selected' : ''}>简答题</option>
+          <option value="sentence" ${type === 'sentence' ? 'selected' : ''}>造句题</option>
+          <option value="choice" ${type === 'choice' ? 'selected' : ''}>选择题</option>
+        </select>
+        <span style="color: #999; font-size: 14px;">#${index + 1}</span>
+        <span class="delete-question-btn" onclick="removeQuestion(${index})" title="删除">×</span>
+      </div>
+      <div>
+        <input type="text" value="${q.question || ''}" placeholder="请输入问题内容..." 
+          onchange="updateQuestionText(${index}, this.value)" style="font-weight: 500;">
+      </div>
+      ${optionsHtml}
+      <div class="question-meta">
+        <div>
+          <label>分值</label>
+          <input type="number" value="${q.maxScore || 10}" min="1" max="100"
+            onchange="updateQuestionScore(${index}, this.value)" style="width: 100px;">
+        </div>
+        <div>
+          <label>参考答案（教师参考，学生不可见）</label>
+          <input type="text" value="${q.correctAnswer || ''}" placeholder="可选"
+            onchange="updateQuestionAnswer(${index}, this.value)">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 添加新问题
+function addQuestionField() {
+  currentQuestions.push({
+    type: 'short_answer',
+    question: '',
+    options: [],
+    maxScore: 10,
+    correctAnswer: ''
+  });
+  renderQuestionsInModal();
+  switchModalTab('questions');
+}
+
+// 更新问题字段
+function updateQuestionType(index, value) {
+  currentQuestions[index].type = value;
+  if (value === 'choice' && currentQuestions[index].options.length === 0) {
+    currentQuestions[index].options = ['', ''];
+  }
+  renderQuestionsInModal();
+}
+
+function updateQuestionText(index, value) {
+  currentQuestions[index].question = value;
+}
+
+function updateQuestionScore(index, value) {
+  currentQuestions[index].maxScore = parseInt(value) || 10;
+}
+
+function updateQuestionAnswer(index, value) {
+  currentQuestions[index].correctAnswer = value;
+}
+
+function updateQuestionOption(qIndex, optIndex, value) {
+  currentQuestions[qIndex].options[optIndex] = value;
+}
+
+function addOption(qIndex) {
+  currentQuestions[qIndex].options.push('');
+  renderQuestionsInModal();
+}
+
+function removeOption(qIndex, optIndex) {
+  currentQuestions[qIndex].options.splice(optIndex, 1);
+  renderQuestionsInModal();
+}
+
+function removeQuestion(index) {
+  if (confirm('确定删除这个问题吗？')) {
+    currentQuestions.splice(index, 1);
+    renderQuestionsInModal();
+  }
+}
+
+// 保存内容和问题（整合保存）
+async function saveContentWithQuestions() {
+  // 1. 验证内容
+  const title = document.getElementById('content-title').value.trim();
+  const content = document.getElementById('content-text').value.trim();
+  
+  if (!title || !content) {
+    alert('请填写标题和内容');
+    switchModalTab('content');
+    return;
+  }
+  
+  const contentData = {
+    id: currentEditingContentId,
+    title: title,
+    content: content,
+    wordCount: document.getElementById('content-wordcount').value || content.length,
+    difficulty: document.getElementById('content-difficulty').value,
+    useForReading: document.getElementById('content-use-reading').checked,
+    useForTyping: document.getElementById('content-use-typing').checked,
+    targetType: document.getElementById('content-target-type').value,
+    targetGroup: document.getElementById('content-target-group').value,
+    targetClasses: Array.from(document.querySelectorAll('.target-class-cb:checked')).map(cb => cb.value),
+    isActive: document.getElementById('content-active').checked
+  };
+  
+  try {
+    // 保存内容
+    const contentRes = await fetch('/api/admin/content/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contentData)
+    });
+    const contentResult = await contentRes.json();
+    
+    if (!contentResult.success) {
+      alert(contentResult.message || '保存内容失败');
+      return;
+    }
+    
+    const contentId = currentEditingContentId || contentResult.content.id;
+    
+    // 2. 保存问题（过滤掉空问题）
+    const validQuestions = currentQuestions.filter(q => q.question.trim());
+    for (const q of validQuestions) {
+      const questionData = {
+        contentId: contentId,
+        type: q.type,
+        question: q.question,
+        options: q.type === 'choice' ? q.options : [],
+        correctAnswer: q.correctAnswer,
+        maxScore: q.maxScore
+      };
+      if (q.id) questionData.id = q.id; // 已有ID则更新
+      
+      await fetch('/api/admin/question/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionData)
+      });
+    }
+    
+    closeContentModal();
+    loadContentList();
+    alert('保存成功！');
+    
+  } catch (e) {
+    alert('保存失败: ' + e.message);
+  }
+}
+
+// 修改原有函数以支持问题编辑
+function showContentModal() {
+  currentEditingContentId = null;
+  currentQuestions = [];
+  
+  document.getElementById('content-modal-title').textContent = '添加内容';
+  document.getElementById('content-title').value = '';
+  document.getElementById('content-text').value = '';
+  document.getElementById('content-wordcount').value = '';
+  document.getElementById('content-difficulty').value = 'medium';
+  document.getElementById('content-use-reading').checked = true;
+  document.getElementById('content-use-typing').checked = false;
+  document.getElementById('content-target-type').value = 'all';
+  document.getElementById('content-active').checked = true;
+  
+  toggleTargetSelect();
+  switchModalTab('content');
+  renderQuestionsInModal();
+  
+  document.getElementById('content-modal').style.display = 'flex';
+  updateContentGroupFilter();
+}
+
+// 修改 editContent 函数（在原有基础上增加问题加载）
+const originalEditContent = editContent;
+editContent = function(content) {
+  currentEditingContentId = content.id;
+  
+  // 填充原有表单
+  document.getElementById('content-modal-title').textContent = '编辑内容';
+  document.getElementById('content-title').value = content.title;
+  document.getElementById('content-text').value = content.content;
+  document.getElementById('content-wordcount').value = content.wordCount || '';
+  document.getElementById('content-difficulty').value = content.difficulty || 'medium';
+  document.getElementById('content-use-reading').checked = content.useForReading !== false;
+  document.getElementById('content-use-typing').checked = content.useForTyping === true;
+  document.getElementById('content-target-type').value = content.targetType || 'all';
+  document.getElementById('content-active').checked = content.isActive !== false;
+  
+  // 处理班级选择
+  if (content.targetType === 'class' && content.targetClasses) {
+    setTimeout(() => {
+      document.querySelectorAll('.target-class-cb').forEach(cb => {
+        cb.checked = content.targetClasses.includes(cb.value);
+      });
+    }, 0);
+  }
+  
+  switchModalTab('content');
+  document.getElementById('content-modal').style.display = 'flex';
+  updateContentGroupFilter();
+  
+  // 加载已有问题
+  loadExistingQuestions(content.id);
+};
+
+function closeContentModal() {
+  document.getElementById('content-modal').style.display = 'none';
+  currentEditingContentId = null;
+  currentQuestions = [];
+}
+
+// ========== 查看学生答案（新增） ==========
+async function viewAnswers(contentId) {
+  // 获取该内容的所有问题
+  try {
+    const res = await fetch('/api/content/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contentId })
+    });
+    const result = await res.json();
+    
+    if (result.success && result.questions.length > 0) {
+      // 显示第一个问题的答案（简化版，可扩展为标签页显示多个问题）
+      const question = result.questions[0];
+      loadAnswersForQuestion(question.id, question.question);
+    } else {
+      alert('该内容没有问题或加载失败');
+    }
+  } catch (e) {
+    alert('加载失败');
+  }
+}
+
+async function loadAnswersForQuestion(questionId, questionText) {
+  try {
+    const res = await fetch('/api/admin/question/answers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionId })
+    });
+    const result = await res.json();
+    
+    if (result.success) {
+      renderAnswers(result.answers, questionText, questionId);
+      document.getElementById('answers-modal').style.display = 'flex';
+    }
+  } catch (e) {
+    alert('加载答案失败');
+  }
+}
+
+function renderAnswers(answers, questionText, questionId) {
+  const container = document.getElementById('answers-list');
+  
+  if (answers.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">暂无学生提交答案</div>';
+    return;
+  }
+  
+  let html = `<h4 style="margin-bottom: 20px; color: #333; font-weight: 600;">问题：${questionText}</h4>`;
+  
+  answers.forEach((ans, index) => {
+    const isGraded = ans.score !== null;
+    html += `
+      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 15px; border-left: 3px solid ${isGraded ? '#52c41a' : '#faad14'};">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+          <div>
+            <strong style="font-size: 16px;">${ans.realName || ans.nickname}</strong>
+            <span style="color: #666; font-size: 13px; margin-left: 10px;">${ans.className || '未分班'}</span>
+          </div>
+          <span style="color: #999; font-size: 13px;">${new Date(ans.submittedAt).toLocaleString()}</span>
+        </div>
+        
+        <div style="background: white; padding: 15px; border-radius: 6px; margin-bottom: 10px; line-height: 1.6;">
+          ${ans.answer.replace(/\n/g, '<br>')}
+        </div>
+        
+        ${isGraded ? `
+          <div style="background: #f6ffed; padding: 10px; border-radius: 6px; color: #52c41a; font-size: 14px;">
+            <strong>得分：${ans.score}分</strong>
+            ${ans.feedback ? `<br>评语：${ans.feedback}` : ''}
+          </div>
+        ` : `
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="number" id="score-${index}" placeholder="得分" style="width: 80px; padding: 5px; border: 1px solid #d9d9d9; border-radius: 4px;" min="0" max="100">
+            <input type="text" id="feedback-${index}" placeholder="评语（可选）" style="flex: 1; min-width: 150px; padding: 5px; border: 1px solid #d9d9d9; border-radius: 4px;">
+            <button class="btn btn-small btn-primary" onclick="gradeAnswer('${questionId}', '${ans.nickname}', ${index})">评分</button>
+          </div>
+        `}
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+async function gradeAnswer(questionId, nickname, index) {
+  const score = document.getElementById(`score-${index}`).value;
+  const feedback = document.getElementById(`feedback-${index}`).value;
+  
+  if (score === '' || score === null) {
+    alert('请输入分数');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/admin/question/grade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        questionId, 
+        nickname, 
+        score: parseInt(score), 
+        feedback,
+        grader: '教师'
+      })
+    });
+    
+    if ((await res.json()).success) {
+      // 刷新列表
+      loadAnswersForQuestion(questionId, document.querySelector('#answers-list h4').textContent.replace('问题：', ''));
+    }
+  } catch (e) {
+    alert('评分失败');
+  }
+}
+
+function closeAnswersModal() {
+  document.getElementById('answers-modal').style.display = 'none';
+}
 
     // 初始化
     async function init() {
