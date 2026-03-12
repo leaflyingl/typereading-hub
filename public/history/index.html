@@ -115,21 +115,42 @@
         .empty { text-align: center; padding: 60px; color: #999; }
         .error { color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px; }
         
-        /* 新增：可点击的文章标题链接样式 */
-        td a.article-link {
-            color: #667eea;
-            text-decoration: none;
+        /* 新增：阅读历史相关样式 */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .history-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
             cursor: pointer;
-            border-bottom: 1px dotted #667eea;
+            transition: all 0.2s;
         }
-        td a.article-link:hover {
-            color: #764ba2;
-            border-bottom: 1px solid #764ba2;
+        .history-item:hover {
+            background: #e6f7ff;
+            transform: translateX(5px);
         }
-        td a.article-link.no-id {
-            color: #999;
-            border-bottom: none;
-            cursor: not-allowed;
+        .history-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+        .history-meta {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 13px;
+        }
+        .read-count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
         }
         
         /* 新增：模态框样式 */
@@ -170,27 +191,24 @@
             color: white;
             line-height: 1;
         }
-        .modal-body { padding: 30px; line-height: 1.8; font-size: 16px; }
+        .modal-body { 
+            padding: 30px; 
+            line-height: 1.8; 
+            font-size: 16px;
+            color: #333;
+        }
         .modal-body p { margin-bottom: 1em; }
         
-        /* 文章下架提示样式 */
         .offline-notice {
             background: #fff2f0;
             border: 1px solid #ffccc7;
             color: #ff4d4f;
-            padding: 30px;
+            padding: 40px;
             border-radius: 8px;
             text-align: center;
         }
-        .offline-notice h3 {
-            margin-bottom: 10px;
-            font-size: 18px;
-        }
-        .offline-notice p {
-            color: #666;
-            font-size: 14px;
-            margin: 5px 0;
-        }
+        .offline-notice h3 { margin-bottom: 10px; }
+        .offline-notice p { color: #666; font-size: 14px; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -230,9 +248,18 @@
                 </div>
             </div>
             
+            <!-- 原有的最近阅读记录（保持完全不变） -->
             <div class="card">
-                <h2>最近阅读记录（点击查看原文复习）</h2>
+                <h2>最近阅读记录</h2>
                 <div id="readingRecords">
+                    <p class="empty">加载中...</p>
+                </div>
+            </div>
+            
+            <!-- 新增：阅读历史（去重后可复习） -->
+            <div class="card">
+                <h2>📚 阅读历史（点击文章可复习）</h2>
+                <div id="readingHistory">
                     <p class="empty">加载中...</p>
                 </div>
             </div>
@@ -311,6 +338,7 @@
             loadReadingStats('day');
             loadTypingStats('day');
             loadRecentRecords();
+            loadReadingHistory(); // 新增：加载阅读历史
         };
 
         function switchTab(tab, btn) {
@@ -394,8 +422,9 @@
             }
         }
 
+        // 原有的最近阅读记录加载（保持完全不变）
         async function loadRecentRecords() {
-            // 加载阅读记录（已修改：支持点击标题回溯原文）
+            // 加载阅读记录
             try {
                 const readingRes = await fetch('/api/user/reading-records', {
                     method: 'POST',
@@ -406,18 +435,12 @@
                 
                 const readingDiv = document.getElementById('readingRecords');
                 if (readingData.success && readingData.records && readingData.records.length > 0) {
-                    let html = '<table><thead><tr><th>日期</th><th>文章（点击复习）</th><th>字数</th></tr></thead><tbody>';
+                    let html = '<table><thead><tr><th>日期</th><th>文章</th><th>字数</th></tr></thead><tbody>';
                     readingData.records.slice(0, 10).forEach(function(r) {
                         const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('zh-CN') : '-';
                         const title = r.articleTitle || '未命名文章';
                         const words = r.wordCount || 0;
-                        // 关键修改：如果存在articleId，让标题可点击
-                        if (r.articleId) {
-                            html += '<tr><td>' + date + '</td><td><a class="article-link" onclick="openArticle(\'' + r.articleId + '\', \'' + escapeHtml(title) + '\', \'' + date + '\', ' + words + ')">' + escapeHtml(title) + '</a></td><td>' + words + '</td></tr>';
-                        } else {
-                            // 旧数据没有articleId，显示不可点击的提示
-                            html += '<tr><td>' + date + '</td><td><span title="历史数据无法追溯原文" style="color:#999;">' + escapeHtml(title) + '</span></td><td>' + words + '</td></tr>';
-                        }
+                        html += '<tr><td>' + date + '</td><td>' + escapeHtml(title) + '</td><td>' + words + '</td></tr>';
                     });
                     html += '</tbody></table>';
                     readingDiv.innerHTML = html;
@@ -429,7 +452,7 @@
                 document.getElementById('readingRecords').innerHTML = '<p class="empty">加载失败</p>';
             }
 
-            // 加载打字记录（保持原样）
+            // 加载打字记录
             try {
                 const typingRes = await fetch('/api/user/typing-records', {
                     method: 'POST',
@@ -458,7 +481,43 @@
             }
         }
 
-        // 新增：打开文章详情（回溯原文）
+        // 新增：加载阅读历史（去重后可点击复习）
+        async function loadReadingHistory() {
+            try {
+                const res = await fetch('/api/user/reading-history', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nickname: currentUser.nickname })
+                });
+                const result = await res.json();
+                
+                const historyDiv = document.getElementById('readingHistory');
+                if (result.success && result.history && result.history.length > 0) {
+                    let html = '<div class="history-list">';
+                    result.history.forEach(function(item) {
+                        const readDate = item.lastReadAt ? new Date(item.lastReadAt).toLocaleDateString('zh-CN') : '-';
+                        html += '<div class="history-item" onclick="openArticle(\'' + item.articleId + '\', \'' + escapeHtml(item.articleTitle) + '\', \'' + readDate + '\', ' + item.wordCount + ')">';
+                        html += '<div class="history-title">' + escapeHtml(item.articleTitle) + '</div>';
+                        html += '<div class="history-meta">';
+                        html += '<span>📅 最近阅读：' + readDate + '</span>';
+                        html += '<span>📝 ' + item.wordCount + ' 词</span>';
+                        if (item.readCount > 1) {
+                            html += '<span class="read-count">读过 ' + item.readCount + ' 次</span>';
+                        }
+                        html += '</div></div>';
+                    });
+                    html += '</div>';
+                    historyDiv.innerHTML = html;
+                } else {
+                    historyDiv.innerHTML = '<p class="empty">暂无阅读历史</p>';
+                }
+            } catch (e) {
+                console.error('加载阅读历史失败:', e);
+                document.getElementById('readingHistory').innerHTML = '<p class="empty">加载失败</p>';
+            }
+        }
+
+        // 新增：打开文章详情
         async function openArticle(articleId, title, readDate, wordCount) {
             if (!articleId) {
                 alert('历史数据无法追溯原文');
@@ -480,31 +539,25 @@
                     document.getElementById('articleModal').style.display = 'flex';
                 } else {
                     // 文章已被删除，显示提示
-                    showOfflineNotice(title, readDate, wordCount);
+                    document.getElementById('modalTitle').textContent = title;
+                    document.getElementById('modalBody').innerHTML = 
+                        '<div class="offline-notice">' +
+                        '<h3>📭 该文章已被教师下架</h3>' +
+                        '<p>您曾于 ' + readDate + ' 阅读过此文章</p>' +
+                        '<p>阅读字数：' + wordCount + ' 词</p>' +
+                        '</div>';
+                    document.getElementById('articleModal').style.display = 'flex';
                 }
             } catch (e) {
                 alert('加载文章失败，请稍后重试');
             }
         }
-        
-        // 新增：显示文章下架提示
-        function showOfflineNotice(title, readDate, wordCount) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalBody').innerHTML = `
-                <div class="offline-notice">
-                    <h3>📭 该文章已被教师下架</h3>
-                    <p>您曾于 ${readDate} 阅读过此文章</p>
-                    <p>阅读字数：${wordCount} 词</p>
-                </div>
-            `;
-            document.getElementById('articleModal').style.display = 'flex';
-        }
-        
+
         // 新增：关闭模态框
         function closeModal() {
             document.getElementById('articleModal').style.display = 'none';
         }
-        
+
         // 点击模态框外部关闭
         document.getElementById('articleModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
