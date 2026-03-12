@@ -936,7 +936,7 @@ if (path === "content/reading") {
         return json({ success: false, message: "参数不完整" });
       }
       
-      const questionId = id || `question:${contentId}:${Date.now()}`;
+      const questionId = id || `question:${contentId}:${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
       const questionData = {
         id: questionId,
         contentId,
