@@ -1124,28 +1124,97 @@ if (path === "content/reading") {
     }
 
     if (path === "admin/question/delete") {
-      const { questionId } = await request.json();
-      if (!questionId) {
-        return json({ success: false, message: "缺少问题ID" });
-      }
-      
-      // 软删除
-      const data = await env.TYPEREADING_KV.get(questionId);
-      if (data) {
-        const question = JSON.parse(data);
-        question.isActive = false;
-        await env.TYPEREADING_KV.put(questionId, JSON.stringify(question));
-      }
-      
-      return json({ success: true });
-    }
-
-    return json({ success: false, message: "接口不存在：" + path });
-
-  } catch (err) {
-    console.error("API Error:", err);
-    return json({ success: false, message: err.message });
+  const { questionId } = await request.json();
+  if (!questionId) {
+    return json({ success: false, message: "缺少问题ID" });
   }
+  
+  // 软删除
+  const data = await env.TYPEREADING_KV.get(questionId);
+  if (data) {
+    const question = JSON.parse(data);
+    question.isActive = false;
+    await env.TYPEREADING_KV.put(questionId, JSON.stringify(question));
+  }
+  
+  return json({ success: true });
+}
+
+/* ========================= 请假管理 API ========================== */  // ✅ 插入在这里
+/* ---------------- 添加请假记录 ---------------- */
+if (path === "admin/leave/add") {
+  const { nickname, leaveDate, days, reason } = await request.json();
+  
+  if (!nickname || !leaveDate || !reason) {
+    return json({ success: false, message: "参数不完整" });
+  }
+  
+  const leaveKey = `leave::`;
+  await env.TYPEREADING_KV.put(leaveKey, JSON.stringify({
+    nickname,
+    leaveDate,
+    days: parseInt(days) || 1,
+    reason,
+    createdAt: new Date().toISOString(),
+    createdBy: "教师"
+  }));
+  
+  return json({ success: true });
+}
+
+/* ---------------- 获取学生请假记录 ---------------- */
+if (path === "user/leave-records") {
+  const { nickname } = await request.json();
+  
+  if (!nickname) {
+    return json({ success: false, message: "昵称不能为空" });
+  }
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: `leave::` });
+  const records = [];
+  
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const record = JSON.parse(data);
+      if (record.nickname === nickname) {
+        records.push(record);
+      }
+    }
+  }
+  
+  // 按日期倒序
+  records.sort((a, b) => new Date(b.leaveDate) - new Date(a.leaveDate));
+  
+  // 计算累计请假天数
+  const totalDays = records.reduce((sum, r) => sum + (r.days || 1), 0);
+  
+  return json({ 
+    success: true, 
+    records,
+    totalDays,
+    count: records.length
+  });
+}
+
+/* ---------------- 删除请假记录 ---------------- */
+if (path === "admin/leave/delete") {
+  const { leaveKey } = await request.json();
+  
+  if (!leaveKey) {
+    return json({ success: false, message: "请假记录ID不能为空" });
+  }
+  
+  await env.TYPEREADING_KV.delete(leaveKey);
+  return json({ success: true });
+}
+
+return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
+} catch (err) {
+  console.error("API Error:", err);
+  return json({ success: false, message: err.message });
+}
+
 
   function getWeekStart(date) {
     const d = new Date(date);
