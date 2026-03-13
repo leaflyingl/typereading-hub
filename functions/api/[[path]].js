@@ -598,6 +598,30 @@ if (path === "checkin/reading") {
       return json({ success: true, stats });
     }
 
+    /* ========================= 获取今日打卡统计 ========================== */
+if (path === "admin/today-checkin") {
+  const today = new Date().toISOString().split("T")[0];
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+  const checkedStudents = new Set();
+  
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const record = JSON.parse(data);
+      if (record.date === today) {
+        checkedStudents.add(record.nickname);
+      }
+    }
+  }
+  
+  return json({ 
+    success: true, 
+    count: checkedStudents.size,
+    today: today
+  });
+}
+
    /* ========================= 保存内容（统一内容池） ========================== */
 if (path === "admin/content/save") {
   const { id, title, content, wordCount: inputWordCount, difficulty, useForReading, useForTyping, targetType, targetGroup, targetClasses, isActive } = await request.json();
@@ -1170,29 +1194,3 @@ if (path === "content/reading") {
   function json(data) {
     return new Response(JSON.stringify(data), { headers });
   }
-
-  /* ========================= 获取今日打卡统计 ========================== */
-if (path === "admin/today-checkin") {
-  const today = new Date().toISOString().split("T")[0];
-  
-  const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
-  const checkedStudents = new Set();
-  
-  for (const key of keys) {
-    const data = await env.TYPEREADING_KV.get(key.name);
-    if (data) {
-      const record = JSON.parse(data);
-      if (record.date === today) {
-        checkedStudents.add(record.nickname);
-      }
-    }
-  }
-  
-  return json({ 
-    success: true, 
-    count: checkedStudents.size,
-    today: today
-  });
-}
-
-}
