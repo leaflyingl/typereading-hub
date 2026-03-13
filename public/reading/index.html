@@ -304,7 +304,9 @@ function getTodayString() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  return `--`;  // ✅ 注意：使用的是反引号，不是单引号！
+  return year + "-" + month + "-" + day;  // ✅ 修改这里
+}
+
 }
 
 
