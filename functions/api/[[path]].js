@@ -1199,3 +1199,4 @@ if (path === "content/reading") {
   function json(data) {
     return new Response(JSON.stringify(data), { headers });
   }
+}
