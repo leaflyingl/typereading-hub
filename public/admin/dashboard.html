@@ -350,7 +350,7 @@
           <div class="stat-label">班级数量</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" id="todayCheckin">-</div>
+          <div class="stat-value" id="today-checkin">-</div>
           <div class="stat-label">今日打卡</div>
       </div>
 
@@ -714,25 +714,18 @@
 // 新增：加载今日打卡人数
 async function loadTodayCheckin() {
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const res = await fetch('/api/admin/students');
+    const res = await fetch('/api/admin/today-checkin');
     const result = await res.json();
     
     if (result.success) {
-      const students = result.students || [];
-      // 计算今日打卡的唯一学生数
-      let checkinCount = 0;
-      const checkedStudents = new Set();
-      
-      // 遍历所有学生的阅读记录（这里需要后端支持，或者前端计算）
-      // 临时方案：显示总学生数作为占位
+      document.getElementById('today-checkin').textContent = result.count;
+    } else {
       document.getElementById('today-checkin').textContent = '-';
     }
   } catch (e) {
     document.getElementById('today-checkin').textContent = '-';
   }
 }
-
 
     function updateClassFilter() {
       const options = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
