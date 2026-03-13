@@ -240,9 +240,11 @@
     
     <div class="container">
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('reading', this)" id="tab-reading">📖 阅读统计</button>
-            <button class="tab" onclick="switchTab('typing', this)" id="tab-typing">⌨️ 打字统计</button>
-        </div>
+            button class="tab active" onclick="switchTab('reading', this)" id="tab-reading">📖 阅读统计</button>
+            button class="tab" onclick="switchTab('typing', this)" id="tab-typing">⌨️ 打字统计</button>
+            button class="tab" onclick="switchTab('leave', this)" id="tab-leave">📋 请假记录</button>
+    </div>
+
         
         <!-- 阅读统计 -->
         <div id="reading-panel" class="tab-panel">
@@ -324,6 +326,16 @@
         </div>
     </div>
 
+    <!-- 请假记录 -->
+<div id="leave-panel" class="tab-panel" style="display:none;">
+   div class="card">
+       h2>📋 请假记录</h2>
+       div id="leaveRecords">
+           p class="empty">加载中p>
+       div>
+   div>
+</div>
+
     <!-- 文章详情模态框 -->
     <div class="modal" id="articleModal">
         <div class="modal-content">
@@ -369,26 +381,42 @@
 
         // 修复2：保存和恢复标签页状态
         function switchTab(tab, btn) {
-            // 保存当前标签到 localStorage
-            localStorage.setItem('historyActiveTab', tab);
-            
-            document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-            btn.classList.add('active');
-            
-            document.getElementById('reading-panel').style.display = tab === 'reading' ? 'block' : 'none';
-            document.getElementById('typing-panel').style.display = tab === 'typing' ? 'block' : 'none';
-        }
+    // 保存当前标签到 localStorage
+    localStorage.setItem('historyActiveTab', tab);
+    
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    btn.classList.add('active');
+    
+    document.getElementById('reading-panel').style.display = tab === 'reading' ? 'block' : 'none';
+    document.getElementById('typing-panel').style.display = tab === 'typing' ? 'block' : 'none';
+    document.getElementById('leave-panel').style.display = tab === 'leave' ? 'block' : 'none';
+    
+    // 如果是请假记录Tab，加载数据
+    if (tab === 'leave') {
+        loadLeaveRecords();
+    }
+}
 
         // 修复2：恢复标签页状态
         function restoreTabState() {
-            const savedTab = localStorage.getItem('historyActiveTab');
-            if (savedTab === 'typing') {
-                document.getElementById('tab-reading').classList.remove('active');
-                document.getElementById('tab-typing').classList.add('active');
-                document.getElementById('reading-panel').style.display = 'none';
-                document.getElementById('typing-panel').style.display = 'block';
-            }
-        }
+    const savedTab = localStorage.getItem('historyActiveTab');
+    if (savedTab === 'typing') {
+        document.getElementById('tab-reading').classList.remove('active');
+        document.getElementById('tab-typing').classList.add('active');
+        document.getElementById('reading-panel').style.display = 'none';
+        document.getElementById('typing-panel').style.display = 'block';
+        document.getElementById('leave-panel').style.display = 'none';
+    } else if (savedTab === 'leave') {
+        document.getElementById('tab-reading').classList.remove('active');
+        document.getElementById('tab-typing').classList.remove('active');
+        document.getElementById('tab-leave').classList.add('active');
+        document.getElementById('reading-panel').style.display = 'none';
+        document.getElementById('typing-panel').style.display = 'none';
+        document.getElementById('leave-panel').style.display = 'block';
+        loadLeaveRecords();
+    }
+}
+
 
         // 修复1：优化阅读统计 - 改为"阅读单词数"并确保是英文单词数
         async function loadReadingStats(period, btn) {
@@ -651,6 +679,63 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
+
+        // 加载请假记录
+async function loadLeaveRecords() {
+    try {
+        const response = await fetch('/api/user/leave-records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nickname: currentUser.nickname })
+        });
+        const data = await response.json();
+        
+        const leaveDiv = document.getElementById('leaveRecords');
+        
+        if (data.success && data.records && data.records.length > 0) {
+            let html =div style="margin-bottom: 20px; padding: 15px; background: #f6ffed; border-radius: 8px; border: 1px solid #b7eb8f;">';
+            html +=div style="display: flex; justify-content: space-between; align-items: center;">';
+            html +=span style="font-weight: 600; color: #389e0d;">📋 累计请假统计</span>';
+            html +=span style="font-size: 18px; font-weight: bold; color: #389e0d;">' + data.totalDays + ' 天</span>';
+            html +=div>';
+            html +=div style="color: #666; font-size: 13px; margin-top: 5px;">共 ' + data.count + ' 次请假记录</div>';
+            html +=div>';
+            
+            html +=div class="history-list">';
+            data.records.forEach(function(record) {
+                const date = record.leaveDate || '-';
+                const days = record.days || 1;
+                const reason = record.reason || '未填写事由';
+                const createdDate = record.createdAt ? new Date(record.createdAt).toLocaleDateString('zh-CN') : '-';
+                
+                html +=div class="history-item">';
+                html +=div class="history-title">' + escapeHtml(reason) +div>';
+                html +=div class="history-meta">';
+                html +=span>📅 请假日期：' + date +span>';
+                html +=span>请假天数：' + days + ' 天</span>';
+                html +=span>记录时间：' + createdDate +span>';
+                html +=div>';
+                html +=div>';
+            });
+            html +=div>';
+            
+            leaveDiv.innerHTML = html;
+        } else {
+            leaveDiv.innerHTML =div style="text-align: center; padding: 60px 20px; color: #999;">' +
+               div style="font-size: 48px; margin-bottom: 15px;">📋</div>' +
+               p>暂无请假记录</p>' +
+               p style="font-size: 13px; margin-top: 10px;">教师尚未为您添加请假记录</p>' +
+               div>';
+        }
+    } catch (e) {
+        console.error('加载请假记录失败:', e);
+        document.getElementById('leaveRecords').innerHTML =div style="text-align: center; padding: 40px; color: #ff4d4f;">' +
+           p>加载请假记录失败</p>' +
+           p style="font-size: 13px; margin-top: 10px;">请稍后重试</p>' +
+           div>';
+    }
+}
+
     </script>
 </body>
 </html>
