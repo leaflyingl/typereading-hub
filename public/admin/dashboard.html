@@ -643,6 +643,41 @@
   </div>
 </div>
 
+  <!-- 请假管理弹窗 -->
+<div id="leave-modal" class="modal">
+ div class="modal-content" style="max-width: 500px;">
+   div class="modal-header">
+     h3 id="leave-modal-title">学生请假记录</h3>
+     span class="close-btn" onclick="closeLeaveModal()">&timesspan>
+   div>
+    
+    <!-- 历史记录 -->
+   div class="form-group">
+     label>历史请假记录</label>
+     div id="leave-history-list" style="max-height: 200px; overflow-y: auto;">
+       p style="color: #999;">加载中p>
+     div>
+   div>
+    
+   hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+    
+    <!-- 新增请假 -->
+   div class="form-group">
+     label>新增请假</label>
+     div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+       input type="date" id="leave-date" class="form-control">
+       input type="number" id="leave-days" class="form-control" placeholder="天数" value="1" min="1">
+     div>
+     input type="text" id="leave-reason" class="form-control" placeholder="请假事由（如：感冒发烧）">
+   div>
+    
+   div class="modal-footer">
+     button class="btn btn-secondary" onclick="closeLeaveModal()">关闭</button>
+     button class="btn btn-primary" onclick="addLeaveRecord()">添加请假</button>
+   div>
+ div>
+</div>
+
   <script>
     let allStudents = [];
     let allClasses = [];
@@ -763,7 +798,10 @@ async function loadTodayCheckin() {
           '<td>' + (s.totalReadingWords || 0) + '</td>' +
           '<td>' + (s.totalTypingWords || 0) + '</td>' +
           '<td>' + date + '</td>' +
-          '<td><button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button></td>' +
+          '<td>' +
+ button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
+ button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +
+'</td>' +
         '</tr>';
       });
       html += '</tbody></table>';
@@ -1738,6 +1776,118 @@ async function gradeAnswer(questionId, nickname, index) {
 
 function closeAnswersModal() {
   document.getElementById('answers-modal').style.display = 'none';
+}
+
+    // ========== 请假管理 ==========
+let currentLeaveStudent = null;
+
+// 显示请假弹窗
+async function showLeaveModal(nickname) {
+  currentLeaveStudent = nickname;
+  document.getElementById('leave-modal-title').textContent = nickname + ' - 请假记录';
+  document.getElementById('leave-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('leave-days').value = 1;
+  document.getElementById('leave-reason').value = '';
+  
+  document.getElementById('leave-modal').style.display = 'flex';
+  
+  // 加载历史记录
+  await loadLeaveHistory(nickname);
+}
+
+// 关闭请假弹窗
+function closeLeaveModal() {
+  document.getElementById('leave-modal').style.display = 'none';
+  currentLeaveStudent = null;
+}
+
+// 加载请假历史
+async function loadLeaveHistory(nickname) {
+  try {
+    const res = await fetch('/api/user/leave-records', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname })
+    });
+    const result = await res.json();
+    
+    const container = document.getElementById('leave-history-list');
+    
+    if (result.success && result.records.length > 0) {
+      let html =table style="width: 100%; font-size: 14px;">';
+      result.records.forEach(r => {
+        html +=tr style="border-bottom: 1px solid #eee;">
+         td style="padding: 8px 0td>
+         tdtd>
+         td>天</td>
+         td style="text-align: right;">
+           span style="color: #ff4d4f; cursor: pointer;" onclick="deleteLeaveRecord('')">删除</span>
+         td>
+       tr>`;
+      });
+      html +=table>';
+      html +=p style="margin-top: 10px; color: #666;">累计请假：天</p>`;
+      container.innerHTML = html;
+    } else {
+      container.innerHTML =p style="color: #999; text-align: center; padding: 20px;">暂无请假记录</p>';
+    }
+  } catch (e) {
+    document.getElementById('leave-history-list').innerHTML =p style="color: red;">加载失败</p>';
+  }
+}
+
+// 添加请假记录
+async function addLeaveRecord() {
+  const date = document.getElementById('leave-date').value;
+  const days = document.getElementById('leave-days').value;
+  const reason = document.getElementById('leave-reason').value.trim();
+  
+  if (!date || !reason) {
+    alert('请填写日期和事由');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/admin/leave/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nickname: currentLeaveStudent,
+        leaveDate: date,
+        days: parseInt(days) || 1,
+        reason: reason
+      })
+    });
+    
+    if ((await res.json()).success) {
+      // 刷新历史记录
+      await loadLeaveHistory(currentLeaveStudent);
+      // 清空表单
+      document.getElementById('leave-reason').value = '';
+      document.getElementById('leave-days').value = 1;
+    }
+  } catch (e) {
+    alert('添加失败');
+  }
+}
+
+// 删除请假记录
+async function deleteLeaveRecord(leaveKey) {
+  if (!confirm('确定删除这条请假记录？')) return;
+  
+  try {
+    const res = await fetch('/api/admin/leave/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leaveKey })
+    });
+    
+    if ((await res.json()).success) {
+      await loadLeaveHistory(currentLeaveStudent);
+    }
+  } catch (e) {
+    alert('删除失败');
+  }
 }
 
     // 初始化
