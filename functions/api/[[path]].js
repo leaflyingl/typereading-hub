@@ -383,7 +383,7 @@ if (path === "checkin/status") {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  today = `--`;  // ✅ 这才是正确的模板字符串用法
+  today = year + "-" + month + "-" + day;  // ✅ 这样最简单，不会错
 }
 
 
@@ -426,7 +426,7 @@ if (path === "checkin/reading") {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    today = `--`;  // ✅ 这才是正确的！
+    today = year + "-" + month + "-" + day;  // ✅ 这样最简单，不会错
   }
   
   // 检查今日是否已打卡
