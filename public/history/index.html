@@ -681,6 +681,7 @@
         }
 
         // 加载请假记录
+// 加载请假记录
 async function loadLeaveRecords() {
     try {
         const response = await fetch('/api/user/leave-records', {
@@ -693,48 +694,49 @@ async function loadLeaveRecords() {
         const leaveDiv = document.getElementById('leaveRecords');
         
         if (data.success && data.records && data.records.length > 0) {
-            let html =div style="margin-bottom: 20px; padding: 15px; background: #f6ffed; border-radius: 8px; border: 1px solid #b7eb8f;">';
-            html +=div style="display: flex; justify-content: space-between; align-items: center;">';
-            html +=span style="font-weight: 600; color: #389e0d;">📋 累计请假统计</span>';
-            html +=span style="font-size: 18px; font-weight: bold; color: #389e0d;">' + data.totalDays + ' 天</span>';
-            html +=div>';
-            html +=div style="color: #666; font-size: 13px; margin-top: 5px;">共 ' + data.count + ' 次请假记录</div>';
-            html +=div>';
+            let html = '<div style="margin-bottom: 20px; padding: 15px; background: #f6ffed; border-radius: 8px; border: 1px solid #b7eb8f;">';
+            html += '<div style="display: flex; justify-content: space-between; align-items: center;">';
+            html += '<span style="font-weight: 600; color: #389e0d;">📋 累计请假统计</span>';
+            html += '<span style="font-size: 18px; font-weight: bold; color: #389e0d;">' + data.totalDays + ' 天</span>';
+            html += '</div>';
+            html += '<div style="color: #666; font-size: 13px; margin-top: 5px;">共 ' + data.count + ' 次请假记录</div>';
+            html += '</div>';
             
-            html +=div class="history-list">';
+            html += '<div class="history-list">';
             data.records.forEach(function(record) {
                 const date = record.leaveDate || '-';
                 const days = record.days || 1;
                 const reason = record.reason || '未填写事由';
                 const createdDate = record.createdAt ? new Date(record.createdAt).toLocaleDateString('zh-CN') : '-';
                 
-                html +=div class="history-item">';
-                html +=div class="history-title">' + escapeHtml(reason) +div>';
-                html +=div class="history-meta">';
-                html +=span>📅 请假日期：' + date +span>';
-                html +=span>请假天数：' + days + ' 天</span>';
-                html +=span>记录时间：' + createdDate +span>';
-                html +=div>';
-                html +=div>';
+                html += '<div class="history-item">';
+                html += '<div class="history-title">' + escapeHtml(reason) + '</div>';
+                html += '<div class="history-meta">';
+                html += '<span>📅 请假日期：' + date + '</span>';
+                html += '<span>请假天数：' + days + ' 天</span>';
+                html += '<span>记录时间：' + createdDate + '</span>';
+                html += '</div>';
+                html += '</div>';
             });
-            html +=div>';
+            html += '</div>';
             
             leaveDiv.innerHTML = html;
         } else {
-            leaveDiv.innerHTML =div style="text-align: center; padding: 60px 20px; color: #999;">' +
-               div style="font-size: 48px; margin-bottom: 15px;">📋</div>' +
-               p>暂无请假记录</p>' +
-               p style="font-size: 13px; margin-top: 10px;">教师尚未为您添加请假记录</p>' +
-               div>';
+            leaveDiv.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #999;">' +
+                '<div style="font-size: 48px; margin-bottom: 15px;">📋</div>' +
+                '<p>暂无请假记录</p>' +
+                '<p style="font-size: 13px; margin-top: 10px;">教师尚未为您添加请假记录</p>' +
+                '</div>';
         }
     } catch (e) {
         console.error('加载请假记录失败:', e);
-        document.getElementById('leaveRecords').innerHTML =div style="text-align: center; padding: 40px; color: #ff4d4f;">' +
-           p>加载请假记录失败</p>' +
-           p style="font-size: 13px; margin-top: 10px;">请稍后重试</p>' +
-           div>';
+        document.getElementById('leaveRecords').innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">' +
+            '<p>加载请假记录失败</p>' +
+            '<p style="font-size: 13px; margin-top: 10px;">请稍后重试</p>' +
+            '</div>';
     }
 }
+
 
     </script>
 </body>
