@@ -1055,60 +1055,67 @@ async function loadTodayCheckin() {
     }
 
     function renderStudents() {
-      const classFilter = document.getElementById('class-filter').value;
-      const genderFilter = document.getElementById('gender-filter').value;
-      let filtered = allStudents;
-      if (classFilter) filtered = filtered.filter(s => s.className === classFilter);
-      if (genderFilter) filtered = filtered.filter(s => s.gender === genderFilter);
+  const classFilter = document.getElementById('class-filter').value;
+  const genderFilter = document.getElementById('gender-filter').value;
+  let filtered = allStudents;
+  if (classFilter) filtered = filtered.filter(s => s.className === classFilter);
+  if (genderFilter) filtered = filtered.filter(s => s.gender === genderFilter);
 
-      if (filtered.length === 0) {
-        document.getElementById('students-list').innerHTML =p style="text-align: center; color: #999;">暂无学生数据</p>';
-        return;
-      }
-      
-      // 只修改这一行：表头添加"状态"
-      let html =table class="data-tabletheadtr>' +
-       thinput type="checkbox" onchange="toggleSelectAll(this)th>' +
-       th>昵称th>真实姓名th>性别th>班级</th>' +
-       th>阅读单词th>打字单词th>注册时间th>操作</th>' +
-	   th>状态</th>' +  // 新增列
-       trtheadtbody>';
-        
-      filtered.forEach(s => {
-        const date = formatDate(s.createdAt);
-        
-        // 判断状态
-        const isRestricted = !s.className || s.isActive === false;
-        const statusHtml = isRestricted 
-          ?span style="color: #ff4d4f; font-size: 12px;">⚠️ 受限</span>' 
-          :span style="color: #52c41a; font-size: 12px;">✓ 正常</span>';
-        
-        // 激活按钮
-        const activeBtn = s.isActive === false
-          ?button class="btn btn-small btn-primary" onclick="toggleStudentActive(\'' + s.nickname + '\', true)">启用</button>'
-          :button class="btn btn-small btn-secondary" onclick="toggleStudentActive(\'' + s.nickname + '\', false)">停用</button>';
-        
-        // 只修改这一行：添加状态单元格和激活按钮
-        html +=tr>' +
-         tdinput type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)td>' +
-         td>' + (s.nickname || '') +td>' +
-         td>' + (s.realName || '-') +td>' +
-         td>' + (s.gender || '-') +td>' +
-         td>' + (s.className || '-') +td>' +
-         td>' + statusHtml +td>' +  // 新增状态列
-         td>' + (s.totalReadingWords || 0) +td>' +
-         td>' + (s.totalTypingWords || 0) +td>' +
-         td>' + date +td>' +
-         td>' +
-           button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
-            activeBtn + ' ' +  // 新增激活按钮
-           button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +
-         td>' +
-       tr>';
-      });
-      html +=tbodytable>';
-      document.getElementById('students-list').innerHTML = html;
-    }
+  if (filtered.length === 0) {
+    document.getElementById('students-list').innerHTML = '<p style="text-align: center; color: #999;">暂无学生数据</p>';
+    return;
+  }
+  
+  // 表头添加"状态"列
+  let html = '<table class="data-table"><thead><tr>' +
+    '<th><input type="checkbox" onchange="toggleSelectAll(this)"></th>' +
+    '<th>昵称</th>' +
+    '<th>真实姓名</th>' +
+    '<th>性别</th>' +
+    '<th>班级</th>' +
+    '<th>状态</th>' +
+    '<th>阅读单词</th>' +
+    '<th>打字单词</th>' +
+    '<th>注册时间</th>' +
+    '<th>操作</th>' +
+    '</tr></thead><tbody>';
+    
+  filtered.forEach(s => {
+    const date = formatDate(s.createdAt);
+    
+    // 判断状态
+    const isRestricted = !s.className || s.isActive === false;
+    const statusHtml = isRestricted 
+      ? '<span style="color: #ff4d4f; font-size: 12px;">⚠️ 受限</span>' 
+      : '<span style="color: #52c41a; font-size: 12px;">✓ 正常</span>';
+    
+    // 激活按钮
+    const activeBtn = s.isActive === false
+      ? '<button class="btn btn-small btn-primary" onclick="toggleStudentActive(\'' + s.nickname + '\', true)">启用</button>'
+      : '<button class="btn btn-small btn-secondary" onclick="toggleStudentActive(\'' + s.nickname + '\', false)">停用</button>';
+    
+    // 添加状态单元格和激活按钮
+    html += '<tr>' +
+      '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
+      '<td>' + (s.nickname || '') + '</td>' +
+      '<td>' + (s.realName || '-') + '</td>' +
+      '<td>' + (s.gender || '-') + '</td>' +
+      '<td>' + (s.className || '-') + '</td>' +
+      '<td>' + statusHtml + '</td>' +
+      '<td>' + (s.totalReadingWords || 0) + '</td>' +
+      '<td>' + (s.totalTypingWords || 0) + '</td>' +
+      '<td>' + date + '</td>' +
+      '<td>' +
+        '<button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
+        activeBtn + ' ' +
+        '<button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +
+      '</td>' +
+      '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  document.getElementById('students-list').innerHTML = html;
+}
 
     function toggleSelectAll(cb) {
       document.querySelectorAll('#students-list input[type="checkbox"]').forEach(box => {
@@ -1702,7 +1709,7 @@ let currentEditingContentId = null;
 // 切换标签页
 function switchModalTab(tab) {
   document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
   
   document.getElementById('panel-content').style.display = tab === 'content' ? 'block' : 'none';
   document.getElementById('panel-questions').style.display = tab === 'questions' ? 'block' : 'none';
