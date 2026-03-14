@@ -1209,6 +1209,214 @@ if (path === "admin/leave/delete") {
   return json({ success: true });
 }
 
+/* ========================= 收费退费管理 API ========================== */
+
+/* ---------------- 添加收费记录 ---------------- */
+if (path === "admin/payment/add") {
+  const { nickname, className, amount, remark } = await request.json();
+  
+  if (!nickname || !amount || amount <= 0) {
+    return json({ success: false, message: "学生昵称和收费金额不能为空" });
+  }
+  
+  const paymentKey = "payment:" + nickname + ":" + Date.now();
+  const paymentData = {
+    id: paymentKey,
+    nickname,
+    className: className || "",
+    amount: Number(amount),
+    remark: remark || "",
+    createdAt: new Date().toISOString(),
+    createdBy: "教师"
+  };
+  
+  await env.TYPEREADING_KV.put(paymentKey, JSON.stringify(paymentData));
+  return json({ success: true, payment: paymentData });
+}
+
+/* ---------------- 添加退费记录 ---------------- */
+if (path === "admin/refund/add") {
+  const { nickname, className, refundAmount, reason, remark } = await request.json();
+  
+  if (!nickname || !refundAmount || refundAmount <= 0) {
+    return json({ success: false, message: "学生昵称和退费金额不能为空" });
+  }
+  
+  const refundKey = "refund:" + nickname + ":" + Date.now();
+  const refundData = {
+    id: refundKey,
+    nickname,
+    className: className || "",
+    refundAmount: Number(refundAmount),
+    reason: reason || "",
+    remark: remark || "",
+    createdAt: new Date().toISOString(),
+    createdBy: "教师"
+  };
+  
+  await env.TYPEREADING_KV.put(refundKey, JSON.stringify(refundData));
+  return json({ success: true, refund: refundData });
+}
+
+/* ---------------- 获取班级财务统计 ---------------- */
+if (path === "admin/finance/class-stats") {
+  const { className } = await request.json();
+  
+  // 获取所有收费记录
+  const { keys: paymentKeys } = await env.TYPEREADING_KV.list({ prefix: "payment:" });
+  const payments = [];
+  for (const key of paymentKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const p = JSON.parse(data);
+      if (!className || p.className === className) {
+        payments.push(p);
+      }
+    }
+  }
+  
+  // 获取所有退费记录
+  const { keys: refundKeys } = await env.TYPEREADING_KV.list({ prefix: "refund:" });
+  const refunds = [];
+  for (const key of refundKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const r = JSON.parse(data);
+      if (!className || r.className === className) {
+        refunds.push(r);
+      }
+    }
+  }
+  
+  // 按班级分组统计
+  const classStatsMap = new Map();
+  
+  // 统计收费
+  payments.forEach(p => {
+    const cls = p.className || "未分班";
+    if (!classStatsMap.has(cls)) {
+      classStatsMap.set(cls, { className: cls, totalAmount: 0, totalRefund: 0, studentCount: new Set() });
+    }
+    const stats = classStatsMap.get(cls);
+    stats.totalAmount += p.amount;
+    stats.studentCount.add(p.nickname);
+  });
+  
+  // 统计退费
+  refunds.forEach(r => {
+    const cls = r.className || "未分班";
+    if (!classStatsMap.has(cls)) {
+      classStatsMap.set(cls, { className: cls, totalAmount: 0, totalRefund: 0, studentCount: new Set() });
+    }
+    classStatsMap.get(cls).totalRefund += r.refundAmount;
+  });
+  
+  // 转换为数组并计算实收
+  const classStats = Array.from(classStatsMap.values()).map(s => ({
+    className: s.className,
+    totalAmount: s.totalAmount,
+    totalRefund: s.totalRefund,
+    netAmount: s.totalAmount - s.totalRefund,
+    studentCount: s.studentCount.size
+  }));
+  
+  // 按班级名称排序
+  classStats.sort((a, b) => a.className.localeCompare(b.className));
+  
+  return json({ success: true, classStats });
+}
+
+/* ---------------- 获取全局财务统计 ---------------- */
+if (path === "admin/finance/global-stats") {
+  // 获取所有收费记录
+  const { keys: paymentKeys } = await env.TYPEREADING_KV.list({ prefix: "payment:" });
+  let totalAmount = 0;
+  const paymentStudents = new Set();
+  
+  for (const key of paymentKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const p = JSON.parse(data);
+      totalAmount += p.amount;
+      paymentStudents.add(p.nickname);
+    }
+  }
+  
+  // 获取所有退费记录
+  const { keys: refundKeys } = await env.TYPEREADING_KV.list({ prefix: "refund:" });
+  let totalRefund = 0;
+  const refundStudents = new Set();
+  
+  for (const key of refundKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const r = JSON.parse(data);
+      totalRefund += r.refundAmount;
+      refundStudents.add(r.nickname);
+    }
+  }
+  
+  // 获取总学生数
+  const { keys: userKeys } = await env.TYPEREADING_KV.list({ prefix: "user:" });
+  const totalStudents = userKeys.length;
+  
+  return json({
+    success: true,
+    stats: {
+      totalAmount,           // 总应收
+      totalRefund,           // 总退款
+      netAmount: totalAmount - totalRefund,  // 总实收
+      totalStudents,         // 总学生数
+      paidStudents: paymentStudents.size,    // 已缴费学生数
+      refundStudents: refundStudents.size    // 有退费学生数
+    }
+  });
+}
+
+/* ---------------- 获取学生财务记录 ---------------- */
+if (path === "admin/finance/student-records") {
+  const { nickname } = await request.json();
+  
+  if (!nickname) {
+    return json({ success: false, message: "学生昵称不能为空" });
+  }
+  
+  // 获取该学生的收费记录
+  const { keys: paymentKeys } = await env.TYPEREADING_KV.list({ prefix: "payment:" + nickname + ":" });
+  const payments = [];
+  for (const key of paymentKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) payments.push(JSON.parse(data));
+  }
+  payments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  // 获取该学生的退费记录
+  const { keys: refundKeys } = await env.TYPEREADING_KV.list({ prefix: "refund:" + nickname + ":" });
+  const refunds = [];
+  for (const key of refundKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) refunds.push(JSON.parse(data));
+  }
+  refunds.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  // 计算汇总
+  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalRefund = refunds.reduce((sum, r) => sum + r.refundAmount, 0);
+  
+  return json({
+    success: true,
+    records: {
+      payments,
+      refunds
+    },
+    summary: {
+      totalPaid,
+      totalRefund,
+      balance: totalPaid - totalRefund
+    }
+  });
+}
+
 return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
 } catch (err) {
   console.error("API Error:", err);
