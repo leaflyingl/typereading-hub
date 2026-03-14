@@ -13,6 +13,53 @@ export async function onRequest(context) {
     return new Response(null, { headers });
   }
 
+   // ← 在这里添加以下代码
+  // 辅助函数：检查用户是否受限
+  async function checkUserRestricted(env, nickname) {
+    if (!nickname) return true; // 未登录用户受限
+    
+    const userKey = "user:" + nickname;
+    const userData = await env.TYPEREADING_KV.get(userKey);
+    if (!userData) return true; // 用户不存在则受限
+    
+    const user = JSON.parse(userData);
+    // 未分班 或 未激活(isActive=false) 则受限
+    return !user.className || user.isActive === false;
+  }
+
+  // 辅助函数：检查本周阅读限制
+  async function checkWeeklyReadingLimit(env, nickname, clientDate) {
+    let today;
+    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      today = clientDate;
+    } else {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      today = year + "-" + month + "-" + day;
+    }
+    
+    // 计算本周开始（周一）
+    const d = new Date(today);
+    const dayOfWeek = d.getDay();
+    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+    
+    // 查询本周阅读记录
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const record = JSON.parse(data);
+        if (record.nickname === nickname && record.date >= weekStart) {
+          return true; // 本周已阅读
+        }
+      }
+    }
+    return false;
+  }
+
   try {
     /* ========================= 学生注册 ========================== */
     if (path === "auth/register" && request.method === "POST") {
@@ -1821,53 +1868,6 @@ return json({ success: false, message: "接口不存在：" + path });  // ✅ �
       avgWpm,
       avgAccuracy
     };
-  }
-
-  // ← 在这里添加以下代码
-  // 辅助函数：检查用户是否受限
-  async function checkUserRestricted(env, nickname) {
-    if (!nickname) return true; // 未登录用户受限
-    
-    const userKey = "user:" + nickname;
-    const userData = await env.TYPEREADING_KV.get(userKey);
-    if (!userData) return true; // 用户不存在则受限
-    
-    const user = JSON.parse(userData);
-    // 未分班 或 未激活(isActive=false) 则受限
-    return !user.className || user.isActive === false;
-  }
-
-  // 辅助函数：检查本周阅读限制
-  async function checkWeeklyReadingLimit(env, nickname, clientDate) {
-    let today;
-    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      today = clientDate;
-    } else {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      today = year + "-" + month + "-" + day;
-    }
-    
-    // 计算本周开始（周一）
-    const d = new Date(today);
-    const dayOfWeek = d.getDay();
-    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-    
-    // 查询本周阅读记录
-    const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
-    for (const key of keys) {
-      const data = await env.TYPEREADING_KV.get(key.name);
-      if (data) {
-        const record = JSON.parse(data);
-        if (record.nickname === nickname && record.date >= weekStart) {
-          return true; // 本周已阅读
-        }
-      }
-    }
-    return false;
   }
 
   function json(data) {
