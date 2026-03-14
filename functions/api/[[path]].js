@@ -1417,67 +1417,6 @@ if (path === "admin/finance/student-records") {
   });
 }
 
-return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
-} catch (err) {
-  console.error("API Error:", err);
-  return json({ success: false, message: err.message });
-}
-
-
-  function getWeekStart(date) {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff)).toISOString().split("T")[0];
-  }
-
-  function calcStats(records, period, type) {
-    const filtered = records.filter(r => {
-      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
-      if (!recordDate) return false;
-      if (type === 'date') return recordDate === period;
-      if (type === 'week') return recordDate >= period;
-      if (type === 'month') return recordDate.startsWith(period);
-      if (type === 'year') return recordDate.startsWith(period);
-      return false;
-    });
-
-    return {
-      count: filtered.length,
-      words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
-    };
-  }
-
-  function calcTypingStats(records, period, type) {
-    const filtered = records.filter(r => {
-      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
-      if (!recordDate) return false;
-      if (type === 'date') return recordDate === period;
-      if (type === 'week') return recordDate >= period;
-      if (type === 'month') return recordDate.startsWith(period);
-      if (type === 'year') return recordDate.startsWith(period);
-      return false;
-    });
-
-    const avgWpm = filtered.length > 0 
-      ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
-      : 0;
-    const avgAccuracy = filtered.length > 0
-      ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
-      : 0;
-
-    return {
-      count: filtered.length,
-      avgWpm,
-      avgAccuracy
-    };
-  }
-
-  function json(data) {
-    return new Response(JSON.stringify(data), { headers });
-  }
-}
-
 /* ========================= 数据导出 API ========================== */
 
 /* ---------------- 导出班级营收统计 ---------------- */
@@ -1735,3 +1674,65 @@ if (path === "admin/export/transactions") {
     }
   });
 }
+    
+return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
+} catch (err) {
+  console.error("API Error:", err);
+  return json({ success: false, message: err.message });
+}
+
+
+  function getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff)).toISOString().split("T")[0];
+  }
+
+  function calcStats(records, period, type) {
+    const filtered = records.filter(r => {
+      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
+      if (!recordDate) return false;
+      if (type === 'date') return recordDate === period;
+      if (type === 'week') return recordDate >= period;
+      if (type === 'month') return recordDate.startsWith(period);
+      if (type === 'year') return recordDate.startsWith(period);
+      return false;
+    });
+
+    return {
+      count: filtered.length,
+      words: filtered.reduce((s, r) => s + (r.wordCount || 0), 0)
+    };
+  }
+
+  function calcTypingStats(records, period, type) {
+    const filtered = records.filter(r => {
+      const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
+      if (!recordDate) return false;
+      if (type === 'date') return recordDate === period;
+      if (type === 'week') return recordDate >= period;
+      if (type === 'month') return recordDate.startsWith(period);
+      if (type === 'year') return recordDate.startsWith(period);
+      return false;
+    });
+
+    const avgWpm = filtered.length > 0 
+      ? Math.round(filtered.reduce((s, r) => s + (r.wpm || 0), 0) / filtered.length)
+      : 0;
+    const avgAccuracy = filtered.length > 0
+      ? Math.round(filtered.reduce((s, r) => s + (r.accuracy || 0), 0) / filtered.length)
+      : 0;
+
+    return {
+      count: filtered.length,
+      avgWpm,
+      avgAccuracy
+    };
+  }
+
+  function json(data) {
+    return new Response(JSON.stringify(data), { headers });
+  }
+}
+
