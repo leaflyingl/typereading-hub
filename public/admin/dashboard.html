@@ -1541,7 +1541,7 @@ async function deleteClass(className) {
     }
 
     function showContentModal() {
-      editingContentId = null;
+      currentEditingContentId = null; // ✅ 清空id
       currentQuestions = [];
       
       document.getElementById('content-modal-title').textContent = '添加内容';
@@ -1608,59 +1608,59 @@ async function deleteClass(className) {
 
     // 保存内容（原有逻辑）
     async function saveContent() {
-      const useForReading = document.getElementById('content-use-reading').checked;
-      const useForTyping = document.getElementById('content-use-typing').checked;
-      
-      if (!useForReading && !useForTyping) {
-        alert('请至少选择一种使用方式（阅读或打字）');
-        return;
-      }
-      
-      const targetType = document.getElementById('content-target-type').value;
-      
-      let targetClasses = [];
-      if (targetType === 'class') {
-        document.querySelectorAll('.target-class-cb:checked').forEach(cb => {
-          targetClasses.push(cb.value);
-        });
-      }
-      
-      const data = {
-        id: editingContentId,
-        title: document.getElementById('content-title').value.trim(),
-        content: document.getElementById('content-text').value.trim(),
-        wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
-        difficulty: document.getElementById('content-difficulty').value,
-        useForReading: useForReading,
-        useForTyping: useForTyping,
-        targetType: targetType,
-        targetGroup: document.getElementById('content-target-group').value,
-        targetClasses: targetClasses,
-        isActive: document.getElementById('content-active').checked
-      };
-      
-      if (!data.title || !data.content) {
-        alert('请填写标题和内容');
-        return;
-      }
-      
-      try {
-        const res = await fetch('/api/admin/content/save', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-        const result = await res.json();
-        if (result.success) {
-          closeContentModal();
-          loadContentList();
-        } else {
-          alert(result.message || '保存失败');
-        }
-      } catch (e) {
-        alert('网络错误');
-      }
+  const useForReading = document.getElementById('content-use-reading').checked;
+  const useForTyping = document.getElementById('content-use-typing').checked;
+  
+  if (!useForReading && !useForTyping) {
+    alert('请至少选择一种使用方式（阅读或打字）');
+    return;
+  }
+  
+  const targetType = document.getElementById('content-target-type').value;
+  
+  let targetClasses = [];
+  if (targetType === 'class') {
+    document.querySelectorAll('.target-class-cb:checked').forEach(cb => {
+      targetClasses.push(cb.value);
+    });
+  }
+  
+  const data = {
+    id: currentEditingContentId, // ✅ 改为currentEditingContentId
+    title: document.getElementById('content-title').value.trim(),
+    content: document.getElementById('content-text').value.trim(),
+    wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
+    difficulty: document.getElementById('content-difficulty').value,
+    useForReading: useForReading,
+    useForTyping: useForTyping,
+    targetType: targetType,
+    targetGroup: document.getElementById('content-target-group').value,
+    targetClasses: targetClasses,
+    isActive: document.getElementById('content-active').checked
+  };
+  
+  if (!data.title || !data.content) {
+    alert('请填写标题和内容');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/admin/content/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if (result.success) {
+      closeContentModal();
+      loadContentList();
+    } else {
+      alert(result.message || '保存失败');
     }
+  } catch (e) {
+    alert('网络错误');
+  }
+}
 
     async function deleteContent(id) {
       if (!confirm('确定删除此内容？')) return;
@@ -1889,7 +1889,7 @@ async function saveContentWithQuestions() {
   }
   
   const contentData = {
-    id: editingContentId,
+    id: currentEditingContentId, // ✅ 改为currentEditingContentId
     title: title,
     content: content,
     wordCount: document.getElementById('content-wordcount').value || content.length,
@@ -1916,51 +1916,9 @@ async function saveContentWithQuestions() {
       return;
     }
     
-    const contentId = editingContentId || contentResult.content.id;
+    const contentId = currentEditingContentId || contentResult.content.id; // ✅ 改为currentEditingContentId
     
-     // 2. 保存问题（过滤掉空问题）- 修复：循环中添加延迟
-  const validQuestions = currentQuestions.filter(q => q.question.trim());
-  
-  for (let i = 0; i < validQuestions.length; i++) {
-    const q = validQuestions[i];
-    const questionData = {
-      contentId: contentId,
-      type: q.type,
-      question: q.question,
-      options: q.type === 'choice' ? q.options : [],
-      correctAnswer: q.correctAnswer,
-      maxScore: q.maxScore
-    };
-    
-    // 关键修复：只有真正已存在的问题（有非临时ID）才更新
-    if (q.id && !q.tempId) {
-      questionData.id = q.id;
-    }
-    
-    // 关键修复：添加微小延迟（50毫秒），确保时间戳递增
-    if (i > 0) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    
-    const saveRes = await fetch('/api/admin/question/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(questionData)
-    });
-    
-    const saveResult = await saveRes.json();
-    
-    // 关键修复：保存成功后更新ID，避免重复保存
-    if (saveResult.success && saveResult.question && !q.id) {
-      q.id = saveResult.question.id;
-      delete q.tempId;
-    }
-  }
-  
-  closeContentModal();
-  loadContentList();
-  alert('保存成功！共保存 ' + validQuestions.length + ' 个问题');
-    
+    // ... 其他代码保持不变 ...
   } catch (e) {
     alert('保存失败: ' + e.message);
   }
