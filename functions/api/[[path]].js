@@ -14,51 +14,144 @@ export async function onRequest(context) {
   }
 
    // ← 在这里添加以下代码
-  // 辅助函数：检查用户是否受限
-  async function checkUserRestricted(env, nickname) {
-    if (!nickname) return true; // 未登录用户受限
-    
-    const userKey = "user:" + nickname;
-    const userData = await env.TYPEREADING_KV.get(userKey);
-    if (!userData) return true; // 用户不存在则受限
-    
-    const user = JSON.parse(userData);
-    // 未分班 或 未激活(isActive=false) 则受限
-    return !user.className || user.isActive === false;
-  }
+  // ===== 辅助函数：检查用户是否受限 =====
+async function checkUserRestricted(nickname) {
+  if (!nickname) return true;
+  const userKey = "user:" + nickname;
+  const userData = await env.TYPEREADING_KV.get(userKey);
+  if (!userData) return true;
+  const user = JSON.parse(userData);
+  return !user.className || user.isActive === false;
+}
 
-  // 辅助函数：检查本周阅读限制
-  async function checkWeeklyReadingLimit(env, nickname, clientDate) {
-    let today;
-    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      today = clientDate;
-    } else {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      today = year + "-" + month + "-" + day;
-    }
-    
-    // 计算本周开始（周一）
-    const d = new Date(today);
-    const dayOfWeek = d.getDay();
-    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-    
-    // 查询本周阅读记录
-    const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
-    for (const key of keys) {
-      const data = await env.TYPEREADING_KV.get(key.name);
-      if (data) {
-        const record = JSON.parse(data);
-        if (record.nickname === nickname && record.date >= weekStart) {
-          return true; // 本周已阅读
-        }
-      }
-    }
-    return false;
+// ===== 辅助函数：获取本周阅读材料（受限用户用） =====
+async function getWeeklyReadingContent(nickname, clientDate) {
+  // 计算本周一日期
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = year + "-" + month + "-" + day;
   }
+  
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+  const weekKey = "weekly:reading:" + nickname + ":" + weekStart;
+  
+  // 检查本周是否已分配材料
+  const assigned = await env.TYPEREADING_KV.get(weekKey);
+  if (assigned) {
+    return JSON.parse(assigned); // 返回已分配的材料
+  }
+  
+  return null; // 本周还未分配
+}
+
+// ===== 辅助函数：分配本周阅读材料（受限用户用） =====
+async function assignWeeklyReadingContent(nickname, clientDate, content) {
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = year + "-" + month + "-" + day;
+  }
+  
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+  const weekKey = "weekly:reading:" + nickname + ":" + weekStart;
+  
+  // 保存本周分配的材料（7天过期或永久保存）
+  await env.TYPEREADING_KV.put(weekKey, JSON.stringify({
+    contentId: content.id,
+    title: content.title,
+    content: content.content,
+    wordCount: content.wordCount,
+    difficulty: content.difficulty,
+    assignedAt: today,
+    expiresAt: getNextMonday(today) // 下周一过期
+  }));
+}
+
+// ===== 辅助函数：获取本周打字材料（受限用户用） =====
+async function getWeeklyTypingContent(nickname, clientDate) {
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = year + "-" + month + "-" + day;
+  }
+  
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+  const weekKey = "weekly:typing:" + nickname + ":" + weekStart;
+  
+  const assigned = await env.TYPEREADING_KV.get(weekKey);
+  if (assigned) {
+    return JSON.parse(assigned);
+  }
+  
+  return null;
+}
+
+// ===== 辅助函数：分配本周打字材料（受限用户用） =====
+async function assignWeeklyTypingContent(nickname, clientDate, content) {
+  let today;
+  if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    today = clientDate;
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = year + "-" + month + "-" + day;
+  }
+  
+  const d = new Date(today);
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+  const weekKey = "weekly:typing:" + nickname + ":" + weekStart;
+  
+  await env.TYPEREADING_KV.put(weekKey, JSON.stringify({
+    contentId: content.id,
+    title: content.title,
+    content: content.content,
+    wordCount: content.wordCount,
+    difficulty: content.difficulty,
+    assignedAt: today,
+    expiresAt: getNextMonday(today)
+  }));
+}
+
+// ===== 辅助函数：获取下周一日期 =====
+function getNextMonday(dateStr) {
+  const d = new Date(dateStr);
+  const dayOfWeek = d.getDay();
+  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + 7;
+  const nextMonday = new Date(d.setDate(diff));
+  const year = nextMonday.getFullYear();
+  const month = String(nextMonday.getMonth() + 1).padStart(2, '0');
+  const day = String(nextMonday.getDate()).padStart(2, '0');
+  return year + "-" + month + "-" + day;
+}
 
   try {
     /* ========================= 学生注册 ========================== */
@@ -789,29 +882,116 @@ if (path === "admin/content/save") {
       return json({ success: false, message: "内容不存在" });
     }
 
-/* ========================= 获取今日阅读内容（修复版 - 显示最新） ========================== */
+/* ========================= 获取今日阅读内容（修复版 - 支持周限制） ========================== */
 if (path === "content/reading") {
   const body = await request.json().catch(() => ({}));
   const { nickname, className, date: clientDate } = body;
   
-  // ===== 新增：权限检查（开始）=====
-  const isRestricted = await checkUserRestricted(env, nickname);
+  // 权限检查
+  const isRestricted = await checkUserRestricted(nickname);
   
+  // ===== 受限用户：每周一篇固定材料 =====
   if (isRestricted && nickname) {
-    const hasReadThisWeek = await checkWeeklyReadingLimit(env, nickname, clientDate);
-    if (hasReadThisWeek) {
+    // 1. 检查本周是否已分配材料
+    let weeklyContent = await getWeeklyReadingContent(nickname, clientDate);
+    
+    if (weeklyContent) {
+      // 已分配，返回同一篇
+      return json({ 
+        success: true, 
+        content: {
+          id: weeklyContent.contentId,
+          title: weeklyContent.title,
+          content: weeklyContent.content,
+          wordCount: weeklyContent.wordCount,
+          difficulty: weeklyContent.difficulty
+        },
+        restricted: true,
+        weeklyAssigned: true,
+        canRead: true
+      });
+    }
+    
+    // 2. 本周未分配，获取最新材料并分配
+    let groupNames = [];
+    if (className) {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const group = JSON.parse(data);
+          const groupClasses = group.classes || group.classNames || [];
+          if (groupClasses.includes(className)) {
+            groupNames.push(group.name);
+          }
+        }
+      }
+    }
+    
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+    const contents = [];
+    
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const content = JSON.parse(data);
+        const isActive = content.isActive !== false;
+        const useForReading = content.useForReading === true;
+        
+        if (!isActive || !useForReading) continue;
+        
+        let isMatch = false;
+        if (content.targetType === "all" || !content.targetType) {
+          isMatch = true;
+        } else if (content.targetType === "group") {
+          isMatch = groupNames.includes(content.targetGroup);
+        } else if (content.targetType === "class") {
+          if (className) {
+            isMatch = content.targetClasses && content.targetClasses.includes(className);
+          } else {
+            isMatch = false;
+          }
+        }
+        
+        if (isMatch) {
+          contents.push(content);
+        }
+      }
+    }
+    
+    if (contents.length === 0) {
       return json({ 
         success: true, 
         content: null,
-        message: "本周阅读额度已用完，请联系老师分班或开通权限",
         restricted: true,
-        canRead: false
+        message: "暂无可用阅读材料"
       });
     }
+    
+    // 按最新排序，取第一篇
+    contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    const selectedContent = contents[0];
+    
+    // 分配本周材料
+    await assignWeeklyReadingContent(nickname, clientDate, selectedContent);
+    
+    return json({ 
+      success: true, 
+      content: {
+        id: selectedContent.id,
+        title: selectedContent.title,
+        content: selectedContent.content,
+        wordCount: selectedContent.wordCount,
+        difficulty: selectedContent.difficulty
+      },
+      restricted: true,
+      weeklyAssigned: true,
+      canRead: true,
+      firstAssign: true
+    });
   }
-  // ===== 新增：权限检查（结束）=====
   
-  // ===== 以下是你原有的代码，完全不动 =====
+  // ===== 正常用户：每天新材料（原有逻辑）=====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -834,7 +1014,6 @@ if (path === "content/reading") {
     const data = await env.TYPEREADING_KV.get(key.name);
     if (data) {
       const content = JSON.parse(data);
-      
       const isActive = content.isActive !== false;
       const useForReading = content.useForReading === true;
       
@@ -865,65 +1044,124 @@ if (path === "content/reading") {
     selectedContent = contents[0];
   }
 
-  // 最后返回时添加 restricted 字段
   return json({ 
     success: true, 
     content: selectedContent,
-    restricted: isRestricted,  // 新增字段
-    canRead: true,             // 新增字段
-    debug: {
-      totalFound: contents.length,
-      studentClass: className,
-      selectedId: selectedContent ? selectedContent.id : null
-    }
+    restricted: false,
+    canRead: true
   });
 }
 
-/* ========================= 获取打字练习内容（修复版） ========================== */
-if (path === "content/typing") {
+/* ========================= 获取今日阅读内容（修复版 - 支持周限制） ========================== */
+if (path === "content/reading") {
   const body = await request.json().catch(() => ({}));
-  const { nickname, className } = body;
+  const { nickname, className, date: clientDate } = body;
   
-  // ===== 新增：权限检查（开始）=====
-  const isRestricted = await checkUserRestricted(env, nickname);
+  // 权限检查
+  const isRestricted = await checkUserRestricted(nickname);
   
-  if (isRestricted) {
-    // 受限用户：只返回最简单的材料
-    const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
-    let simplestContent = null;
+  // ===== 受限用户：每周一篇固定材料 =====
+  if (isRestricted && nickname) {
+    // 1. 检查本周是否已分配材料
+    let weeklyContent = await getWeeklyReadingContent(nickname, clientDate);
     
-    for (const key of itemKeys) {
-      const data = await env.TYPEREADING_KV.get(key.name);
-      if (data) {
-        const content = JSON.parse(data);
-        const isActive = content.isActive !== false;
-        const useForTyping = content.useForTyping === true;
-        
-        if (!isActive || !useForTyping) continue;
-        
-        if (!simplestContent || content.difficulty === 'easy') {
-          simplestContent = {
-            id: content.id,
-            title: content.title || "练习",
-            content: content.content,
-            wordCount: content.wordCount || content.content.length,
-            difficulty: content.difficulty || "medium"
-          };
-          if (content.difficulty === 'easy') break;
+    if (weeklyContent) {
+      // 已分配，返回同一篇
+      return json({ 
+        success: true, 
+        content: {
+          id: weeklyContent.contentId,
+          title: weeklyContent.title,
+          content: weeklyContent.content,
+          wordCount: weeklyContent.wordCount,
+          difficulty: weeklyContent.difficulty
+        },
+        restricted: true,
+        weeklyAssigned: true,
+        canRead: true
+      });
+    }
+    
+    // 2. 本周未分配，获取最新材料并分配
+    let groupNames = [];
+    if (className) {
+      const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+      for (const key of keys) {
+        const data = await env.TYPEREADING_KV.get(key.name);
+        if (data) {
+          const group = JSON.parse(data);
+          const groupClasses = group.classes || group.classNames || [];
+          if (groupClasses.includes(className)) {
+            groupNames.push(group.name);
+          }
         }
       }
     }
     
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+    const contents = [];
+    
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const content = JSON.parse(data);
+        const isActive = content.isActive !== false;
+        const useForReading = content.useForReading === true;
+        
+        if (!isActive || !useForReading) continue;
+        
+        let isMatch = false;
+        if (content.targetType === "all" || !content.targetType) {
+          isMatch = true;
+        } else if (content.targetType === "group") {
+          isMatch = groupNames.includes(content.targetGroup);
+        } else if (content.targetType === "class") {
+          if (className) {
+            isMatch = content.targetClasses && content.targetClasses.includes(className);
+          } else {
+            isMatch = false;
+          }
+        }
+        
+        if (isMatch) {
+          contents.push(content);
+        }
+      }
+    }
+    
+    if (contents.length === 0) {
+      return json({ 
+        success: true, 
+        content: null,
+        restricted: true,
+        message: "暂无可用阅读材料"
+      });
+    }
+    
+    // 按最新排序，取第一篇
+    contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    const selectedContent = contents[0];
+    
+    // 分配本周材料
+    await assignWeeklyReadingContent(nickname, clientDate, selectedContent);
+    
     return json({ 
       success: true, 
-      content: simplestContent,
+      content: {
+        id: selectedContent.id,
+        title: selectedContent.title,
+        content: selectedContent.content,
+        wordCount: selectedContent.wordCount,
+        difficulty: selectedContent.difficulty
+      },
       restricted: true,
-      message: "请联系老师分班以解锁更多练习"
+      weeklyAssigned: true,
+      canRead: true,
+      firstAssign: true
     });
   }
-  // ===== 新增：权限检查（结束）=====
   
-  // ===== 以下是你原有的代码，完全不动 =====
+  // ===== 正常用户：每天新材料（原有逻辑）=====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -939,18 +1177,17 @@ if (path === "content/typing") {
     }
   }
   
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
   const contents = [];
   
-  const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
-  for (const key of itemKeys) {
+  for (const key of keys) {
     const data = await env.TYPEREADING_KV.get(key.name);
     if (data) {
       const content = JSON.parse(data);
-      
       const isActive = content.isActive !== false;
-      const useForTyping = content.useForTyping === true;
+      const useForReading = content.useForReading === true;
       
-      if (!isActive || !useForTyping) continue;
+      if (!isActive || !useForReading) continue;
       
       let isMatch = false;
       if (content.targetType === "all" || !content.targetType) {
@@ -958,26 +1195,31 @@ if (path === "content/typing") {
       } else if (content.targetType === "group") {
         isMatch = groupNames.includes(content.targetGroup);
       } else if (content.targetType === "class") {
-        isMatch = content.targetClasses && content.targetClasses.includes(className);
+        if (className) {
+          isMatch = content.targetClasses && content.targetClasses.includes(className);
+        } else {
+          isMatch = false;
+        }
       }
       
       if (isMatch) {
-        contents.push({
-          id: content.id,
-          title: content.title || "未命名",
-          content: content.content,
-          wordCount: content.wordCount || content.content.length,
-          difficulty: content.difficulty || "medium"
-        });
+        contents.push(content);
       }
     }
   }
   
-  const selectedContent = contents.length > 0 
-    ? contents[Math.floor(Math.random() * contents.length)]
-    : null;
+  let selectedContent = null;
+  if (contents.length > 0) {
+    contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    selectedContent = contents[0];
+  }
 
-  return json({ success: true, content: selectedContent, restricted: false });
+  return json({ 
+    success: true, 
+    content: selectedContent,
+    restricted: false,
+    canRead: true
+  });
 }
 
     /* ========================= 排行榜 ========================== */
