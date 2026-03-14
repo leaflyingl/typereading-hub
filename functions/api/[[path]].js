@@ -33,6 +33,7 @@ export async function onRequest(context) {
         realName: "",
         gender: "",
         className: "",
+        isActive: true,  // ← 新增：默认激活
         createdAt: new Date().toISOString()
       };
 
@@ -43,10 +44,12 @@ export async function onRequest(context) {
           nickname,
           realName: "",
           gender: "",
-          className: ""
+          className: "",
+          isActive: true  // ← 新增
         }
       });
     }
+
 
     /* ========================= 学生登录 ========================== */
     if (path === "auth/login" && request.method === "POST") {
@@ -115,7 +118,7 @@ export async function onRequest(context) {
 
     /* ========================= 更新学生信息 ========================== */
     if (path === "admin/student/update") {
-      const { nickname, realName, gender, className } = await request.json();
+      const { nickname, realName, gender, className, isActive } = await request.json();  // ← 新增 isActive
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
@@ -128,6 +131,7 @@ export async function onRequest(context) {
       user.realName = realName || "";
       user.gender = gender || "";
       user.className = className || "";
+      user.isActive = isActive !== false;  // ← 新增：默认 true
 
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
       return json({ success: true });
@@ -741,8 +745,26 @@ if (path === "admin/content/save") {
 /* ========================= 获取今日阅读内容（修复版 - 显示最新） ========================== */
 if (path === "content/reading") {
   const body = await request.json().catch(() => ({}));
-  const className = body.className || "";
+  const { nickname, className, date: clientDate } = body;
   
+  // ===== 新增：权限检查（开始）=====
+  const isRestricted = await checkUserRestricted(env, nickname);
+  
+  if (isRestricted && nickname) {
+    const hasReadThisWeek = await checkWeeklyReadingLimit(env, nickname, clientDate);
+    if (hasReadThisWeek) {
+      return json({ 
+        success: true, 
+        content: null,
+        message: "本周阅读额度已用完，请联系老师分班或开通权限",
+        restricted: true,
+        canRead: false
+      });
+    }
+  }
+  // ===== 新增：权限检查（结束）=====
+  
+  // ===== 以下是你原有的代码，完全不动 =====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -766,7 +788,6 @@ if (path === "content/reading") {
     if (data) {
       const content = JSON.parse(data);
       
-      // 严格检查：禁用状态（兼容旧数据）
       const isActive = content.isActive !== false;
       const useForReading = content.useForReading === true;
       
@@ -781,7 +802,6 @@ if (path === "content/reading") {
         if (className) {
           isMatch = content.targetClasses && content.targetClasses.includes(className);
         } else {
-          // 未分班学生只能看到"全部分享"的内容
           isMatch = false;
         }
       }
@@ -792,17 +812,18 @@ if (path === "content/reading") {
     }
   }
   
-  // 🔥 关键修改：按更新时间排序，返回最新的文章（而不是随机）
-  // 这样学生每次看到的都是教师最新添加/修改的文章
   let selectedContent = null;
   if (contents.length > 0) {
     contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    selectedContent = contents[0]; // 取最新的一篇
+    selectedContent = contents[0];
   }
 
+  // 最后返回时添加 restricted 字段
   return json({ 
     success: true, 
     content: selectedContent,
+    restricted: isRestricted,  // 新增字段
+    canRead: true,             // 新增字段
     debug: {
       totalFound: contents.length,
       studentClass: className,
@@ -811,69 +832,106 @@ if (path === "content/reading") {
   });
 }
 
-
-
-    /* ========================= 获取打字练习内容（修复版） ========================== */
-    if (path === "content/typing") {
-      const body = await request.json().catch(() => ({}));
-      const className = body.className || "";
-      
-      let groupNames = [];
-      if (className) {
-        const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-        for (const key of keys) {
-          const data = await env.TYPEREADING_KV.get(key.name);
-          if (data) {
-            const group = JSON.parse(data);
-            const groupClasses = group.classes || group.classNames || [];
-            if (groupClasses.includes(className)) {
-              groupNames.push(group.name);
-            }
-          }
+/* ========================= 获取打字练习内容（修复版） ========================== */
+if (path === "content/typing") {
+  const body = await request.json().catch(() => ({}));
+  const { nickname, className } = body;
+  
+  // ===== 新增：权限检查（开始）=====
+  const isRestricted = await checkUserRestricted(env, nickname);
+  
+  if (isRestricted) {
+    // 受限用户：只返回最简单的材料
+    const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+    let simplestContent = null;
+    
+    for (const key of itemKeys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const content = JSON.parse(data);
+        const isActive = content.isActive !== false;
+        const useForTyping = content.useForTyping === true;
+        
+        if (!isActive || !useForTyping) continue;
+        
+        if (!simplestContent || content.difficulty === 'easy') {
+          simplestContent = {
+            id: content.id,
+            title: content.title || "练习",
+            content: content.content,
+            wordCount: content.wordCount || content.content.length,
+            difficulty: content.difficulty || "medium"
+          };
+          if (content.difficulty === 'easy') break;
         }
       }
-      
-      const contents = [];
-      
-      const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
-      for (const key of itemKeys) {
-        const data = await env.TYPEREADING_KV.get(key.name);
-        if (data) {
-          const content = JSON.parse(data);
-          
-          // 修复：正确判断 isActive
-          const isActive = content.isActive !== false;
-          const useForTyping = content.useForTyping === true;
-          
-          if (!isActive || !useForTyping) continue;
-          
-          let isMatch = false;
-          if (content.targetType === "all" || !content.targetType) {
-            isMatch = true;
-          } else if (content.targetType === "group") {
-            isMatch = groupNames.includes(content.targetGroup);
-          } else if (content.targetType === "class") {
-            isMatch = content.targetClasses && content.targetClasses.includes(className);
-          }
-          
-          if (isMatch) {
-            contents.push({
-              id: content.id,
-              title: content.title || "未命名",
-              content: content.content,
-              wordCount: content.wordCount || content.content.length,
-              difficulty: content.difficulty || "medium"
-            });
-          }
-        }
-      }
-      
-      const selectedContent = contents.length > 0 
-        ? contents[Math.floor(Math.random() * contents.length)]
-        : null;
-
-      return json({ success: true, content: selectedContent });
     }
+    
+    return json({ 
+      success: true, 
+      content: simplestContent,
+      restricted: true,
+      message: "请联系老师分班以解锁更多练习"
+    });
+  }
+  // ===== 新增：权限检查（结束）=====
+  
+  // ===== 以下是你原有的代码，完全不动 =====
+  let groupNames = [];
+  if (className) {
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const group = JSON.parse(data);
+        const groupClasses = group.classes || group.classNames || [];
+        if (groupClasses.includes(className)) {
+          groupNames.push(group.name);
+        }
+      }
+    }
+  }
+  
+  const contents = [];
+  
+  const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+  for (const key of itemKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const content = JSON.parse(data);
+      
+      const isActive = content.isActive !== false;
+      const useForTyping = content.useForTyping === true;
+      
+      if (!isActive || !useForTyping) continue;
+      
+      let isMatch = false;
+      if (content.targetType === "all" || !content.targetType) {
+        isMatch = true;
+      } else if (content.targetType === "group") {
+        isMatch = groupNames.includes(content.targetGroup);
+      } else if (content.targetType === "class") {
+        isMatch = content.targetClasses && content.targetClasses.includes(className);
+      }
+      
+      if (isMatch) {
+        contents.push({
+          id: content.id,
+          title: content.title || "未命名",
+          content: content.content,
+          wordCount: content.wordCount || content.content.length,
+          difficulty: content.difficulty || "medium"
+        });
+      }
+    }
+  }
+  
+  const selectedContent = contents.length > 0 
+    ? contents[Math.floor(Math.random() * contents.length)]
+    : null;
+
+  return json({ success: true, content: selectedContent, restricted: false });
+}
 
     /* ========================= 排行榜 ========================== */
     if (path === "rank/typing") {
@@ -1208,6 +1266,30 @@ if (path === "admin/leave/delete") {
   await env.TYPEREADING_KV.delete(leaveKey);
   return json({ success: true });
 }
+
+/* ========================= 学生状态管理 API ========================== */
+
+/* ---------------- 切换学生激活状态 ---------------- */
+if (path === "admin/student/toggle-active") {
+  const { nickname, isActive } = await request.json();
+  
+  if (!nickname) {
+    return json({ success: false, message: "昵称不能为空" });
+  }
+  
+  const userKey = "user:" + nickname;
+  const data = await env.TYPEREADING_KV.get(userKey);
+  if (!data) {
+    return json({ success: false, message: "用户不存在" });
+  }
+  
+  const user = JSON.parse(data);
+  user.isActive = isActive !== false; // 默认为 true
+  
+  await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
+  return json({ success: true, isActive: user.isActive });
+}
+
 
 /* ========================= 收费退费管理 API ========================== */
 
@@ -1716,7 +1798,7 @@ return json({ success: false, message: "接口不存在：" + path });  // ✅ �
     };
   }
 
-  function calcTypingStats(records, period, type) {
+    function calcTypingStats(records, period, type) {
     const filtered = records.filter(r => {
       const recordDate = r.date || (r.timestamp ? r.timestamp.split("T")[0] : "");
       if (!recordDate) return false;
@@ -1741,8 +1823,54 @@ return json({ success: false, message: "接口不存在：" + path });  // ✅ �
     };
   }
 
+  // ← 在这里添加以下代码
+  // 辅助函数：检查用户是否受限
+  async function checkUserRestricted(env, nickname) {
+    if (!nickname) return true; // 未登录用户受限
+    
+    const userKey = "user:" + nickname;
+    const userData = await env.TYPEREADING_KV.get(userKey);
+    if (!userData) return true; // 用户不存在则受限
+    
+    const user = JSON.parse(userData);
+    // 未分班 或 未激活(isActive=false) 则受限
+    return !user.className || user.isActive === false;
+  }
+
+  // 辅助函数：检查本周阅读限制
+  async function checkWeeklyReadingLimit(env, nickname, clientDate) {
+    let today;
+    if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      today = clientDate;
+    } else {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      today = year + "-" + month + "-" + day;
+    }
+    
+    // 计算本周开始（周一）
+    const d = new Date(today);
+    const dayOfWeek = d.getDay();
+    const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
+    
+    // 查询本周阅读记录
+    const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
+    for (const key of keys) {
+      const data = await env.TYPEREADING_KV.get(key.name);
+      if (data) {
+        const record = JSON.parse(data);
+        if (record.nickname === nickname && record.date >= weekStart) {
+          return true; // 本周已阅读
+        }
+      }
+    }
+    return false;
+  }
+
   function json(data) {
     return new Response(JSON.stringify(data), { headers });
   }
 }
-
