@@ -495,6 +495,22 @@
         </div>
       </div>
 
+      <!-- 数据导出按钮 -->
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <h3 style="margin-bottom: 15px;">📊 数据导出</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn" style="background: white; color: #667eea;" onclick="exportClassStats()">
+            📥 导出班级营收统计
+          </button>
+          <button class="btn" style="background: white; color: #667eea;" onclick="showExportStudentModal()">
+            📥 导出学生收费明细
+          </button>
+          <button class="btn" style="background: white; color: #667eea;" onclick="showExportTransactionModal()">
+            📥 导出交易明细
+          </button>
+        </div>
+      </div>
+
       <div class="card">
         <h3 style="margin-bottom: 20px;">班级营收统计</h3>
         <div id="finance-class-list">正在加载班级财务数据...</div>
@@ -882,6 +898,64 @@
       
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeStudentFinanceModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- 导出学生收费明细弹窗 -->
+  <div id="export-student-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>导出学生收费明细</h3>
+        <span class="close-btn" onclick="closeExportStudentModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label>选择班级（留空导出全部）</label>
+        <select id="export-student-class" class="form-control">
+          <option value="">全部班级</option>
+        </select>
+      </div>
+      <div style="background: #f6ffed; border: 1px solid #b7eb8f; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+        <strong style="color: #52c41a;">💡 提示：</strong>
+        <span style="color: #666;">导出 CSV 格式文件，可用 Excel 打开</span>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeExportStudentModal()">取消</button>
+        <button class="btn btn-primary" onclick="exportStudentDetails()">确认导出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导出交易明细弹窗 -->
+  <div id="export-transaction-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>导出交易明细</h3>
+        <span class="close-btn" onclick="closeExportTransactionModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label>记录类型</label>
+        <select id="export-transaction-type" class="form-control">
+          <option value="all">全部记录</option>
+          <option value="payment">仅收费记录</option>
+          <option value="refund">仅退费记录</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>开始日期（可选）</label>
+        <input type="date" id="export-start-date" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>结束日期（可选）</label>
+        <input type="date" id="export-end-date" class="form-control">
+      </div>
+      <div style="background: #f6ffed; border: 1px solid #b7eb8f; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;">
+        <strong style="color: #52c41a;">💡 提示：</strong>
+        <span style="color: #666;">不选日期则导出全部记录</span>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeExportTransactionModal()">取消</button>
+        <button class="btn btn-primary" onclick="exportTransactions()">确认导出</button>
       </div>
     </div>
   </div>
@@ -2300,6 +2374,147 @@ function closeAnswersModal() {
     // 金额格式化（保留2位小数）
     function formatMoney(amount) {
       return (Number(amount) || 0).toFixed(2);
+    }
+
+        // ========== 数据导出功能 ==========
+
+    // 导出班级营收统计
+    async function exportClassStats() {
+      try {
+        const res = await fetch('/api/admin/export/class-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ format: 'csv' })
+        });
+        
+        if (!res.ok) throw new Error('导出失败');
+        
+        // 获取文件名
+        const disposition = res.headers.get('Content-Disposition');
+        let fileName = '班级营收统计.csv';
+        if (disposition) {
+          const match = disposition.match(/filename="(.+)"/);
+          if (match) fileName = match[1];
+        }
+        
+        // 下载文件
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+      } catch (e) {
+        alert('导出失败: ' + e.message);
+      }
+    }
+
+    // 显示导出学生明细弹窗
+    function showExportStudentModal() {
+      // 更新班级下拉框
+      const select = document.getElementById('export-student-class');
+      const options = allClasses.map(c => '<option value="' + c.name + '">' + c.name + '</option>').join('');
+      select.innerHTML = '<option value="">全部班级</option>' + options;
+      
+      document.getElementById('export-student-modal').style.display = 'flex';
+    }
+
+    // 关闭导出学生明细弹窗
+    function closeExportStudentModal() {
+      document.getElementById('export-student-modal').style.display = 'none';
+    }
+
+    // 导出学生收费明细
+    async function exportStudentDetails() {
+      const className = document.getElementById('export-student-class').value;
+      
+      try {
+        const res = await fetch('/api/admin/export/student-details', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ className, format: 'csv' })
+        });
+        
+        if (!res.ok) throw new Error('导出失败');
+        
+        const disposition = res.headers.get('Content-Disposition');
+        let fileName = '学生收费明细.csv';
+        if (disposition) {
+          const match = disposition.match(/filename="(.+)"/);
+          if (match) fileName = match[1];
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        closeExportStudentModal();
+        
+      } catch (e) {
+        alert('导出失败: ' + e.message);
+      }
+    }
+
+    // 显示导出交易明细弹窗
+    function showExportTransactionModal() {
+      document.getElementById('export-transaction-type').value = 'all';
+      document.getElementById('export-start-date').value = '';
+      document.getElementById('export-end-date').value = '';
+      document.getElementById('export-transaction-modal').style.display = 'flex';
+    }
+
+    // 关闭导出交易明细弹窗
+    function closeExportTransactionModal() {
+      document.getElementById('export-transaction-modal').style.display = 'none';
+    }
+
+    // 导出交易明细
+    async function exportTransactions() {
+      const type = document.getElementById('export-transaction-type').value;
+      const startDate = document.getElementById('export-start-date').value;
+      const endDate = document.getElementById('export-end-date').value;
+      
+      try {
+        const res = await fetch('/api/admin/export/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, startDate, endDate })
+        });
+        
+        if (!res.ok) throw new Error('导出失败');
+        
+        const disposition = res.headers.get('Content-Disposition');
+        let fileName = '交易明细.csv';
+        if (disposition) {
+          const match = disposition.match(/filename="(.+)"/);
+          if (match) fileName = match[1];
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        closeExportTransactionModal();
+        
+      } catch (e) {
+        alert('导出失败: ' + e.message);
+      }
     }
 
     // ========== 请假管理 ==========
