@@ -1489,10 +1489,14 @@ if (path === "admin/export/class-stats") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
+  // 修复：使用 RFC 5987 编码中文文件名
+  const fileName = `班级营收统计_${new Date().toISOString().split('T')[0]}.csv`;
+  const encodedFileName = encodeURIComponent(fileName);
+  
   return new Response(csvContent, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="班级营收统计_${new Date().toISOString().split('T')[0]}.csv"`,
+      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
       "Access-Control-Allow-Origin": "*"
     }
   });
@@ -1577,14 +1581,15 @@ if (path === "admin/export/student-details") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
-  const fileName = className 
-    ? `学生收费明细_${className}_${new Date().toISOString().split('T')[0]}.csv`
-    : `学生收费明细_全部_${new Date().toISOString().split('T')[0]}.csv`;
+  // 修复：使用 RFC 5987 编码中文文件名
+  const classSuffix = className ? `_${className}` : "_全部";
+  const fileName = `学生收费明细${classSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+  const encodedFileName = encodeURIComponent(fileName);
   
   return new Response(csvContent, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
       "Access-Control-Allow-Origin": "*"
     }
   });
@@ -1664,12 +1669,16 @@ if (path === "admin/export/transactions") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
-  const fileName = `交易明细_${startDate || '全部'}_${endDate || '全部'}_${new Date().toISOString().split('T')[0]}.csv`;
+  // 修复：使用 RFC 5987 编码中文文件名
+  const dateRange = startDate && endDate ? `_${startDate}_${endDate}` : "";
+  const typeSuffix = type === "payment" ? "_收费" : type === "refund" ? "_退费" : "";
+  const fileName = `交易明细${typeSuffix}${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
+  const encodedFileName = encodeURIComponent(fileName);
   
   return new Response(csvContent, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
       "Access-Control-Allow-Origin": "*"
     }
   });
