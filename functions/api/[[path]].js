@@ -1489,18 +1489,19 @@ if (path === "admin/export/class-stats") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
-  // 修复：使用 RFC 5987 编码中文文件名
-  const fileName = `班级营收统计_${new Date().toISOString().split('T')[0]}.csv`;
-  const encodedFileName = encodeURIComponent(fileName);
-  
+   // 使用 ASCII 文件名，避免任何编码问题
+  const today = new Date().toISOString().split('T')[0];
+  const fileName = `class-stats-.csv`;
+
   return new Response(csvContent, {
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
-      "Access-Control-Allow-Origin": "*"
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename=""`,
+    "Access-Control-Allow-Origin": "*"
     }
   });
 }
+  
 
 /* ---------------- 导出学生收费明细 ---------------- */
 if (path === "admin/export/student-details") {
@@ -1581,17 +1582,17 @@ if (path === "admin/export/student-details") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
-  // 修复：使用 RFC 5987 编码中文文件名
-  const classSuffix = className ? `_${className}` : "_全部";
-  const fileName = `学生收费明细${classSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
-  const encodedFileName = encodeURIComponent(fileName);
-  
-  return new Response(csvContent, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
-      "Access-Control-Allow-Origin": "*"
-    }
+// 使用 ASCII 文件名
+const today = new Date().toISOString().split('T')[0];
+const classSuffix = className ? className.replace(/[^a-zA-Z0-9]/g, '_') : 'all';
+const fileName = `student-fees--.csv`;
+
+return new Response(csvContent, {
+  headers: {
+  "Content-Type": "text/csv; charset=utf-8",
+  "Content-Disposition": `attachment; filename=""`,      
+  "Access-Control-Allow-Origin": "*"
+     }
   });
 }
 
@@ -1669,20 +1670,20 @@ if (path === "admin/export/transactions") {
   
   const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
   
-  // 修复：使用 RFC 5987 编码中文文件名
-  const dateRange = startDate && endDate ? `_${startDate}_${endDate}` : "";
-  const typeSuffix = type === "payment" ? "_收费" : type === "refund" ? "_退费" : "";
-  const fileName = `交易明细${typeSuffix}${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
-  const encodedFileName = encodeURIComponent(fileName);
-  
-  return new Response(csvContent, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`,
-      "Access-Control-Allow-Origin": "*"
-    }
+// 使用 ASCII 文件名
+ const today = new Date().toISOString().split('T')[0];
+ const typeSuffix = type === "payment" ? "-payment" : type === "refund" ? "-refund" : "-all";
+ const dateRange = (startDate && endDate) ? `-${startDate}-to-${endDate}` : '';
+ const fileName = `transactions--.csv`;
+
+ return new Response(csvContent, {
+   headers: {
+   "Content-Type": "text/csv; charset=utf-8",
+   "Content-Disposition": `attachment; filename=""`,
+   "Access-Control-Allow-Origin": "*"
+     }
   });
-}
+ }
     
 return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
 } catch (err) {
