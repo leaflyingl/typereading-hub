@@ -1889,7 +1889,7 @@ async function saveContentWithQuestions() {
   }
   
   const contentData = {
-    id: currentEditingContentId, // ✅ 改为currentEditingContentId
+    id: currentEditingContentId,  // ✅ 修复：使用 currentEditingContentId
     title: title,
     content: content,
     wordCount: document.getElementById('content-wordcount').value || content.length,
@@ -1916,9 +1916,53 @@ async function saveContentWithQuestions() {
       return;
     }
     
-    const contentId = currentEditingContentId || contentResult.content.id; // ✅ 改为currentEditingContentId
+    const contentId = currentEditingContentId || contentResult.content.id;  // ✅ 修复：使用 currentEditingContentId
     
-    // ... 其他代码保持不变 ...
+    // 2. 保存问题（过滤掉空问题）
+    const validQuestions = currentQuestions.filter(q => q.question.trim());
+    
+    for (let i = 0; i < validQuestions.length; i++) {
+      const q = validQuestions[i];
+      const questionData = {
+        contentId: contentId,
+        type: q.type,
+        question: q.question,
+        options: q.type === 'choice' ? q.options : [],
+        correctAnswer: q.correctAnswer,
+        maxScore: q.maxScore
+      };
+      
+      if (q.id && !q.tempId) {
+        questionData.id = q.id;
+      }
+      
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      const saveRes = await fetch('/api/admin/question/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(questionData)
+      });
+      
+      const saveResult = await saveRes.json();
+      
+      if (saveResult.success && saveResult.question && !q.id) {
+        q.id = saveResult.question.id;
+        delete q.tempId;
+      }
+    }
+    
+    // ✅ 关键修复：先关闭对话框，再显示提示
+    closeContentModal();
+    loadContentList();
+    
+    // 使用 setTimeout 确保对话框关闭后再显示提示
+    setTimeout(() => {
+      alert('保存成功！共保存 ' + validQuestions.length + ' 个问题');
+    }, 100);
+    
   } catch (e) {
     alert('保存失败: ' + e.message);
   }
