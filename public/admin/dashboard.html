@@ -643,40 +643,41 @@
   </div>
 </div>
 
-  <!-- 请假管理弹窗 -->
+<!-- 请假管理弹窗 -->
 <div id="leave-modal" class="modal">
- div class="modal-content" style="max-width: 500px;">
-   div class="modal-header">
-     h3 id="leave-modal-title">学生请假记录</h3>
-     span class="close-btn" onclick="closeLeaveModal()">&timesspan>
-   div>
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 id="leave-modal-title">学生请假记录</h3>
+      <span class="close-btn" onclick="closeLeaveModal()">&times;</span>
+    </div>
     
     <!-- 历史记录 -->
-   div class="form-group">
-     label>历史请假记录</label>
-     div id="leave-history-list" style="max-height: 200px; overflow-y: auto;">
-       p style="color: #999;">加载中p>
-     div>
-   div>
+    <div class="form-group">
+      <label>历史请假记录</label>
+      <div id="leave-history-list" style="max-height: 200px; overflow-y: auto;">
+        <p style="color: #999;">加载中...</p>
+      </div>
+    </div>
     
-   hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
     
     <!-- 新增请假 -->
-   div class="form-group">
-     label>新增请假</label>
-     div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
-       input type="date" id="leave-date" class="form-control">
-       input type="number" id="leave-days" class="form-control" placeholder="天数" value="1" min="1">
-     div>
-     input type="text" id="leave-reason" class="form-control" placeholder="请假事由（如：感冒发烧）">
-   div>
+    <div class="form-group">
+      <label>新增请假</label>
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="date" id="leave-date" class="form-control">
+        <input type="number" id="leave-days" class="form-control" placeholder="天数" value="1" min="1">
+      </div>
+      <input type="text" id="leave-reason" class="form-control" placeholder="请假事由（如：感冒发烧）">
+    </div>
     
-   div class="modal-footer">
-     button class="btn btn-secondary" onclick="closeLeaveModal()">关闭</button>
-     button class="btn btn-primary" onclick="addLeaveRecord()">添加请假</button>
-   div>
- div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeLeaveModal()">关闭</button>
+      <button class="btn btn-primary" onclick="addLeaveRecord()">添加请假</button>
+    </div>
+  </div>
 </div>
+
 
   <script>
     let allStudents = [];
@@ -786,24 +787,24 @@ async function loadTodayCheckin() {
         '<th><input type="checkbox" onchange="toggleSelectAll(this)"></th>' +
         '<th>昵称</th><th>真实姓名</th><th>性别</th><th>班级</th>' +
         '<th>阅读单词</th><th>打字单词</th><th>注册时间</th><th>操作</th>' +
-        '</tr></thead><tbody>';
-      filtered.forEach(s => {
-        const date = formatDate(s.createdAt);
-        html += '<tr>' +
-          '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
-          '<td>' + (s.nickname || '') + '</td>' +
-          '<td>' + (s.realName || '-') + '</td>' +
-          '<td>' + (s.gender || '-') + '</td>' +
-          '<td>' + (s.className || '-') + '</td>' +
-          '<td>' + (s.totalReadingWords || 0) + '</td>' +
-          '<td>' + (s.totalTypingWords || 0) + '</td>' +
-          '<td>' + date + '</td>' +
-          '<td>' +
- button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
- button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +
-'</td>' +
-        '</tr>';
-      });
+        '</tr></thead><tbody>'
+   filtered.forEach(s => {
+    const date = formatDate(s.createdAt);
+    html += '<tr>' +
+      '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
+      '<td>' + (s.nickname || '') + '</td>' +
+      '<td>' + (s.realName || '-') + '</td>' +
+      '<td>' + (s.gender || '-') + '</td>' +
+      '<td>' + (s.className || '-') + '</td>' +
+      '<td>' + (s.totalReadingWords || 0) + '</td>' +
+      '<td>' + (s.totalTypingWords || 0) + '</td>' +
+      '<td>' + date + '</td>' +
+      '<td>' +
+        '<button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
+        '<button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +  // ✅ 添加这行
+      '</td>' +
+    '</tr>';
+  });
       html += '</tbody></table>';
       document.getElementById('students-list').innerHTML = html;
     }
@@ -1814,27 +1815,28 @@ async function loadLeaveHistory(nickname) {
     const container = document.getElementById('leave-history-list');
     
     if (result.success && result.records.length > 0) {
-      let html =table style="width: 100%; font-size: 14px;">';
+      let html = '<table style="width: 100%; font-size: 14px;">';
       result.records.forEach(r => {
-        html +=tr style="border-bottom: 1px solid #eee;">
-         td style="padding: 8px 0td>
-         tdtd>
-         td>天</td>
-         td style="text-align: right;">
-           span style="color: #ff4d4f; cursor: pointer;" onclick="deleteLeaveRecord('')">删除</span>
-         td>
-       tr>`;
+        html += `<tr style="border-bottom: 1px solid #eee;">
+          <td style="padding: 8px 0;">${r.leaveDate}</td>
+          <td>${r.reason}</td>
+          <td>${r.days || 1} 天</td>
+          <td style="text-align: right;">
+            <span style="color: #ff4d4f; cursor: pointer;" onclick="deleteLeaveRecord('${r.id}')">删除</span>
+          </td>
+        </tr>`;
       });
-      html +=table>';
-      html +=p style="margin-top: 10px; color: #666;">累计请假：天</p>`;
+      html += '</table>';
+      html += `<p style="margin-top: 10px; color: #666;">累计请假：${result.totalDays} 天</p>`;
       container.innerHTML = html;
     } else {
-      container.innerHTML =p style="color: #999; text-align: center; padding: 20px;">暂无请假记录</p>';
+      container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">暂无请假记录</p>';
     }
   } catch (e) {
-    document.getElementById('leave-history-list').innerHTML =p style="color: red;">加载失败</p>';
+    document.getElementById('leave-history-list').innerHTML = '<p style="color: red;">加载失败</p>';
   }
 }
+
 
 // 添加请假记录
 async function addLeaveRecord() {
