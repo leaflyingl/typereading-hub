@@ -785,7 +785,8 @@ if (path === "admin/content/save") {
     return json({ success: false, message: "请至少选择一种使用方式（阅读或打字）" });
   }
 
-  const contentId = id || Date.now().toString();
+  // ===== 关键修复：如果有id，使用原id进行更新；没有则创建新的 =====  
+  const contentId = id || Date.now().toString(); // ✅ 正确保留id  
   const contentKey = "content:item:" + contentId;
 
   // 关键修复：正确计算英文单词数
