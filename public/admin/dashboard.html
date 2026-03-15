@@ -372,6 +372,44 @@
     .finance-record-amount.income { color: #52c41a; }
     .finance-record-amount.expense { color: #ff4d4f; }
 
+        /* 会员状态标签 */
+    .tag-premium {
+      background: #f6ffed;
+      color: #52c41a;
+      border: 1px solid #b7eb8f;
+    }
+    .tag-basic {
+      background: #f5f5f5;
+      color: #999;
+      border: 1px solid #d9d9d9;
+    }
+    .tag-expired {
+      background: #fff2f0;
+      color: #ff4d4f;
+      border: 1px solid #ffccc7;
+    }
+    
+    /* 会员管理弹窗样式 */
+    .status-display {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .membership-prompt {
+      background: #fff7e6;
+      border: 1px solid #ffd591;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      text-align: center;
+    }
+    .membership-prompt p {
+      color: #d46b08;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
   </style>
 
 </head>
@@ -433,6 +471,52 @@
         <div id="students-list">正在加载学生数据...</div>
       </div>
     </div>
+
+      <!-- 会员管理弹窗 -->
+  <div id="membership-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>会员管理 - <span id="membership-nickname"></span></h3>
+        <span class="close-btn" onclick="closeMembershipModal()">&times;</span>
+      </div>
+      
+      <div class="form-group">
+        <label>当前状态</label>
+        <div id="current-membership-status" class="status-display">
+          加载中...
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>会员类型</label>
+        <select id="membership-type" class="form-control" onchange="toggleExpiryDate()">
+          <option value="basic">普通会员</option>
+          <option value="premium">高级会员</option>
+        </select>
+      </div>
+      
+      <div class="form-group" id="expiry-date-group" style="display:none;">
+        <label>有效期至</label>
+        <input type="date" id="membership-expires" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label>缴费金额（元，可选）</label>
+        <input type="number" id="payment-amount" class="form-control" placeholder="记录本次缴费金额">
+      </div>
+      
+      <div class="form-group">
+        <label>备注</label>
+        <input type="text" id="membership-note" class="form-control" placeholder="如：2026春季学期学费">
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeMembershipModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveMembership()">保存</button>
+      </div>
+    </div>
+  </div>
+
 
     <!-- 班级管理 -->
     <div id="classes-tab" class="tab-content">
@@ -1055,67 +1139,68 @@ async function loadTodayCheckin() {
     }
 
     function renderStudents() {
-  const classFilter = document.getElementById('class-filter').value;
-  const genderFilter = document.getElementById('gender-filter').value;
-  let filtered = allStudents;
-  if (classFilter) filtered = filtered.filter(s => s.className === classFilter);
-  if (genderFilter) filtered = filtered.filter(s => s.gender === genderFilter);
-
-  if (filtered.length === 0) {
-    document.getElementById('students-list').innerHTML = '<p style="text-align: center; color: #999;">暂无学生数据</p>';
-    return;
-  }
-  
-  // 表头添加"状态"列
-  let html = '<table class="data-table"><thead><tr>' +
-    '<th><input type="checkbox" onchange="toggleSelectAll(this)"></th>' +
-    '<th>昵称</th>' +
-    '<th>真实姓名</th>' +
-    '<th>性别</th>' +
-    '<th>班级</th>' +
-    '<th>状态</th>' +
-    '<th>阅读单词</th>' +
-    '<th>打字单词</th>' +
-    '<th>注册时间</th>' +
-    '<th>操作</th>' +
-    '</tr></thead><tbody>';
-    
-  filtered.forEach(s => {
-    const date = formatDate(s.createdAt);
-    
-    // 判断状态
-    const isRestricted = !s.className || s.isActive === false;
-    const statusHtml = isRestricted 
-      ? '<span style="color: #ff4d4f; font-size: 12px;">⚠️ 受限</span>' 
-      : '<span style="color: #52c41a; font-size: 12px;">✓ 正常</span>';
-    
-    // 激活按钮
-    const activeBtn = s.isActive === false
-      ? '<button class="btn btn-small btn-primary" onclick="toggleStudentActive(\'' + s.nickname + '\', true)">启用</button>'
-      : '<button class="btn btn-small btn-secondary" onclick="toggleStudentActive(\'' + s.nickname + '\', false)">停用</button>';
-    
-    // 添加状态单元格和激活按钮
-    html += '<tr>' +
-      '<td><input type="checkbox" value="' + s.nickname + '" onchange="toggleSelect(\'' + s.nickname + '\', this.checked)"></td>' +
-      '<td>' + (s.nickname || '') + '</td>' +
-      '<td>' + (s.realName || '-') + '</td>' +
-      '<td>' + (s.gender || '-') + '</td>' +
-      '<td>' + (s.className || '-') + '</td>' +
-      '<td>' + statusHtml + '</td>' +
-      '<td>' + (s.totalReadingWords || 0) + '</td>' +
-      '<td>' + (s.totalTypingWords || 0) + '</td>' +
-      '<td>' + date + '</td>' +
-      '<td>' +
-        '<button class="btn btn-small btn-secondary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
-        activeBtn + ' ' +
-        '<button class="btn btn-small btn-secondary" onclick="showLeaveModal(\'' + s.nickname + '\')" style="margin-left:5px;">请假</button>' +
-      '</td>' +
-      '</tr>';
-  });
-  
-  html += '</tbody></table>';
-  document.getElementById('students-list').innerHTML = html;
-}
+      const classFilter = document.getElementById('class-filter').value;
+      const genderFilter = document.getElementById('gender-filter').value;
+      
+      let filtered = allStudents;
+      if (classFilter) filtered = filtered.filter(s => s.className === classFilter);
+      if (genderFilter) filtered = filtered.filter(s => s.gender === genderFilter);
+      
+      const container = document.getElementById('students-list');
+      if (filtered.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无学生数据</p>';
+        return;
+      }
+      
+      let html = '<table class="data-table"><thead><tr>' +
+        '<th><input type="checkbox" id="select-all" onchange="toggleSelectAll()"></th>' +
+        '<th>昵称</th>' +
+        '<th>真实姓名</th>' +
+        '<th>性别</th>' +
+        '<th>班级</th>' +
+        '<th>会员状态</th>' +
+        '<th>有效期至</th>' +
+        '<th>操作</th>' +
+        '</tr></thead><tbody>';
+      
+      filtered.forEach(s => {
+        // 处理会员状态显示
+        const membership = s.membership || { type: 'basic' };
+        const isPremium = membership.type === 'premium';
+        const isExpired = isPremium && membership.expiresAt && new Date() > new Date(membership.expiresAt);
+        
+        let statusClass = 'tag-basic';
+        let statusText = '普通会员';
+        
+        if (isExpired) {
+          statusClass = 'tag-expired';
+          statusText = '已过期';
+        } else if (isPremium) {
+          statusClass = 'tag-premium';
+          statusText = '⭐ 高级会员';
+        }
+        
+        const expiryText = isPremium ? (membership.expiresAt || '-') : '-';
+        
+        html += '<tr>' +
+          '<td><input type="checkbox" class="student-cb" value="' + s.nickname + '"></td>' +
+          '<td>' + s.nickname + '</td>' +
+          '<td>' + (s.realName || '-') + '</td>' +
+          '<td>' + (s.gender || '-') + '</td>' +
+          '<td>' + (s.className || '<span style="color:#999">未分班</span>') + '</td>' +
+          '<td><span class="tag ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td>' + expiryText + '</td>' +
+          '<td>' +
+            '<button class="btn btn-small btn-primary" onclick="editStudent(\'' + s.nickname + '\')">编辑</button> ' +
+            '<button class="btn btn-small btn-secondary" onclick="showMembershipModal(\'' + s.nickname + '\')">会员</button> ' +
+            '<button class="btn btn-small btn-danger" onclick="deleteStudent(\'' + s.nickname + '\')">删除</button>' +
+          '</td>' +
+        '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
 
     function toggleSelectAll(cb) {
       document.querySelectorAll('#students-list input[type="checkbox"]').forEach(box => {
@@ -1179,6 +1264,101 @@ async function loadTodayCheckin() {
           loadStudents();
         }
       } catch (e) { alert('删除失败'); }
+    }
+
+        // ========== 会员管理 ==========
+    let currentMembershipNickname = null;
+
+    function showMembershipModal(nickname) {
+      currentMembershipNickname = nickname;
+      document.getElementById('membership-nickname').textContent = nickname;
+      
+      const student = allStudents.find(s => s.nickname === nickname);
+      const membership = student.membership || { type: 'basic' };
+      
+      // 显示当前状态
+      const statusDiv = document.getElementById('current-membership-status');
+      if (membership.type === 'premium') {
+        const isExpired = membership.expiresAt && new Date() > new Date(membership.expiresAt);
+        if (isExpired) {
+          statusDiv.innerHTML = '<span class="tag tag-expired">已过期</span> 原有效期至：' + membership.expiresAt;
+        } else {
+          statusDiv.innerHTML = '<span class="tag tag-premium">⭐ 高级会员</span> 有效期至：' + (membership.expiresAt || '未设置');
+        }
+        document.getElementById('membership-type').value = 'premium';
+        document.getElementById('expiry-date-group').style.display = 'block';
+        document.getElementById('membership-expires').value = membership.expiresAt || '';
+      } else {
+        statusDiv.innerHTML = '<span class="tag tag-basic">普通会员</span>';
+        document.getElementById('membership-type').value = 'basic';
+        document.getElementById('expiry-date-group').style.display = 'none';
+        document.getElementById('membership-expires').value = '';
+      }
+      
+      // 清空缴费信息
+      document.getElementById('payment-amount').value = '';
+      document.getElementById('membership-note').value = '';
+      
+      document.getElementById('membership-modal').style.display = 'flex';
+    }
+
+    function closeMembershipModal() {
+      document.getElementById('membership-modal').style.display = 'none';
+      currentMembershipNickname = null;
+    }
+
+    function toggleExpiryDate() {
+      const type = document.getElementById('membership-type').value;
+      const expiryGroup = document.getElementById('expiry-date-group');
+      
+      if (type === 'premium') {
+        expiryGroup.style.display = 'block';
+        // 默认3个月后
+        const threeMonthsLater = new Date();
+        threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+        document.getElementById('membership-expires').value = threeMonthsLater.toISOString().split('T')[0];
+      } else {
+        expiryGroup.style.display = 'none';
+      }
+    }
+
+    async function saveMembership() {
+      const nickname = currentMembershipNickname;
+      const type = document.getElementById('membership-type').value;
+      const expiresAt = document.getElementById('membership-expires').value;
+      const amount = document.getElementById('payment-amount').value;
+      const note = document.getElementById('membership-note').value;
+      
+      try {
+        const res = await fetch('/api/admin/membership/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nickname,
+            membership: {
+              type,
+              expiresAt: type === 'premium' ? expiresAt : null,
+              autoDowngrade: true
+            },
+            payment: amount ? {
+              amount: parseFloat(amount),
+              note,
+              date: new Date().toISOString()
+            } : null
+          })
+        });
+        
+        const result = await res.json();
+        if (result.success) {
+          alert('会员信息已更新');
+          closeMembershipModal();
+          loadStudents(); // 刷新列表
+        } else {
+          alert(result.message || '更新失败');
+        }
+      } catch (e) {
+        alert('网络错误');
+      }
     }
 
     // ========== 班级管理 ==========
