@@ -278,6 +278,15 @@ function getNextMonday(dateStr) {
       });
     }
 
+    /* ========================= 教师登录 ========================== */
+    if (path === "admin/login" && request.method === "POST") {
+      const { password } = await request.json();
+      if (password === "teacher123") {
+        return json({ success: true });
+      }
+      return json({ success: false, message: "密码错误" });
+    }
+    
     /* ========================= 获取所有学生 ========================== */
     if (path === "admin/students") {
       const { keys: readingKeys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
