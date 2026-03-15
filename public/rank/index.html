@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>排行榜 - TypeReading Hub</title>
+    <title>打字排行榜 - TypeReading Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -68,7 +68,7 @@
             background: #f0f0ff;
         }
         
-        /* 当前班级提示 */
+        /* 当前班级信息 */
         .class-info {
             text-align: center;
             color: #666;
@@ -93,6 +93,16 @@
             font-weight: 600;
             color: #666;
             font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        th:hover {
+            background: #e8e8e8;
+        }
+        
+        th.active-sort {
+            color: #667eea;
         }
         
         tr:hover { background: #f8f9fa; }
@@ -184,23 +194,6 @@
             padding: 60px;
             color: #999;
         }
-        
-        .loading::after {
-            content: '';
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #667eea;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
@@ -208,11 +201,11 @@
         <a href="/" class="back">← 返回首页</a>
         
         <div class="card">
-            <h1>🏆 打字速度排行榜</h1>
+            <h1>🏆 打字排行榜</h1>
             
             <!-- 标签切换 -->
             <div class="tab-container">
-                <button class="tab active" id="classTab" onclick="switchTab('class')">
+                <button class="tab" id="classTab" onclick="switchTab('class')">
                     📚 班级榜
                 </button>
                 <button class="tab" id="allTab" onclick="switchTab('all')">
@@ -225,7 +218,7 @@
             
             <!-- 排行榜列表 -->
             <div id="rankingList">
-                <div class="loading">加载中</div>
+                <div class="loading">加载中...</div>
             </div>
             
             <div class="footer">
@@ -235,10 +228,32 @@
     </div>
 
     <script>
-        let currentTab = 'class'; // 默认显示班级榜
+        let currentTab = 'class';
         let currentUser = null;
+        let currentData = [];
+        let sortField = 'wpm';
         
-        // 获取当前登录用户
+        // 页面加载时恢复标签状态
+        function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabFromUrl = urlParams.get('tab');
+            const tabFromStorage = localStorage.getItem('rankTab');
+            
+            if (tabFromUrl && ['class', 'all'].includes(tabFromUrl)) {
+                currentTab = tabFromUrl;
+            } else if (tabFromStorage && ['class', 'all'].includes(tabFromStorage)) {
+                currentTab = tabFromStorage;
+            }
+            
+            const sortFromUrl = urlParams.get('sort');
+            if (sortFromUrl && ['wpm', 'accuracy'].includes(sortFromUrl)) {
+                sortField = sortFromUrl;
+            }
+            
+            updateTabUI();
+            loadRanking();
+        }
+        
         function getCurrentUser() {
             const userStr = localStorage.getItem('currentUser');
             if (userStr) {
@@ -251,37 +266,50 @@
             return null;
         }
         
-        // 切换标签
         function switchTab(type) {
             currentTab = type;
+            sortField = 'wpm';
             
-            // 更新标签样式
-            document.getElementById('classTab').classList.toggle('active', type === 'class');
-            document.getElementById('allTab').classList.toggle('active', type === 'all');
-            
-            // 加载对应榜单
+            localStorage.setItem('rankTab', type);
+            updateURL();
+            updateTabUI();
             loadRanking();
         }
         
-        // 加载排行榜
+        function updateTabUI() {
+            document.getElementById('classTab').classList.toggle('active', currentTab === 'class');
+            document.getElementById('allTab').classList.toggle('active', currentTab === 'all');
+        }
+        
+        function updateURL() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', currentTab);
+            url.searchParams.set('sort', sortField);
+            window.history.replaceState({}, '', url);
+        }
+        
+        function sortBy(field) {
+            sortField = field;
+            updateURL();
+            renderRanking(currentData);
+        }
+        
         async function loadRanking() {
             const listDiv = document.getElementById('rankingList');
             const classInfoDiv = document.getElementById('classInfo');
             
-            listDiv.innerHTML = '<div class="loading">加载中</div>';
+            listDiv.innerHTML = '<div class="loading">加载中...</div>';
             
             currentUser = getCurrentUser();
             
-            // 构建请求参数
             const params = {
                 type: currentTab,
                 limit: currentTab === 'class' ? 10 : 20
             };
             
-            // 班级榜需要传递班级名称
             if (currentTab === 'class' && currentUser && currentUser.className) {
                 params.className = currentUser.className;
-                classInfoDiv.textContent = `当前班级：${currentUser.className}`;
+                classInfoDiv.textContent = `当前班级：`;
             } else if (currentTab === 'class') {
                 classInfoDiv.textContent = '您暂未分配班级';
             } else {
@@ -298,12 +326,13 @@
                 const data = await res.json();
                 
                 if (data.success && data.rank && data.rank.length > 0) {
-                    renderRanking(data.rank);
+                    currentData = data.rank;
+                    renderRanking(currentData);
                 } else {
                     listDiv.innerHTML = `
                         <div class="empty">
                             <div class="empty-icon">🏃</div>
-                            <div>${currentTab === 'class' ? '班级暂无排行数据' : '暂无排行数据'}</div>
+                            <div>暂无排行数据</div>
                             <div style="font-size: 13px; margin-top: 10px;">快来成为第一个吧！</div>
                         </div>
                     `;
@@ -318,10 +347,17 @@
             }
         }
         
-        // 渲染排行榜
         function renderRanking(rankList) {
             const listDiv = document.getElementById('rankingList');
             const medals = ['🥇', '🥈', '🥉'];
+            
+            let sortedList = [...rankList];
+            sortedList.sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0));
+            
+            sortedList = sortedList.map((item, index) => ({
+                ...item,
+                rank: index + 1
+            }));
             
             let html = `
                 <table>
@@ -329,30 +365,34 @@
                         <tr>
                             <th style="width: 60px;">排名</th>
                             <th>姓名</th>
-                            <th style="width: 100px;">WPM</th>
-                            <th style="width: 80px;">准确率</th>
+                            <th style="width: 100px; cursor: pointer;" 
+                                class=" " 
+                                onclick="sortBy('wpm')">WPM</th>
+                            <th style="width: 100px; cursor: pointer;" 
+                                class=" " 
+                                onclick="sortBy('accuracy')">准确率</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            rankList.forEach((r, i) => {
-                const rank = i + 1;
+            sortedList.forEach((r, i) => {
+                const rank = r.rank;
                 const medal = medals[i] || rank;
                 const isTop3 = i < 3;
-                const topClass = isTop3 ? `top-${rank}` : '';
+                const topClass = isTop3 ? `top-` : '';
                 
                 html += `
-                    <tr class="${topClass}">
+                    <tr class="">
                         <td class="rank-cell">
-                            <span class="${isTop3 ? 'rank-medal' : ''}">${medal}</span>
+                            <span class="rank-medal"></span>
                         </td>
                         <td class="name-cell">
-                            <div>${escapeHtml(r.realName || r.nickname)}</div>
-                            ${currentTab === 'all' ? `<span class="class-tag">${escapeHtml(r.className)}</span>` : ''}
+                            <div></div>
+                            </span>` : ''}
                         </td>
-                        <td class="wpm">${r.wpm}</td>
-                        <td class="accuracy">${r.accuracy}%</td>
+                        <td class="wpm"></td>
+                        <td class="accuracy">%</td>
                     </tr>
                 `;
             });
@@ -361,7 +401,6 @@
             listDiv.innerHTML = html;
         }
         
-        // HTML 转义
         function escapeHtml(text) {
             if (!text) return '';
             return text
@@ -372,8 +411,7 @@
                 .replace(/'/g, '&#039;');
         }
         
-        // 页面加载时自动加载
-        loadRanking();
+        init();
     </script>
 </body>
 </html>
