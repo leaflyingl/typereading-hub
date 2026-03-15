@@ -659,18 +659,6 @@ async function assignWeeklyTypingContent(nickname, clientDate, content, env) {
       return json({ success: true });
     }
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    const path = url.pathname;
-
-    // 辅助函数
-    function json(data) {
-      return new Response(JSON.stringify(data), {
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
  /* ========================= 阅读打卡（稳定兼容版） ========================== */
 if (path === "checkin/reading") {
   const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
