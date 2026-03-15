@@ -194,6 +194,36 @@ body {
   gap: 5px;
 }
 
+/* 会员标签样式 */
+.membership-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: normal;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.membership-basic {
+  background-color: #f0f0f0;
+  color: #666;
+  border: 1px solid #d9d9d9;
+}
+
+.membership-premium {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+/* 修改 user-status 为垂直布局，右对齐 */
+.user-status { 
+  display: flex; 
+  flex-direction: column;
+  align-items: flex-end; 
+  gap: 4px; 
+}
+
 /* 管理员链接 */
 .admin-link {
   text-align: center;
@@ -511,29 +541,41 @@ body {
             checkLogin();
         };
 
-        function checkLogin() {
-            const userStatusDiv = document.getElementById('userStatus');
-            const startBtn = document.getElementById('startBtn');
-            const currentUserStr = localStorage.getItem('currentUser');
+function checkLogin() {
+    const userStatusDiv = document.getElementById('userStatus');
+    const startBtn = document.getElementById('startBtn');
+    const currentUserStr = localStorage.getItem('currentUser');
+    
+    if (currentUserStr) {
+        try {
+            const user = JSON.parse(currentUserStr);
+            const nickname = user.nickname || '同学';
             
-            if (currentUserStr) {
-                try {
-                    const user = JSON.parse(currentUserStr);
-                    const nickname = user.nickname || '同学';
-                    // 点击名字进入用户信息页
-                    userStatusDiv.innerHTML = 
-                        '<span class="welcome-text" onclick="goTo(\'/profile/\')">欢迎，' + escapeHtml(nickname) + '</span>' +
-                        '<button class="btn btn-secondary" onclick="logout()">退出</button>';
-                    startBtn.textContent = '进入学习';
-                    startBtn.href = '/reading/';
-                } catch (e) {
-                    localStorage.removeItem('currentUser');
-                    showLoginPrompt();
-                }
-            } else {
-                showLoginPrompt();
-            }
+            // 获取会员类型
+            const membershipType = user.membership?.type || 'basic';
+            const membershipLabel = membershipType === 'premium' ? '高级会员' : '普通会员';
+            const membershipClass = membershipType === 'premium' ? 'membership-premium' : 'membership-basic';
+
+            // 渲染用户信息（用户名 + 会员标签 + 退出按钮）
+            userStatusDiv.innerHTML = 
+                '<div style="display:flex;flex-direction:column;align-items:flex-end;">' +
+                    '<span class="welcome-text" onclick="goTo(\'/profile/\')">欢迎，' + escapeHtml(nickname) + '</span>' +
+                    '<span class="membership-badge ' + membershipClass + '">' + membershipLabel + '</span>' +
+                '</div>' +
+                '<button class="btn btn-secondary" onclick="logout()">退出</button>';
+
+            startBtn.textContent = '进入学习';
+            startBtn.href = '/reading/';
+
+        } catch (e) {
+            localStorage.removeItem('currentUser');
+            showLoginPrompt();
         }
+    } else {
+        showLoginPrompt();
+    }
+}
+
 
         function escapeHtml(text) {
             if (!text) return '';
