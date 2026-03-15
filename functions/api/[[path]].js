@@ -786,9 +786,9 @@ if (path === "checkin/status") {
       return json({ success: true, records });
     }
 
-    /* ========================= 打字记录提交 ========================== */
+    /* ========================= 打字记录提交（新版 - 支持按键统计）========================== */
     if (path === "typing/result") {
-      const { nickname, wpm, accuracy, wordCount, content } = await request.json();
+      const { nickname, wpm, accuracy, duration, wordCount, content, keystrokes, targetLength } = await request.json();
       if (!nickname) {
         return json({ success: false, message: "昵称不能为空" });
       }
@@ -798,22 +798,35 @@ if (path === "checkin/status") {
       const dateStr = now.toISOString().split("T")[0];
 
       const finalWordCount = Number(wordCount) || (content ? content.length : 0);
+      
+      // 验证正确率：如果有按键统计，重新计算
+      let finalAccuracy = Number(accuracy) || 0;
+      if (keystrokes && keystrokes.total > 0) {
+        // 使用前端传来的按键统计重新计算
+        // 正确率 = 正确按键数 / 总按键数
+        finalAccuracy = Math.round((keystrokes.correct / keystrokes.total) * 100);
+      }
 
       await env.TYPEREADING_KV.put(
         recordKey,
         JSON.stringify({
           nickname,
           wpm: Number(wpm) || 0,
-          accuracy: Number(accuracy) || 0,
+          accuracy: finalAccuracy,  // 使用重新计算的正确率
+          duration: Number(duration) || 0,
           wordCount: finalWordCount,
           content: content || "",
           date: dateStr,
-          timestamp: now.toISOString()
+          timestamp: now.toISOString(),
+          // 保存按键统计（可选，用于后续分析）
+          keystrokes: keystrokes || null,
+          targetLength: targetLength || 0
         })
       );
 
-      return json({ success: true });
+      return json({ success: true, accuracy: finalAccuracy });
     }
+
 
     /* ========================= 获取学习统计 ========================== */
     if (path === "user/stats") {
