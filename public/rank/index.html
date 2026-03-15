@@ -309,7 +309,7 @@
             
             if (currentTab === 'class' && currentUser && currentUser.className) {
                 params.className = currentUser.className;
-                classInfoDiv.textContent = `当前班级：`;
+                classInfoDiv.textContent = '当前班级：' + currentUser.className;
             } else if (currentTab === 'class') {
                 classInfoDiv.textContent = '您暂未分配班级';
             } else {
@@ -329,21 +329,11 @@
                     currentData = data.rank;
                     renderRanking(currentData);
                 } else {
-                    listDiv.innerHTML = `
-                        <div class="empty">
-                            <div class="empty-icon">🏃</div>
-                            <div>暂无排行数据</div>
-                            <div style="font-size: 13px; margin-top: 10px;">快来成为第一个吧！</div>
-                        </div>
-                    `;
+                    listDiv.innerHTML = '<div class="empty"><div class="empty-icon">🏃</div><div>暂无排行数据</div><div style="font-size: 13px; margin-top: 10px;">快来成为第一个吧！</div></div>';
                 }
             } catch(e) {
-                listDiv.innerHTML = `
-                    <div class="empty">
-                        <div class="empty-icon">⚠️</div>
-                        <div>加载失败，请稍后重试</div>
-                    </div>
-                `;
+                console.error('加载失败:', e);
+                listDiv.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div>加载失败，请稍后重试</div></div>';
             }
         }
         
@@ -351,51 +341,35 @@
             const listDiv = document.getElementById('rankingList');
             const medals = ['🥇', '🥈', '🥉'];
             
+            // 按当前字段降序排序
             let sortedList = [...rankList];
-            sortedList.sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0));
-            
-            sortedList = sortedList.map((item, index) => ({
-                ...item,
-                rank: index + 1
-            }));
-            
-            let html = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 60px;">排名</th>
-                            <th>姓名</th>
-                            <th style="width: 100px; cursor: pointer;" 
-                                class=" " 
-                                onclick="sortBy('wpm')">WPM</th>
-                            <th style="width: 100px; cursor: pointer;" 
-                                class=" " 
-                                onclick="sortBy('accuracy')">准确率</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            sortedList.forEach((r, i) => {
-                const rank = r.rank;
-                const medal = medals[i] || rank;
-                const isTop3 = i < 3;
-                const topClass = isTop3 ? `top-` : '';
-                
-                html += `
-                    <tr class="">
-                        <td class="rank-cell">
-                            <span class="rank-medal"></span>
-                        </td>
-                        <td class="name-cell">
-                            <div></div>
-                            </span>` : ''}
-                        </td>
-                        <td class="wpm"></td>
-                        <td class="accuracy">%</td>
-                    </tr>
-                `;
+            sortedList.sort(function(a, b) {
+                return (b[sortField] || 0) - (a[sortField] || 0);
             });
+            
+            // 重新计算排名
+            sortedList = sortedList.map(function(item, index) {
+                return Object.assign({}, item, { rank: index + 1 });
+            });
+            
+            let html = '<table><thead><tr><th style="width: 60px;">排名</th><th>姓名</th><th style="width: 100px; cursor: pointer;" class="' + (sortField === 'wpm' ? 'active-sort' : '') + '" onclick="sortBy(\'wpm\')">WPM</th><th style="width: 100px; cursor: pointer;" class="' + (sortField === 'accuracy' ? 'active-sort' : '') + '" onclick="sortBy(\'accuracy\')">准确率</th></tr></thead><tbody>';
+            
+            for (let i = 0; i < sortedList.length; i++) {
+                const r = sortedList[i];
+                const medal = medals[i] || r.rank;
+                const isTop3 = i < 3;
+                const topClass = isTop3 ? 'top-' + (i + 1) : '';
+                
+                html += '<tr class="' + topClass + '">' +
+                    '<td class="rank-cell"><span class="rank-medal">' + medal + '</span></td>' +
+                    '<td class="name-cell">' +
+                        '<div>' + escapeHtml(r.realName || r.nickname) + '</div>' +
+                        (currentTab === 'all' ? '<span class="class-tag">' + escapeHtml(r.className || '未分班') + '</span>' : '') +
+                    '</td>' +
+                    '<td class="wpm">' + (r.wpm || 0) + '</td>' +
+                    '<td class="accuracy">' + (r.accuracy || 0) + '%</td>' +
+                '</tr>';
+            }
             
             html += '</tbody></table>';
             listDiv.innerHTML = html;
@@ -403,7 +377,7 @@
         
         function escapeHtml(text) {
             if (!text) return '';
-            return text
+            return String(text)
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -411,6 +385,7 @@
                 .replace(/'/g, '&#039;');
         }
         
+        // 页面加载时初始化
         init();
     </script>
 </body>
