@@ -659,31 +659,29 @@ async function assignWeeklyTypingContent(nickname, clientDate, content, env) {
       return json({ success: true });
     }
 
- /* ========================= 查询今日打卡状态（修复版） ========================== */
+/* ========================= 查询今日打卡状态（最终稳定版） ========================== */
 if (path === "checkin/status") {
   const { nickname, date: clientDate } = await request.json();
   if (!nickname) {
     return json({ success: false, message: "昵称不能为空" });
   }
-  
-  // 关键修复：优先使用客户端传来的日期
+
+  // 日期处理（完全没问题）
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
-  // 修复后的代码（模板字符串版本）
-} else {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  today = year + "-" + month + "-" + day;  // ✅ 这样最简单，不会错
-}
+  } else {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    today = year + "-" + month + "-" + day;
+  }
 
-
-  
   const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
   let hasCheckedIn = false;
   let todayRecord = null;
+
   for (const key of keys) {
     const data = await env.TYPEREADING_KV.get(key.name);
     if (!data) continue;
@@ -694,6 +692,7 @@ if (path === "checkin/status") {
       break;
     }
   }
+
   return json({
     success: true,
     hasCheckedIn,
@@ -701,27 +700,26 @@ if (path === "checkin/status") {
     debug: { checkDate: today }
   });
 }
-
-/* ========================= 阅读打卡（修复版） ========================== */
+    
+/* ========================= 阅读打卡（最终稳定版） ========================== */
 if (path === "checkin/reading") {
   const { nickname, articleId, articleTitle, wordCount, date: clientDate } = await request.json();
   if (!nickname) {
     return json({ success: false, message: "昵称不能为空" });
   }
-  
-  // 关键修复：优先使用客户端传来的日期
+
+  // 日期处理（完全没问题）
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
   } else {
-    // 备用：使用服务器本地时间
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;  // ✅ 这样最简单，不会错
+    today = year + "-" + month + "-" + day;
   }
-  
+
   // 检查今日是否已打卡
   const { keys } = await env.TYPEREADING_KV.list({ prefix: "reading:" });
   for (const key of keys) {
@@ -733,7 +731,7 @@ if (path === "checkin/reading") {
       }
     }
   }
-  
+
   const recordKey = "reading:" + nickname + ":" + Date.now();
   const now = new Date();
   await env.TYPEREADING_KV.put(
@@ -749,7 +747,6 @@ if (path === "checkin/reading") {
   );
   return json({ success: true, message: "打卡成功", date: today });
 }
-
 
     /* ========================= 获取阅读记录 ========================== */
     if (path === "user/reading-records") {
