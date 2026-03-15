@@ -365,6 +365,34 @@ body {
   color: #fa8c16;
 }
 
+        /* 会员限制提示 */
+    .membership-lock {
+      background: #fff7e6;
+      border: 1px dashed #ffd591;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 15px;
+      text-align: center;
+    }
+    .membership-lock p {
+      color: #d46b08;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    .membership-lock .btn {
+      padding: 10px 24px;
+      font-size: 14px;
+    }
+    
+    /* 禁用状态的题目 */
+    .question-item.locked {
+      opacity: 0.7;
+    }
+    .question-item.locked .answer-textarea {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
 /* ==================== Pad 适配 ==================== */
 
 @media (min-width: 768px) {
@@ -674,19 +702,30 @@ function getTodayString() {
     function renderQuestions(questions) {
       const container = document.getElementById('questions-list');
       
-      container.innerHTML = questions.map((q, index) => `
-        <div class="question-item">
+      // 获取当前用户会员状态
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const membership = currentUser.membership || { type: 'basic' };
+      const isPremium = membership.type === 'premium';
+      const isExpired = isPremium && membership.expiresAt && new Date().toISOString().split('T')[0] > membership.expiresAt;
+      const canAnswer = isPremium && !isExpired;
+      
+      container.innerHTML = questions.map((q, index) => {
+        const lockedClass = canAnswer ? '' : 'locked';
+        
+        return `
+        <div class="question-item ${lockedClass}">
           <div class="question-header">
             ${index + 1}. ${q.question}
             <span class="question-type">${getQuestionTypeName(q.type)}</span>
           </div>
           
-          ${q.type === 'choice' && q.options ? `
+          ${q.type === 'choice' ? `
             <div class="options-list">
-              ${q.options.map((opt, optIndex) => `
+              ${q.options.map((opt, i) => `
                 <label class="option-label">
-                  <input type="radio" name="q-${q.id}" value="${opt}" id="opt-${q.id}-${optIndex}">
-                  <span>${String.fromCharCode(65 + optIndex)}. ${opt}</span>
+                  <input type="radio" name="q-${q.id}" value="${String.fromCharCode(65 + i)}" 
+                    ${canAnswer ? '' : 'disabled'}>
+                  <span>${String.fromCharCode(65 + i)}. ${opt}</span>
                 </label>
               `).join('')}
             </div>
@@ -695,19 +734,34 @@ function getTodayString() {
           <textarea 
             class="answer-textarea" 
             id="answer-${q.id}" 
-            placeholder="请输入您的答案..."
+            placeholder="${canAnswer ? '请输入您的答案...' : '开通会员后可作答'}"
+            ${canAnswer ? '' : 'disabled'}
           ></textarea>
           
-          <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
-            提交答案
-          </button>
+          ${canAnswer ? `
+            <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
+              提交答案
+            </button>
+          ` : ''}
           
           <div id="status-${q.id}"></div>
         </div>
-      `).join('');
+      `}).join('');
       
-      // 检查每道题的已回答状态
-      questions.forEach(q => checkAnswerStatus(q.id));
+      // 添加会员限制提示（普通会员）
+      if (!canAnswer) {
+        container.innerHTML += `
+          <div class="membership-lock">
+            <p>🔒 您是${isExpired ? '已过期的' : '普通'}会员，可查看题目但无法作答</p>
+            <p style="font-size: 12px; color: #999;">请联系老师开通高级会员，获得完整学习体验</p>
+          </div>
+        `;
+      }
+      
+      // 已提交状态检查（仅高级会员）
+      if (canAnswer) {
+        questions.forEach(q => checkAnswerStatus(q.id));
+      }
     }
 
     function getQuestionTypeName(type) {
