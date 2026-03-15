@@ -3,120 +3,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TypeReading Hub - 英语阅读与打字练习平台</title>
+    <title>TypingReading Hub - 英语阅读与打字练习平台</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header {
-            background: rgba(255,255,255,0.95);
-            padding: 20px 40px;
-            border-radius: 16px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .logo { font-size: 28px; font-weight: bold; color: #667eea; }
-        .user-status { display: flex; align-items: center; gap: 15px; }
-        .welcome-text { color: #667eea; font-weight: 500; cursor: pointer; }
-        .welcome-text:hover { text-decoration: underline; }
-        .btn {
-            padding: 10px 24px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn-primary { background: #667eea; color: white; }
-        .btn-secondary { background: #f0f0f0; color: #333; }
-        
-        .hero {
-            background: rgba(255,255,255,0.95);
-            padding: 60px 40px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 40px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-        .hero h1 { font-size: 42px; margin-bottom: 20px; color: #333; }
-        .hero p { font-size: 18px; color: #666; margin-bottom: 30px; }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-        .feature-card {
-            background: rgba(255,255,255,0.95);
-            padding: 35px 25px;
-            border-radius: 16px;
-            text-align: center;
-            transition: transform 0.3s;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            cursor: pointer;
-        }
-        
-        .feature-card:hover { transform: translateY(-5px); }
-        .feature-icon { font-size: 48px; margin-bottom: 15px; }
-        .feature-card h3 { font-size: 20px; margin-bottom: 10px; color: #333; }
-        .feature-card p { color: #666; font-size: 14px; }
-        
-        .admin-link {
-            text-align: center;
-            margin-top: 40px;
-        }
-        .admin-link a {
-            color: rgba(255,255,255,0.4);
-            text-decoration: none;
-            font-size: 13px;
-            transition: color 0.3s;
-        }
-        .admin-link a:hover { color: rgba(255,255,255,0.8); }
-        
-        .login-prompt {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            padding: 10px 20px;
-            border-radius: 8px;
-            color: #856404;
-            font-size: 14px;
-        }
+       * { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
 
-        /* 滚动通知栏 */
-        .notice-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            max-width: 90%;
-            z-index: 1000;
-        }
-        .notice-content {
-            display: inline-block;
-            animation: scroll 20s linear infinite;
-        }
-        @keyframes scroll {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
+:root {
+  /* 颜色变量，方便统一调整 */
+  --primary: #667eea;
+  --primary-dark: #764ba2;
+  --bg-gradient-start: #667eea;
+  --bg-gradient-end: #764ba2;
+  --card-bg: rgba(255,255,255,0.95);
+  --text-primary: #333;
+  --text-secondary: #666;
+  --shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+html {
+  font-size: 16px; /* 基准字体大小 */
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  min-height: 100vh;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+/* ==================== 基础布局（移动端优先）==================== */
+
+.container { 
+  max-width: 100%; 
+  margin: 0 auto; 
+  padding: 15px; 
+  padding-bottom: 80px; /* 底部导航预留空间 */
+}
+
+/* 头部 */
+.header {
+  background: var(--card-bg);
+  padding: 15px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.logo { 
+  font-size: 20px; 
+  font-weight: bold; 
+  color: var(--primary); 
+}
+
+.user-status { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  flex-wrap: wrap;
+}
+
+.welcome-text { 
+  color: var(--primary); 
+  font-weight: 500; 
+  cursor: pointer;
+  font-size: 14px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.welcome-text:hover { text-decoration: underline; }
+
+/* 按钮基础样式 */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  min-height: 44px; /* 触摸友好 */
+  line-height: 1.5;
+}
+
+.btn-primary { 
+  background: var(--primary); 
+  color: white; 
+}
+
+.btn-primary:active {
+  background: var(--primary-dark);
+  transform: scale(0.98);
+}
+
+.btn-secondary { 
+  background: #f0f0f0; 
+  color: var(--text-primary); 
+}
+
+.btn-secondary:active {
+  background: #e0e0e0;
+}
+
+/* Hero 区域 */
+.hero {
+  background: var(--card-bg);
+  padding: 40px 20px;
+  border-radius: 16px;
+  text-align: center;
+  margin-bottom: 25px;
+  box-shadow: var(--shadow);
+}
+
+.hero h1 { 
+  font-size: 24px; 
+  margin-bottom: 12px; 
+  color: var(--text-primary); 
+  line-height: 1.3;
+}
+
+.hero p { 
+  font-size: 15px; 
+  color: var(--text-secondary); 
+  margin-bottom: 20px; 
+}
+
+/* 功能卡片网格 - 移动端单列 */
+.features {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.feature-card {
+  background: var(--card-bg);
+  padding: 25px 20px;
+  border-radius: 14px;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.feature-card:active { 
+  transform: scale(0.98); 
+}
+
+.feature-icon { 
+  font-size: 40px; 
+  margin-bottom: 12px; 
+  line-height: 1;
+}
+
+.feature-card h3 { 
+  font-size: 17px; 
+  margin-bottom: 8px; 
+  color: var(--text-primary); 
+}
+
+.feature-card p { 
+  color: var(--text-secondary); 
+  font-size: 13px; 
+  line-height: 1.5;
+}
+
+/* 登录提示 */
+.login-prompt {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 8px 15px;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 管理员链接 */
+.admin-link {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.admin-link a {
+  color: rgba(255,255,255,0.4);
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.3s;
+  padding: 10px;
+  display: inline-block;
+}
+
+.admin-link a:hover { color: rgba(255,255,255,0.8); }
+
+/* 通知栏 - 移动端简化 */
+.notice-bar {
+  position: fixed;
+  bottom: 70px; /* 底部导航上方 */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 95%;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+.notice-content {
+  display: inline-block;
+  animation: scroll 25s linear infinite;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ==================== Pad 竖屏（768px - 1024px）==================== */
+
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .container {
+    padding: 25px;
+    max-width: 800px;
+    padding-bottom: 90px;
+  }
+  
+  .header {
+    padding: 20px 30px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+  }
+  
+  .logo { font-size: 26px; }
+  .welcome-text { max-width: 200px; font-size: 15px; }
+  
+  .hero {
+    padding: 50px 40px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .hero h1 { font-size: 32px; }
+  .hero p { font-size: 17px; }
+  
+  /* Pad 竖屏：2列卡片 */
+  .features {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  
+  .feature-card {
+    padding: 35px 25px;
+  }
+  
+  .feature-icon { font-size: 48px; }
+  .feature-card h3 { font-size: 19px; }
+  .feature-card p { font-size: 14px; }
+  
+  .notice-bar {
+    bottom: 80px;
+    padding: 12px 25px;
+    font-size: 14px;
+  }
+}
+
+/* ==================== Pad 横屏（768px - 1366px）==================== */
+
+@media (min-width: 768px) and (max-width: 1366px) and (orientation: landscape) {
+  .container {
+    padding: 30px;
+    max-width: 1200px;
+    padding-bottom: 30px; /* 横屏不需要底部导航 */
+  }
+  
+  .header {
+    padding: 25px 40px;
+    border-radius: 16px;
+    margin-bottom: 35px;
+  }
+  
+  .logo { font-size: 28px; }
+  .welcome-text { max-width: none; font-size: 16px; }
+  
+  .btn {
+    padding: 12px 28px;
+    font-size: 15px;
+  }
+  
+  .hero {
+    padding: 60px 50px;
+    border-radius: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .hero h1 { font-size: 38px; margin-bottom: 15px; }
+  .hero p { font-size: 18px; margin-bottom: 30px; }
+  
+  /* Pad 横屏：3列或4列卡片 */
+  .features {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+  }
+  
+  .feature-card {
+    padding: 40px 30px;
+    border-radius: 16px;
+  }
+  
+  .feature-card:hover { 
+    transform: translateY(-5px); 
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  }
+  
+  .feature-icon { font-size: 52px; margin-bottom: 15px; }
+  .feature-card h3 { font-size: 20px; }
+  .feature-card p { font-size: 14px; }
+  
+  /* 横屏通知栏放顶部 */
+  .notice-bar {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin-top: 30px;
+    max-width: 100%;
+    border-radius: 12px;
+    padding: 15px 30px;
+  }
+}
+
+/* ==================== 桌面大屏（> 1366px）==================== */
+
+@media (min-width: 1366px) {
+  .container {
+    max-width: 1400px;
+    padding: 40px;
+    padding-bottom: 40px;
+  }
+  
+  .header {
+    padding: 25px 50px;
+    border-radius: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .logo { font-size: 32px; }
+  
+  .hero {
+    padding: 80px 60px;
+    border-radius: 24px;
+  }
+  
+  .hero h1 { font-size: 48px; }
+  .hero p { font-size: 20px; }
+  
+  /* 桌面：4列卡片 */
+  .features {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+  }
+  
+  .feature-card {
+    padding: 45px 35px;
+  }
+  
+  .notice-bar {
+    position: relative;
+    margin-top: 40px;
+  }
+}
+
+/* ==================== 特殊适配 ==================== */
+
+/* 横屏手机（iPhone 横屏） */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hero {
+    padding: 20px;
+  }
+  .hero h1 { font-size: 20px; }
+  .features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .notice-bar { display: none; } /* 横屏手机隐藏通知栏 */
+}
+
+/* 暗黑模式支持 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-bg: rgba(40, 40, 50, 0.95);
+    --text-primary: #f0f0f0;
+    --text-secondary: #aaa;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .btn-secondary {
+    background: #3a3a4a;
+    color: #f0f0f0;
+  }
+  
+  .login-prompt {
+    background: #3d3d2a;
+    border-color: #5a5a40;
+    color: #d4d4a0;
+  }
+}
+
+/* 减少动画（无障碍） */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  body {
+    background: white;
+  }
+  .notice-bar, .admin-link {
+    display: none;
+  }
+  .feature-card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
     </style>
 </head>
 <body>
@@ -164,10 +500,8 @@
         <!-- 滚动通知栏 -->
         <div class="notice-bar">
             <div class="notice-content">
-                📢 非本班学生不能上排行榜 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 
-                📢 请本班学生在注册或在后台填写真实姓名和性别 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
-                📢 非本班学生不能上排行榜 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
-                📢 请本班学生在注册或在后台填写真实姓名和性别
+                📢 普通用户不能上排行榜 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp; 
+                📢 普通用户限每周一篇阅读和打字材料 &nbsp;&nbsp;&nbsp; | &nbsp;&nbsp;&nbsp;
             </div>
         </div>
     </div>
