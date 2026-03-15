@@ -1397,8 +1397,10 @@ if (path === "content/typing") {
   });
 }
 
-    /* ========================= 排行榜 ========================== */
+    /* ========================= 排行榜（支持班级榜/总榜）========================== */
     if (path === "rank/typing") {
+      const { type, className, limit } = await request.json();
+      
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const results = [];
 
@@ -1412,25 +1414,42 @@ if (path === "content/typing") {
         if (!userData) continue;
 
         const user = JSON.parse(userData);
+        
+        // 班级榜筛选
+        if (type === 'class' && className) {
+          if (user.className !== className) continue;
+        }
+
         results.push({
           nickname: record.nickname,
           realName: user.realName || record.nickname,
-          className: user.className || "",
+          className: user.className || "未分班",
           wpm: record.wpm || 0,
           accuracy: record.accuracy || 0,
           timestamp: record.timestamp
         });
       }
 
+      // 按 WPM 降序排列
       results.sort((a, b) => b.wpm - a.wpm);
       
-      const ranked = results.slice(0, 20).map((item, index) => ({
+      // 根据类型确定返回数量：班级榜默认10，总榜默认20
+      const defaultLimit = type === 'class' ? 10 : 20;
+      const finalLimit = limit || defaultLimit;
+      
+      const ranked = results.slice(0, finalLimit).map((item, index) => ({
         rank: index + 1,
         ...item
       }));
-      
-      return json({ success: true, rank: ranked });
+
+      return json({ 
+        success: true, 
+        rank: ranked,
+        type: type || 'all',
+        total: results.length
+      });
     }
+
 
     /* ========================= 新增：阅读历史与问答系统 API ========================== */
 
