@@ -24,6 +24,53 @@ async function checkUserRestricted(nickname) {
   return !user.className || user.isActive === false;
 }
 
+// ===== 辅助函数：检查并更新会员状态 =====
+async function checkAndUpdateMembership(nickname, user, env) {
+  // 如果没有会员信息，初始化为普通会员
+  if (!user.membership) {
+    user.membership = { 
+      type: "basic",
+      expiresAt: null,
+      autoDowngrade: true
+    };
+    await env.TYPEREADING_KV.put("user:" + nickname, JSON.stringify(user));
+    return user.membership;
+  }
+  
+  // 检查是否过期（高级会员）
+  if (user.membership.type === "premium" && user.membership.expiresAt) {
+    const today = new Date().toISOString().split('T')[0];
+    if (today > user.membership.expiresAt && user.membership.autoDowngrade !== false) {
+      // 自动降级为普通会员
+      user.membership.type = "basic";
+      user.membership.expiresAt = null;
+      await env.TYPEREADING_KV.put("user:" + nickname, JSON.stringify(user));
+    }
+  }
+  
+  return user.membership;
+}
+
+// ===== 辅助函数：获取用户完整信息（含会员状态）=====
+async function getUserWithMembership(nickname, env) {
+  const userKey = "user:" + nickname;
+  const data = await env.TYPEREADING_KV.get(userKey);
+  if (!data) return null;
+  
+  const user = JSON.parse(data);
+  const membership = await checkAndUpdateMembership(nickname, user, env);
+  
+  return {
+    nickname: user.nickname,
+    realName: user.realName || "",
+    gender: user.gender || "",
+    className: user.className || "",
+    isActive: user.isActive !== false,
+    membership: membership,
+    createdAt: user.createdAt
+  };
+}
+
 // ===== 辅助函数：获取本周阅读材料（受限用户用） =====
 async function getWeeklyReadingContent(nickname, clientDate) {
   // 计算本周一日期
@@ -173,7 +220,12 @@ function getNextMonday(dateStr) {
         realName: "",
         gender: "",
         className: "",
-        isActive: true,  // ← 新增：默认激活
+        isActive: true,
+        membership: {
+          type: "basic",
+          expiresAt: null,
+          autoDowngrade: true
+        },
         createdAt: new Date().toISOString()
       };
 
@@ -185,13 +237,13 @@ function getNextMonday(dateStr) {
           realName: "",
           gender: "",
           className: "",
-          isActive: true  // ← 新增
+          isActive: true,
+          membership: userData.membership
         }
       });
     }
 
-
-    /* ========================= 学生登录 ========================== */
+       /* ========================= 学生登录 ========================== */
     if (path === "auth/login" && request.method === "POST") {
       const { nickname, password } = await request.json();
       if (!nickname) {
@@ -209,16 +261,21 @@ function getNextMonday(dateStr) {
         return json({ success: false, message: "密码错误" });
       }
 
-      return json({ success: true, user });
-    }
+      // 检查并更新会员状态
+      const membership = await checkAndUpdateMembership(nickname, user, env);
 
-    /* ========================= 教师登录 ========================== */
-    if (path === "admin/login" && request.method === "POST") {
-      const { password } = await request.json();
-      if (password === "teacher123") {
-        return json({ success: true });
-      }
-      return json({ success: false, message: "密码错误" });
+      return json({ 
+        success: true, 
+        user: {
+          nickname: user.nickname,
+          realName: user.realName || "",
+          gender: user.gender || "",
+          className: user.className || "",
+          isActive: user.isActive !== false,
+          membership: membership,
+          createdAt: user.createdAt
+        }
+      });
     }
 
     /* ========================= 获取所有学生 ========================== */
@@ -243,12 +300,20 @@ function getNextMonday(dateStr) {
         const data = await env.TYPEREADING_KV.get(key.name);
         if (data) {
           const user = JSON.parse(data);
+          
+          // 检查并更新会员状态
+          const membership = await checkAndUpdateMembership(user.nickname, user, env);
+          
           user.totalReadingWords = readingRecords
             .filter(r => r.nickname === user.nickname)
             .reduce((sum, r) => sum + (r.wordCount || 0), 0);
           user.totalTypingWords = typingRecords
             .filter(r => r.nickname === user.nickname)
             .reduce((sum, r) => sum + (r.wordCount || r.content?.length || 0), 0);
+
+          // 确保返回会员信息
+          user.membership = membership;
+          
           students.push(user);
         }
       }
@@ -275,6 +340,57 @@ function getNextMonday(dateStr) {
 
       await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
       return json({ success: true });
+    }
+
+        /* ========================= 教师更新会员信息 ========================== */
+    if (path === "admin/membership/update" && request.method === "POST") {
+      const { nickname, membership, payment } = await request.json();
+      
+      if (!nickname) {
+        return json({ success: false, message: "昵称不能为空" });
+      }
+      
+      if (!membership || !membership.type) {
+        return json({ success: false, message: "会员类型不能为空" });
+      }
+
+      const userKey = "user:" + nickname;
+      const data = await env.TYPEREADING_KV.get(userKey);
+      if (!data) {
+        return json({ success: false, message: "用户不存在" });
+      }
+
+      const user = JSON.parse(data);
+      
+      // 更新会员信息
+      user.membership = {
+        type: membership.type,
+        expiresAt: membership.type === "premium" ? membership.expiresAt : null,
+        autoDowngrade: membership.autoDowngrade !== false,
+        updatedAt: new Date().toISOString()
+      };
+
+      // 保存缴费记录（如果有）
+      if (payment && payment.amount) {
+        const paymentKey = "payment:" + nickname + ":" + Date.now();
+        await env.TYPEREADING_KV.put(paymentKey, JSON.stringify({
+          nickname,
+          amount: parseFloat(payment.amount),
+          note: payment.note || "",
+          date: payment.date || new Date().toISOString(),
+          type: "membership",
+          membershipType: membership.type,
+          expiresAt: user.membership.expiresAt
+        }));
+      }
+
+      await env.TYPEREADING_KV.put(userKey, JSON.stringify(user));
+      
+      return json({ 
+        success: true, 
+        message: "会员信息已更新",
+        membership: user.membership
+      });
     }
 
     /* ========================= 删除单个学生 ========================== */
