@@ -1008,16 +1008,26 @@ if (path === "admin/content/save") {
       return json({ success: false, message: "内容不存在" });
     }
 
-/* ========================= 获取今日阅读内容（修复版 - 支持周限制） ========================== */
+/* ========================= 获取今日阅读内容（修复版 - 支持会员周限制） ========================== */
 if (path === "content/reading") {
   const body = await request.json().catch(() => ({}));
   const { nickname, className, date: clientDate } = body;
+
+  // 获取用户信息并检查会员状态
+  let membership = { type: "basic" };
+  if (nickname) {
+    const userKey = "user:" + nickname;
+    const userData = await env.TYPEREADING_KV.get(userKey);
+    if (userData) {
+      const user = JSON.parse(userData);
+      membership = await checkAndUpdateMembership(nickname, user, env);
+    }
+  }
   
-  // 权限检查
-  const isRestricted = await checkUserRestricted(nickname);
-  
-  // ===== 受限用户：每周一篇固定材料 =====
-  if (isRestricted && nickname) {
+  const isPremium = membership.type === "premium";
+
+  // ===== 普通会员：每周一篇固定材料 =====
+  if (!isPremium && nickname) {
     // 1. 检查本周是否已分配材料
     let weeklyContent = await getWeeklyReadingContent(nickname, clientDate);
     
@@ -1032,7 +1042,7 @@ if (path === "content/reading") {
           wordCount: weeklyContent.wordCount,
           difficulty: weeklyContent.difficulty
         },
-        restricted: true,
+        membership: "basic",
         weeklyAssigned: true,
         canRead: true
       });
@@ -1089,8 +1099,8 @@ if (path === "content/reading") {
       return json({ 
         success: true, 
         content: null,
-        restricted: true,
-        message: "暂无可用阅读材料"
+        membership: "basic",
+        message: "普通会员限每周一篇，升级高级会员无限制"
       });
     }
     
@@ -1110,14 +1120,14 @@ if (path === "content/reading") {
         wordCount: selectedContent.wordCount,
         difficulty: selectedContent.difficulty
       },
-      restricted: true,
+      membership: "basic",
       weeklyAssigned: true,
       canRead: true,
       firstAssign: true
     });
   }
-  
-  // ===== 正常用户：每天新材料（原有逻辑）=====
+
+  // ===== 高级会员：每天新材料 =====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1169,27 +1179,37 @@ if (path === "content/reading") {
     contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     selectedContent = contents[0];
   }
-
+  
   return json({ 
     success: true, 
     content: selectedContent,
-    restricted: false,
+    membership: "premium",
     canRead: true
   });
 }
 
-/* ========================= 获取今日阅读内容（修复版 - 支持周限制） ========================== */
-if (path === "content/reading") {
+/* ========================= 获取打字练习内容（修复版 - 支持会员周限制） ========================== */
+if (path === "content/typing") {
   const body = await request.json().catch(() => ({}));
-  const { nickname, className, date: clientDate } = body;
+  const { nickname, className } = body;
+
+  // 获取用户信息并检查会员状态
+  let membership = { type: "basic" };
+  if (nickname) {
+    const userKey = "user:" + nickname;
+    const userData = await env.TYPEREADING_KV.get(userKey);
+    if (userData) {
+      const user = JSON.parse(userData);
+      membership = await checkAndUpdateMembership(nickname, user, env);
+    }
+  }
   
-  // 权限检查
-  const isRestricted = await checkUserRestricted(nickname);
-  
-  // ===== 受限用户：每周一篇固定材料 =====
-  if (isRestricted && nickname) {
+  const isPremium = membership.type === "premium";
+
+  // ===== 普通会员：每周一篇固定材料 =====
+  if (!isPremium && nickname) {
     // 1. 检查本周是否已分配材料
-    let weeklyContent = await getWeeklyReadingContent(nickname, clientDate);
+    let weeklyContent = await getWeeklyTypingContent(nickname, null);
     
     if (weeklyContent) {
       // 已分配，返回同一篇
@@ -1202,9 +1222,8 @@ if (path === "content/reading") {
           wordCount: weeklyContent.wordCount,
           difficulty: weeklyContent.difficulty
         },
-        restricted: true,
-        weeklyAssigned: true,
-        canRead: true
+        membership: "basic",
+        weeklyAssigned: true
       });
     }
     
@@ -1224,17 +1243,17 @@ if (path === "content/reading") {
       }
     }
     
-    const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+    const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
     const contents = [];
     
-    for (const key of keys) {
+    for (const key of itemKeys) {
       const data = await env.TYPEREADING_KV.get(key.name);
       if (data) {
         const content = JSON.parse(data);
         const isActive = content.isActive !== false;
-        const useForReading = content.useForReading === true;
+        const useForTyping = content.useForTyping === true;
         
-        if (!isActive || !useForReading) continue;
+        if (!isActive || !useForTyping) continue;
         
         let isMatch = false;
         if (content.targetType === "all" || !content.targetType) {
@@ -1259,8 +1278,8 @@ if (path === "content/reading") {
       return json({ 
         success: true, 
         content: null,
-        restricted: true,
-        message: "暂无可用阅读材料"
+        membership: "basic",
+        message: "普通会员限每周一篇，升级高级会员无限制"
       });
     }
     
@@ -1269,7 +1288,7 @@ if (path === "content/reading") {
     const selectedContent = contents[0];
     
     // 分配本周材料
-    await assignWeeklyReadingContent(nickname, clientDate, selectedContent);
+    await assignWeeklyTypingContent(nickname, null, selectedContent);
     
     return json({ 
       success: true, 
@@ -1280,14 +1299,13 @@ if (path === "content/reading") {
         wordCount: selectedContent.wordCount,
         difficulty: selectedContent.difficulty
       },
-      restricted: true,
+      membership: "basic",
       weeklyAssigned: true,
-      canRead: true,
       firstAssign: true
     });
   }
-  
-  // ===== 正常用户：每天新材料（原有逻辑）=====
+
+  // ===== 高级会员：正常返回班级内容 =====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1302,49 +1320,48 @@ if (path === "content/reading") {
       }
     }
   }
-  
-  const { keys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+
   const contents = [];
-  
-  for (const key of keys) {
+  const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+
+  for (const key of itemKeys) {
     const data = await env.TYPEREADING_KV.get(key.name);
-    if (data) {
-      const content = JSON.parse(data);
-      const isActive = content.isActive !== false;
-      const useForReading = content.useForReading === true;
-      
-      if (!isActive || !useForReading) continue;
-      
-      let isMatch = false;
-      if (content.targetType === "all" || !content.targetType) {
-        isMatch = true;
-      } else if (content.targetType === "group") {
-        isMatch = groupNames.includes(content.targetGroup);
-      } else if (content.targetType === "class") {
-        if (className) {
-          isMatch = content.targetClasses && content.targetClasses.includes(className);
-        } else {
-          isMatch = false;
-        }
-      }
-      
-      if (isMatch) {
-        contents.push(content);
-      }
+    if (!data) continue;
+
+    const content = JSON.parse(data);
+    const isActive = content.isActive !== false;
+    const useForTyping = content.useForTyping === true;
+
+    if (!isActive || !useForTyping) continue;
+
+    let isMatch = false;
+    if (content.targetType === "all" || !content.targetType) {
+      isMatch = true;
+    } else if (content.targetType === "group") {
+      isMatch = groupNames.includes(content.targetGroup);
+    } else if (content.targetType === "class") {
+      isMatch = content.targetClasses && content.targetClasses.includes(className);
+    }
+
+    if (isMatch) {
+      contents.push({
+        id: content.id,
+        title: content.title || "未命名",
+        content: content.content,
+        wordCount: content.wordCount || content.content.length,
+        difficulty: content.difficulty || "medium"
+      });
     }
   }
-  
-  let selectedContent = null;
-  if (contents.length > 0) {
-    contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    selectedContent = contents[0];
-  }
+
+  const selectedContent = contents.length > 0 
+    ? contents[Math.floor(Math.random() * contents.length)]
+    : null;
 
   return json({ 
     success: true, 
     content: selectedContent,
-    restricted: false,
-    canRead: true
+    membership: "premium"
   });
 }
 
