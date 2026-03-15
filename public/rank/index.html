@@ -6,28 +6,159 @@
     <title>排行榜 - TypeReading Hub</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
+        
         .container { max-width: 800px; margin: 0 auto; }
+        
+        .back { 
+            color: white; 
+            text-decoration: none; 
+            display: inline-block; 
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .back:hover { text-decoration: underline; }
+        
         .card {
             background: white;
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        h1 { color: #333; margin-bottom: 20px; text-align: center; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; font-weight: 600; }
+        
+        h1 { 
+            color: #333; 
+            margin-bottom: 20px; 
+            text-align: center;
+            font-size: 24px;
+        }
+        
+        /* 标签切换样式 */
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .tab {
+            padding: 10px 30px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tab:hover:not(.active) {
+            background: #f0f0ff;
+        }
+        
+        /* 当前班级提示 */
+        .class-info {
+            text-align: center;
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        
+        /* 表格样式 */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        
+        th, td { 
+            padding: 15px 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #eee; 
+        }
+        
+        th { 
+            background: #f8f9fa; 
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+        
         tr:hover { background: #f8f9fa; }
-        .rank-1 { color: gold; font-size: 20px; }
-        .rank-2 { color: silver; font-size: 20px; }
-        .rank-3 { color: #cd7f32; font-size: 20px; }
-        .wpm { color: #667eea; font-weight: bold; }
+        
+        /* 排名样式 */
+        .rank-cell {
+            font-weight: bold;
+            font-size: 16px;
+            width: 60px;
+        }
+        
+        .rank-medal {
+            font-size: 24px;
+        }
+        
+        /* 前三名特殊背景 */
+        tr.top-1 { background: linear-gradient(90deg, #fff9e6 0%, #fff 100%); }
+        tr.top-2 { background: linear-gradient(90deg, #f5f5f5 0%, #fff 100%); }
+        tr.top-3 { background: linear-gradient(90deg, #fff5eb 0%, #fff 100%); }
+        
+        /* 姓名和班级 */
+        .name-cell {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .class-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* WPM 和准确率 */
+        .wpm { 
+            color: #667eea; 
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .accuracy {
+            color: #52c41a;
+            font-weight: 500;
+        }
+        
+        /* 空状态 */
+        .empty { 
+            text-align: center; 
+            padding: 60px; 
+            color: #999; 
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        /* 底部按钮 */
+        .footer {
+            text-align: center; 
+            margin-top: 25px;
+        }
+        
         .btn {
             padding: 10px 24px;
             border: none;
@@ -37,61 +168,211 @@
             text-decoration: none;
             display: inline-block;
         }
-        .btn-secondary { background: #f0f0f0; color: #333; }
-        .back { color: #667eea; text-decoration: none; display: inline-block; margin-bottom: 20px; }
-        .empty { text-align: center; padding: 60px; color: #999; }
+        
+        .btn-secondary { 
+            background: #f0f0f0; 
+            color: #333; 
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <a href="/" class="back">← 返回首页</a>
+        
         <div class="card">
-            <h1>🏆 打字排行榜 TOP 20</h1>
-            <div id="rankingList">
-                <div class="empty">加载中...</div>
+            <h1>🏆 打字速度排行榜</h1>
+            
+            <!-- 标签切换 -->
+            <div class="tab-container">
+                <button class="tab active" id="classTab" onclick="switchTab('class')">
+                    📚 班级榜
+                </button>
+                <button class="tab" id="allTab" onclick="switchTab('all')">
+                    🌍 总榜
+                </button>
             </div>
-            <div style="text-align: center; margin-top: 20px;">
+            
+            <!-- 当前班级信息 -->
+            <div class="class-info" id="classInfo"></div>
+            
+            <!-- 排行榜列表 -->
+            <div id="rankingList">
+                <div class="loading">加载中</div>
+            </div>
+            
+            <div class="footer">
                 <a href="/" class="btn btn-secondary">返回首页</a>
             </div>
         </div>
     </div>
 
     <script>
-        async function loadRanking() {
-    try {
-        const res = await fetch('/api/rank/typing', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({limit: 20})
-        });
-        const data = await res.json();
-        const listDiv = document.getElementById('rankingList');
+        let currentTab = 'class'; // 默认显示班级榜
+        let currentUser = null;
         
-        if (data.success && data.rank && data.rank.length > 0) {
-            let html = '<table><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>WPM</th><th>准确率</th></tr></thead><tbody>';
-            data.rank.forEach((r, i) => {
-                const rankClass = i < 3 ? `rank-${i + 1}` : '';
-                const medal = ['🥇','🥈','🥉'][i] || (i + 1);
-                const displayRank = i < 3 ? `<span class="${rankClass}">${medal}</span>` : medal;
-                html += `<tr>
-                    <td>${displayRank}</td>
-                    <td><strong>${r.realName || r.nickname || '-'}</strong></td>
-                    <td>${r.className || '-'}</td>
-                    <td class="wpm">${r.wpm || 0}</td>
-                    <td>${r.accuracy || 0}%</td>
-                </tr>`;
+        // 获取当前登录用户
+        function getCurrentUser() {
+            const userStr = localStorage.getItem('currentUser');
+            if (userStr) {
+                try {
+                    return JSON.parse(userStr);
+                } catch(e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+        
+        // 切换标签
+        function switchTab(type) {
+            currentTab = type;
+            
+            // 更新标签样式
+            document.getElementById('classTab').classList.toggle('active', type === 'class');
+            document.getElementById('allTab').classList.toggle('active', type === 'all');
+            
+            // 加载对应榜单
+            loadRanking();
+        }
+        
+        // 加载排行榜
+        async function loadRanking() {
+            const listDiv = document.getElementById('rankingList');
+            const classInfoDiv = document.getElementById('classInfo');
+            
+            listDiv.innerHTML = '<div class="loading">加载中</div>';
+            
+            currentUser = getCurrentUser();
+            
+            // 构建请求参数
+            const params = {
+                type: currentTab,
+                limit: currentTab === 'class' ? 10 : 20
+            };
+            
+            // 班级榜需要传递班级名称
+            if (currentTab === 'class' && currentUser && currentUser.className) {
+                params.className = currentUser.className;
+                classInfoDiv.textContent = `当前班级：${currentUser.className}`;
+            } else if (currentTab === 'class') {
+                classInfoDiv.textContent = '您暂未分配班级';
+            } else {
+                classInfoDiv.textContent = '全部学生排行';
+            }
+            
+            try {
+                const res = await fetch('/api/rank/typing', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(params)
+                });
+                
+                const data = await res.json();
+                
+                if (data.success && data.rank && data.rank.length > 0) {
+                    renderRanking(data.rank);
+                } else {
+                    listDiv.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">🏃</div>
+                            <div>${currentTab === 'class' ? '班级暂无排行数据' : '暂无排行数据'}</div>
+                            <div style="font-size: 13px; margin-top: 10px;">快来成为第一个吧！</div>
+                        </div>
+                    `;
+                }
+            } catch(e) {
+                listDiv.innerHTML = `
+                    <div class="empty">
+                        <div class="empty-icon">⚠️</div>
+                        <div>加载失败，请稍后重试</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // 渲染排行榜
+        function renderRanking(rankList) {
+            const listDiv = document.getElementById('rankingList');
+            const medals = ['🥇', '🥈', '🥉'];
+            
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">排名</th>
+                            <th>姓名</th>
+                            <th style="width: 100px;">WPM</th>
+                            <th style="width: 80px;">准确率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            rankList.forEach((r, i) => {
+                const rank = i + 1;
+                const medal = medals[i] || rank;
+                const isTop3 = i < 3;
+                const topClass = isTop3 ? `top-${rank}` : '';
+                
+                html += `
+                    <tr class="${topClass}">
+                        <td class="rank-cell">
+                            <span class="${isTop3 ? 'rank-medal' : ''}">${medal}</span>
+                        </td>
+                        <td class="name-cell">
+                            <div>${escapeHtml(r.realName || r.nickname)}</div>
+                            ${currentTab === 'all' ? `<span class="class-tag">${escapeHtml(r.className)}</span>` : ''}
+                        </td>
+                        <td class="wpm">${r.wpm}</td>
+                        <td class="accuracy">${r.accuracy}%</td>
+                    </tr>
+                `;
             });
+            
             html += '</tbody></table>';
             listDiv.innerHTML = html;
-        } else {
-            listDiv.innerHTML = '<div class="empty">暂无排行数据，快来成为第一个吧！</div>';
         }
-    } catch(e) {
-        document.getElementById('rankingList').innerHTML = '<div class="empty">加载失败</div>';
-    }
-}
-
         
+        // HTML 转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        
+        // 页面加载时自动加载
         loadRanking();
     </script>
 </body>
