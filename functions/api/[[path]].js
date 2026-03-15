@@ -71,55 +71,74 @@ async function getUserWithMembership(nickname, env) {
   };
 }
 
-// ===== 辅助函数：获取本周阅读材料（受限用户用） =====
-async function getWeeklyReadingContent(nickname, clientDate) {
-  // 计算本周一日期
+// ===== 辅助函数：获取本周阅读材料（改为7天周期）=====
+async function getWeeklyReadingContent(nickname, clientDate, env) {
+  if (!nickname) return null;
+  
+  // 查找用户的首次分配记录
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "weekly:reading:" + nickname + ":" });
+  
+  if (keys.length === 0) {
+    return null; // 从未分配过
+  }
+  
+  // 找到最新的分配记录
+  let latestKey = null;
+  let latestDate = null;
+  
+  for (const key of keys) {
+    // 从key中提取日期：weekly:reading:nickname:YYYY-MM-DD
+    const parts = key.name.split(":");
+    if (parts.length >= 4) {
+      const dateStr = parts[3];
+      if (!latestDate || dateStr > latestDate) {
+        latestDate = dateStr;
+        latestKey = key.name;
+      }
+    }
+  }
+  
+  if (!latestKey) return null;
+  
+  const data = await env.TYPEREADING_KV.get(latestKey);
+  if (!data) return null;
+  
+  const content = JSON.parse(data);
+  
+  // 检查是否在7天有效期内
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
   } else {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
   }
   
-  const d = new Date(today);
-  const dayOfWeek = d.getDay();
-  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-  const weekKey = "weekly:reading:" + nickname + ":" + weekStart;
-  
-  // 检查本周是否已分配材料
-  const assigned = await env.TYPEREADING_KV.get(weekKey);
-  if (assigned) {
-    return JSON.parse(assigned); // 返回已分配的材料
+  // 如果今天在有效期（分配日期+7天）内，返回内容
+  if (content.expiresAt && today <= content.expiresAt) {
+    return content;
   }
   
-  return null; // 本周还未分配
+  return null; // 已过期
 }
 
-// ===== 辅助函数：分配本周阅读材料（受限用户用） =====
-async function assignWeeklyReadingContent(nickname, clientDate, content) {
+// ===== 辅助函数：分配本周阅读材料（改为7天周期）=====
+async function assignWeeklyReadingContent(nickname, clientDate, content, env) {
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
   } else {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
   }
   
-  const d = new Date(today);
-  const dayOfWeek = d.getDay();
-  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-  const weekKey = "weekly:reading:" + nickname + ":" + weekStart;
+  // 计算7天后的日期
+  const expireDate = new Date(today);
+  expireDate.setDate(expireDate.getDate() + 7);
+  const expiresAt = expireDate.getFullYear() + "-" + String(expireDate.getMonth() + 1).padStart(2, '0') + "-" + String(expireDate.getDate()).padStart(2, '0');
   
-  // 保存本周分配的材料（7天过期或永久保存）
+  const weekKey = "weekly:reading:" + nickname + ":" + today;
+  
   await env.TYPEREADING_KV.put(weekKey, JSON.stringify({
     contentId: content.id,
     title: content.title,
@@ -127,55 +146,71 @@ async function assignWeeklyReadingContent(nickname, clientDate, content) {
     wordCount: content.wordCount,
     difficulty: content.difficulty,
     assignedAt: today,
-    expiresAt: getNextMonday(today) // 下周一过期
+    expiresAt: expiresAt // 7天后过期
   }));
 }
 
-// ===== 辅助函数：获取本周打字材料（受限用户用） =====
-async function getWeeklyTypingContent(nickname, clientDate) {
+// ===== 辅助函数：获取本周打字材料（改为7天周期）=====
+async function getWeeklyTypingContent(nickname, clientDate, env) {
+  if (!nickname) return null;
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "weekly:typing:" + nickname + ":" });
+  
+  if (keys.length === 0) {
+    return null;
+  }
+  
+  let latestKey = null;
+  let latestDate = null;
+  
+  for (const key of keys) {
+    const parts = key.name.split(":");
+    if (parts.length >= 4) {
+      const dateStr = parts[3];
+      if (!latestDate || dateStr > latestDate) {
+        latestDate = dateStr;
+        latestKey = key.name;
+      }
+    }
+  }
+  
+  if (!latestKey) return null;
+  
+  const data = await env.TYPEREADING_KV.get(latestKey);
+  if (!data) return null;
+  
+  const content = JSON.parse(data);
+  
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
   } else {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
   }
   
-  const d = new Date(today);
-  const dayOfWeek = d.getDay();
-  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-  const weekKey = "weekly:typing:" + nickname + ":" + weekStart;
-  
-  const assigned = await env.TYPEREADING_KV.get(weekKey);
-  if (assigned) {
-    return JSON.parse(assigned);
+  if (content.expiresAt && today <= content.expiresAt) {
+    return content;
   }
   
   return null;
 }
 
-// ===== 辅助函数：分配本周打字材料（受限用户用） =====
-async function assignWeeklyTypingContent(nickname, clientDate, content) {
+// ===== 辅助函数：分配本周打字材料（改为7天周期）=====
+async function assignWeeklyTypingContent(nickname, clientDate, content, env) {
   let today;
   if (clientDate && typeof clientDate === 'string' && clientDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     today = clientDate;
   } else {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    today = year + "-" + month + "-" + day;
+    today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, '0') + "-" + String(now.getDate()).padStart(2, '0');
   }
   
-  const d = new Date(today);
-  const dayOfWeek = d.getDay();
-  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-  const weekStart = new Date(d.setDate(diff)).toISOString().split("T")[0];
-  const weekKey = "weekly:typing:" + nickname + ":" + weekStart;
+  const expireDate = new Date(today);
+  expireDate.setDate(expireDate.getDate() + 7);
+  const expiresAt = expireDate.getFullYear() + "-" + String(expireDate.getMonth() + 1).padStart(2, '0') + "-" + String(expireDate.getDate()).padStart(2, '0');
+  
+  const weekKey = "weekly:typing:" + nickname + ":" + today;
   
   await env.TYPEREADING_KV.put(weekKey, JSON.stringify({
     contentId: content.id,
@@ -184,21 +219,10 @@ async function assignWeeklyTypingContent(nickname, clientDate, content) {
     wordCount: content.wordCount,
     difficulty: content.difficulty,
     assignedAt: today,
-    expiresAt: getNextMonday(today)
+    expiresAt: expiresAt
   }));
 }
 
-// ===== 辅助函数：获取下周一日期 =====
-function getNextMonday(dateStr) {
-  const d = new Date(dateStr);
-  const dayOfWeek = d.getDay();
-  const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) + 7;
-  const nextMonday = new Date(d.setDate(diff));
-  const year = nextMonday.getFullYear();
-  const month = String(nextMonday.getMonth() + 1).padStart(2, '0');
-  const day = String(nextMonday.getDate()).padStart(2, '0');
-  return year + "-" + month + "-" + day;
-}
 
   try {
     /* ========================= 学生注册 ========================== */
@@ -1026,10 +1050,10 @@ if (path === "content/reading") {
   
   const isPremium = membership.type === "premium";
 
-  // ===== 普通会员：每周一篇固定材料 =====
+  // ===== 普通会员：本周固定一篇（基于首次登录时的最新内容）=====
   if (!isPremium && nickname) {
     // 1. 检查本周是否已分配材料
-    let weeklyContent = await getWeeklyReadingContent(nickname, clientDate);
+    let weeklyContent = await getWeeklyReadingContent(nickname, clientDate, env);
     
     if (weeklyContent) {
       // 已分配，返回同一篇
@@ -1048,7 +1072,7 @@ if (path === "content/reading") {
       });
     }
     
-    // 2. 本周未分配，获取最新材料并分配
+    // 2. 本周未分配，获取当前最新材料并分配
     let groupNames = [];
     if (className) {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1100,16 +1124,16 @@ if (path === "content/reading") {
         success: true, 
         content: null,
         membership: "basic",
-        message: "普通会员限每周一篇，升级高级会员无限制"
+        message: "普通会员限每周一篇，请联系老师开通高级会员"
       });
     }
     
-    // 按最新排序，取第一篇
+    // 按最新排序，取第一篇（当前最新）
     contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     const selectedContent = contents[0];
     
-    // 分配本周材料
-    await assignWeeklyReadingContent(nickname, clientDate, selectedContent);
+    // 分配本周材料（保存首次登录时的内容）
+    await assignWeeklyReadingContent(nickname, clientDate, selectedContent, env);
     
     return json({ 
       success: true, 
@@ -1127,7 +1151,7 @@ if (path === "content/reading") {
     });
   }
 
-  // ===== 高级会员：每天新材料 =====
+  // ===== 高级会员：每次获取当前最新内容 =====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1176,6 +1200,7 @@ if (path === "content/reading") {
   
   let selectedContent = null;
   if (contents.length > 0) {
+    // 高级会员：每次都取最新内容
     contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     selectedContent = contents[0];
   }
@@ -1206,10 +1231,10 @@ if (path === "content/typing") {
   
   const isPremium = membership.type === "premium";
 
-  // ===== 普通会员：每周一篇固定材料 =====
+  // ===== 普通会员：本周固定一篇（基于首次登录时的最新内容）=====
   if (!isPremium && nickname) {
     // 1. 检查本周是否已分配材料
-    let weeklyContent = await getWeeklyTypingContent(nickname, null);
+    let weeklyContent = await getWeeklyTypingContent(nickname, null, env);
     
     if (weeklyContent) {
       // 已分配，返回同一篇
@@ -1227,7 +1252,7 @@ if (path === "content/typing") {
       });
     }
     
-    // 2. 本周未分配，获取最新材料并分配
+    // 2. 本周未分配，获取当前最新材料并分配
     let groupNames = [];
     if (className) {
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1279,16 +1304,16 @@ if (path === "content/typing") {
         success: true, 
         content: null,
         membership: "basic",
-        message: "普通会员限每周一篇，升级高级会员无限制"
+        message: "普通会员限每周一篇，请联系老师开通高级会员"
       });
     }
     
-    // 按最新排序，取第一篇
+    // 按最新排序，取第一篇（当前最新）
     contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     const selectedContent = contents[0];
     
-    // 分配本周材料
-    await assignWeeklyTypingContent(nickname, null, selectedContent);
+    // 分配本周材料（保存首次登录时的内容）
+    await assignWeeklyTypingContent(nickname, null, selectedContent, env);
     
     return json({ 
       success: true, 
@@ -1305,7 +1330,7 @@ if (path === "content/typing") {
     });
   }
 
-  // ===== 高级会员：正常返回班级内容 =====
+  // ===== 高级会员：每次获取当前最新内容 =====
   let groupNames = [];
   if (className) {
     const { keys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
@@ -1349,14 +1374,15 @@ if (path === "content/typing") {
         title: content.title || "未命名",
         content: content.content,
         wordCount: content.wordCount || content.content.length,
-        difficulty: content.difficulty || "medium"
+        difficulty: content.difficulty || "medium",
+        updatedAt: content.updatedAt || content.createdAt
       });
     }
   }
 
-  const selectedContent = contents.length > 0 
-    ? contents[Math.floor(Math.random() * contents.length)]
-    : null;
+  // 高级会员：按最新排序，取第一篇
+  contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const selectedContent = contents.length > 0 ? contents[0] : null;
 
   return json({ 
     success: true, 
