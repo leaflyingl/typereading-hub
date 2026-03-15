@@ -6,261 +6,475 @@
   <title>阅读打卡 - TypeReading Hub</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .header {
-      background: white;
-      border-radius: 16px;
-      padding: 20px 30px;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .header h1 {
-      color: #333;
-      font-size: 24px;
-    }
-    .back-btn {
-      color: #667eea;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 30px;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }
-    .loading {
-      text-align: center;
-      color: #999;
-      padding: 40px;
-    }
-    .checked-in {
-      text-align: center;
-      padding: 40px;
-    }
-    .checked-in-icon {
-      font-size: 64px;
-      color: #52c41a;
-      margin-bottom: 20px;
-    }
-    .checked-in h2 {
-      color: #333;
-      margin-bottom: 10px;
-    }
-    .checked-in p {
-      color: #666;
-      margin-bottom: 20px;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-    .stat-item {
-      background: #f8f9fa;
-      padding: 20px;
-      border-radius: 12px;
-      text-align: center;
-    }
-    .stat-value {
-      font-size: 28px;
-      font-weight: bold;
-      color: #667eea;
-    }
-    .stat-label {
-      color: #666;
-      font-size: 14px;
-      margin-top: 5px;
-    }
-    .article-card {
-      background: #f8f9fa;
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 20px;
-    }
-    .article-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 15px;
-    }
-    .article-content {
-      color: #555;
-      line-height: 1.8;
-      font-size: 16px;
-      white-space: pre-wrap;
-    }
-    .word-count {
-      color: #999;
-      font-size: 14px;
-      margin-top: 15px;
-      text-align: right;
-    }
-    .checkin-btn {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 18px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .checkin-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    }
-    .checkin-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
-    .no-content {
-      text-align: center;
-      padding: 60px 20px;
-      color: #666;
-    }
-    .no-content-icon {
-      font-size: 48px;
-      margin-bottom: 20px;
-    }
-    .toast {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 16px 24px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 1000;
-      animation: slideIn 0.3s ease;
-    }
-    .toast.success { background: #52c41a; }
-    .toast.error { background: #ff4d4f; }
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    
-    /* 新增：课后练习区域样式 */
-    .qna-section {
-      display: none;
-      margin-top: 20px;
-    }
-    .qna-title {
-      font-size: 18px;
-      color: #333;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #667eea;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .question-item {
-      background: #f8f9fa;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 15px;
-      border-left: 3px solid #667eea;
-    }
-    .question-header {
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 12px;
-      font-size: 16px;
-    }
-    .question-type {
-      background: #e6f7ff;
-      color: #1890ff;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin-left: 8px;
-      font-weight: normal;
-    }
-    .options-list {
-      margin: 10px 0;
-      padding-left: 5px;
-    }
-    .option-label {
-      display: block;
-      padding: 8px;
-      margin: 5px 0;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .option-label:hover {
-      background: #e6f7ff;
-    }
-    .option-label input[type="radio"] {
-      margin-right: 8px;
-    }
-    .answer-textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d9d9d9;
-      border-radius: 8px;
-      min-height: 100px;
-      resize: vertical;
-      font-family: inherit;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-    .answer-textarea:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    .submit-answer-btn {
-      background: #667eea;
-      color: white;
-      border: none;
-      padding: 10px 24px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      margin-top: 10px;
-      font-weight: 500;
-    }
-    .submit-answer-btn:hover {
-      background: #5a67d8;
-    }
-    .submit-answer-btn:disabled {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-    .answer-status {
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-    .answer-status.submitted {
-      background: #f6ffed;
-      color: #52c41a;
-    }
-    .answer-status.pending {
-      background: #fff7e6;
-      color: #fa8c16;
-    }
+
+:root {
+  --primary: #667eea;
+  --primary-dark: #764ba2;
+  --bg-gradient-start: #667eea;
+  --bg-gradient-end: #764ba2;
+  --card-bg: #fff;
+  --text: #333;
+  --text-secondary: #666;
+  --border: #e8e8e8;
+  --success: #52c41a;
+  --warning: #faad14;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+  min-height: 100vh;
+  padding: 15px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* 头部导航 */
+.header {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+  color: var(--text);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-btn {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.back-btn:active {
+  background: #f0f5ff;
+}
+
+/* 卡片基础样式 */
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+/* 加载状态 */
+.loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px;
+  font-size: 15px;
+}
+
+/* 已打卡状态 */
+.checked-in {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.checked-in-icon {
+  font-size: 56px;
+  margin-bottom: 15px;
+}
+
+.checked-in h2 {
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 22px;
+}
+
+.checked-in p {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-size: 15px;
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.stat-item {
+  background: #f8f9fa;
+  padding: 18px 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* 文章卡片 */
+.article-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.article-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.article-content {
+  color: #555;
+  line-height: 1.9;
+  font-size: 16px;
+  white-space: pre-wrap;
+}
+
+.word-count {
+  color: #999;
+  font-size: 13px;
+  margin-top: 15px;
+  text-align: right;
+}
+
+/* 打卡按钮 */
+.checkin-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 56px;
+}
+
+.checkin-btn:active {
+  transform: scale(0.98);
+}
+
+.checkin-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* 无内容状态 */
+.no-content {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-secondary);
+}
+
+.no-content-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.no-content h3 {
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+/* Toast 提示 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 14px 22px;
+  border-radius: 10px;
+  color: white;
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+  font-size: 14px;
+  max-width: 80%;
+  word-break: break-all;
+}
+
+.toast.success { background: var(--success); }
+.toast.error { background: #ff4d4f; }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* 课后练习区域 */
+.qna-section {
+  display: none;
+  margin-top: 0;
+}
+
+.qna-title {
+  font-size: 17px;
+  color: var(--text);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.question-item {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 15px;
+  border-left: 3px solid var(--primary);
+}
+
+.question-header {
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.question-type {
+  background: #e6f7ff;
+  color: #1890ff;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.options-list {
+  margin: 12px 0;
+}
+
+.option-label {
+  display: block;
+  padding: 12px;
+  margin: 8px 0;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+  background: white;
+  border: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.option-label:active {
+  background: #e6f7ff;
+  border-color: var(--primary);
+}
+
+.option-label input[type="radio"] {
+  margin-right: 10px;
+}
+
+.answer-textarea {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 15px;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.answer-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.submit-answer-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  margin-top: 12px;
+  font-weight: 500;
+  min-height: 44px;
+}
+
+.submit-answer-btn:active {
+  background: var(--primary-dark);
+}
+
+.submit-answer-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.answer-status {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.answer-status.submitted {
+  background: #f6ffed;
+  color: var(--success);
+}
+
+.answer-status.pending {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+/* ==================== Pad 适配 ==================== */
+
+@media (min-width: 768px) {
+  body {
+    padding: 25px;
+  }
+  
+  .container {
+    max-width: 800px;
+  }
+  
+  .header {
+    padding: 20px 30px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+  }
+  
+  .header h1 {
+    font-size: 24px;
+  }
+  
+  .card {
+    padding: 30px;
+    border-radius: 16px;
+    margin-bottom: 25px;
+  }
+  
+  .article-title {
+    font-size: 22px;
+  }
+  
+  .article-content {
+    font-size: 18px;
+    line-height: 2;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+  
+  .stat-value {
+    font-size: 32px;
+  }
+  
+  .question-item {
+    padding: 25px;
+  }
+  
+  .qna-title {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1000px;
+  }
+  
+  .article-content {
+    font-size: 19px;
+    line-height: 2.2;
+  }
+}
+
+/* 横屏手机优化 */
+@media (max-height: 500px) and (orientation: landscape) {
+  body {
+    padding: 10px;
+  }
+  
+  .header {
+    padding: 12px 20px;
+    margin-bottom: 10px;
+  }
+  
+  .card {
+    padding: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .article-content {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+}
+
+/* 暗黑模式 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --card-bg: #2a2a3a;
+    --text: #e8e8e8;
+    --text-secondary: #a0a0a0;
+    --border: #3a3a50;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .article-card,
+  .question-item,
+  .stat-item {
+    background: #323248;
+  }
+  
+  .article-content {
+    color: #c8c8d0;
+  }
+}
   </style>
 </head>
 <body>
