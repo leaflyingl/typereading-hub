@@ -410,7 +410,7 @@
                 html += '<tr class="' + topClass + '">' +
                     '<td class="rank-cell"><span class="rank-medal">' + medal + '</span></td>' +
                     '<td class="name-cell">' +
-                        '<div>' + escapeHtml(r.nickname || r.realName) + '</div>' +
+                        '<div>' + escapeHtml(r.realName || r.nickname) + '</div>' +
                         (showClassTag ? '<span class="class-tag">' + escapeHtml(r.className || '未分班') + '</span>' : '') +
                     '</td>' +
                     '<td class="wpm">' + (r.wpm || 0) + '</td>' +
