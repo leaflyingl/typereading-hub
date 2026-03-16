@@ -525,8 +525,7 @@ body {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     const isLoggedIn = currentUser && currentUser.nickname;
     const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
-    const canAnswer = isLoggedIn && membership.type === 'premium' && !(membership.expiresAt && new
-    Date().toISOString().split('T')[0] > membership.expiresAt);
+    const canAnswer = isLoggedIn && membership.type === 'premium' && !(membership.expiresAt && new Date().toISOString().split('T')[0] > membership.expiresAt);
 
     // 全局变量保存当前文章信息
     let currentArticleId = null;
@@ -601,63 +600,65 @@ function getTodayString() {
     }
 
     // 修复：渲染已打卡状态，正确显示文章信息
-    function renderCheckedIn(record) {
-      document.getElementById('content-area').innerHTML = `
-        <div class="card checked-in">
-          <div class="checked-in-icon">✅</div>
-          <h2>今日已完成阅读打卡</h2>
-          <p>文章：《${record.articleTitle || '未命名文章'}》</p>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-value">${record.wordCount || 0}</div>
-              <div class="stat-label">阅读字数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">1</div>
-              <div class="stat-label">打卡次数</div>
-            </div>
-          </div>
-        </div>
-      `;
-      // 已打卡也加载问题（显示已提交状态）
-      if (currentArticleId) {
-        loadQuestions(currentArticleId);
-      }
-    }
+function renderCheckedIn(record) {
+  document.getElementById('content-area').innerHTML = `
+  <div class="card checked-in">
+    <div class="checked-in-icon">✅</div>
+    <h2>今日已完成阅读打卡</h2>
+    <p>文章：《${record.articleTitle || '未知文章'}》</p>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value">${record.wordCount || 0}</div>
+        <div class="stat-label">阅读字数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">1</div>
+        <div class="stat-label">打卡次数</div>
+      </div>
+    </div>
+  </div>
+`;
+
+  // 已打卡也加载问题（显示已提交状态）
+  if (currentArticleId) {
+    loadQuestions(currentArticleId);
+  }
+}
 
     // 修复：渲染文章内容，正确传递参数
-    function renderContent(content) {
-      const contentArea = document.getElementById('content-area');
-      
-      if (!content) {
-        contentArea.innerHTML = `
-          <div class="card no-content">
-            <div class="no-content-icon">📚</div>
-            <h3>暂无阅读内容</h3>
-            <p>请联系老师添加阅读材料</p>
-          </div>
-        `;
-        return;
-      }
+function renderContent(content) {
+  const contentArea = document.getElementById('content-area');
+  
+  if (!content) {
+    contentArea.innerHTML = `
+      <div class="card no-content">
+        <div class="no-content-icon">📚</div>
+        <h3>暂无阅读内容</h3>
+        <p>请联系老师添加阅读材料</p>
+      </div>
+    `;
+    return;
+  }
 
-      // 保存文章ID
-      currentArticleId = content.id;
-      contentArea.innerHTML = `
-        <div class="card">
-          <div class="article-card">
-            <div class="article-title">${content.title}</div>
-            <div class="article-content">${content.content}</div>
-            <div class="word-count">字数：${content.wordCount || content.content.length}</div>
-          </div>
-          <button class="checkin-btn" onclick="handleCheckin('${content.title.replace(/'/g, "\\'")}', ${content.wordCount || content.content.length})" disabled>
-            完成阅读，立即打卡
-          </button>
-        </div>
-      `;
-      
-      // 新增：加载课后练习问题
-      loadQuestions(content.id);
-    }
+  // 保存文章ID
+  currentArticleId = content.id;
+  contentArea.innerHTML = `
+    <div class="card">
+      <div class="article-card">
+        <div class="article-title">${content.title}</div>
+        <div class="article-content">${content.content}</div>
+        <div class="word-count">字数：${content.wordCount || content.content.length}</div>
+      </div>
+      <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount || content.content.length})">
+        完成阅读，立即打卡
+      </button>
+    </div>
+  `;
+  
+  // 新增：加载课后练习问题
+  loadQuestions(content.id);
+}
+
 
     // 关键修复：使用保存的 articleId
     async function handleCheckin(title, wordCount) {
@@ -718,45 +719,44 @@ function getTodayString() {
         const lockedClass = canAnswer ? '' : 'locked';
         const disabledAttr = canAnswer ? '' : 'disabled';
         
-        return `
-        <div class="question-item ${lockedClass}">
-          <div class="question-header">
-            ${index + 1}. ${q.question}
-            <span class="question-type">${getQuestionTypeName(q.type)}</span>
-          </div>
-          
-          ${q.type === 'choice' ? `
-            <div class="options-list">
-              ${q.options.map((opt, i) => `
-                <label class="option-label">
-                  <input type="radio" name="q-${q.id}" value="${String.fromCharCode(65 + i)}" 
-                    ${canAnswer ? '' : 'disabled'}>
-                  <span>${String.fromCharCode(65 + i)}. ${opt}</span>
-                </label>
-              `).join('')}
-            </div>
-          ` : ''}
-          
-          <textarea 
-            class="answer-textarea" 
-            id="answer-${q.id}" 
-            placeholder="${canAnswer ? '请输入您的答案...' : '开通会员后可作答'}"
-            ${canAnswer ? '' : 'disabled'}
-          ></textarea>
-          
-          ${canAnswer ? `
-            <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
-              提交答案
-            </button>
-          ` : '
-            <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
-            提交答案
-            </button>
-            '}
-          
-          <div id="status-${q.id}"></div>
-        </div>
-      `}).join('');
+       return `
+<div class="question-item ${lockedClass}">
+  <div class="question-header">
+    ${index + 1}. ${q.question}
+    <span class="question-type">${getQuestionTypeName(q.type)}</span>
+  </div>
+  
+  ${q.type === 'choice' && q.options ? `
+    <div class="options-list">
+      ${q.options.map((opt, i) => `
+        <label class="option-label">
+          <input type="radio" name="q-${q.id}" value="${opt}" ${disabledAttr}>
+          <span>${String.fromCharCode(65 + i)}. ${opt}</span>
+        </label>
+      `).join('')}
+    </div>
+  ` : ''}
+  
+  <textarea 
+    class="answer-textarea" 
+    id="answer-${q.id}" 
+    placeholder="请输入您的答案..."
+    ${disabledAttr}
+  ></textarea>
+  
+  ${canAnswer ? `
+    <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
+      提交答案
+    </button>
+  ` : `
+    <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
+      提交答案
+    </button>
+  `}
+  
+  <div id="status-${q.id}"></div>
+</div>
+`}).join('');
       
       // 添加会员限制提示（普通会员）
       if (!canAnswer) {
@@ -921,8 +921,8 @@ function renderContent(content) {
         <div class="article-content">${content.content}</div>
         <div class="word-count">字数：${content.wordCount || content.content.length}</div>
       </div>
-      <button class="checkin-btn" id="checkinBtn">
-        完成阅读，立即打卡
+      <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount || content.content.length})" ${isLoggedIn ? '' : 'disabled'}>
+      ${isLoggedIn ? '完成阅读，立即打卡' : '请先登录后打卡'}
       </button>
     </div>
   `;
