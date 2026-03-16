@@ -333,10 +333,9 @@
 
     <script>
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-        if (!currentUser) {
-            alert('请先登录');
-            location.href = '/register/';
-        }
+        const isLoggedIn = currentUser && currentUser.nickname;
+	    const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
+	    const canType = isLoggedIn && membership.type !== 'anonymous';
         
         let targetText = '';
         let startTime = null;
@@ -365,8 +364,10 @@
                 if (result.success && result.content) {
                     targetText = result.content.content;
                     document.getElementById('targetText').textContent = targetText;
-                    document.getElementById('inputText').disabled = false;
-                    document.getElementById('inputText').focus();
+                    document.getElementById('inputText').disabled = !canType;
+	                if (canType) {
+	                document.getElementById('inputText').focus();
+	                }
                 } else {
                     document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
                 }
@@ -463,6 +464,11 @@
         }
         
         async function submitResult() {
+            if (!isLoggedIn) {
+                showToast('请先登录后再提交成绩', 'error');
+                window.location.href = '/register/';
+                return;
+                }
             const input = document.getElementById('inputText').value;
             if (input.length < 10) {
                 alert('请至少输入一段文字');
@@ -500,6 +506,10 @@
         }
         
         function resetTest() {
+            if (!canType) {
+                showToast('请先登录后再练习', 'error');
+                return;
+                }
             document.getElementById('inputText').value = '';
             document.getElementById('wpm').textContent = '0';
             document.getElementById('accuracy').textContent = '100%';
