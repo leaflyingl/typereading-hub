@@ -232,6 +232,61 @@
             textarea:disabled { background: #2a2a3a; }
             .keystroke-info { background: #1a2744; border-color: #2a3a5a; }
         }
+/* ==================== 按钮布局优化 ==================== */
+
+/* 按钮容器 */
+.button-group {
+    display: flex;
+    flex-direction: row; /* 默认横向排列 */
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+/* 移动端：垂直排列 */
+@media (max-width: 480px) {
+    .button-group {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0 5px;
+        gap: 8px;
+    }
+    
+    .button-group .btn {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 8px;
+        padding: 16px 20px;
+        font-size: 16px;
+        border-radius: 12px;
+    }
+    
+    .button-group .btn:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* 平板端：横向排列，但按钮更大 */
+@media (min-width: 481px) and (max-width: 768px) {
+    .button-group {
+        gap: 12px;
+    }
+    
+    .button-group .btn {
+        padding: 14px 20px;
+        font-size: 15px;
+        min-width: 140px;
+    }
+}
+
+/* 桌面端：保持现有样式 */
+@media (min-width: 769px) {
+    .button-group {
+        gap: 15px;
+    }
+}
+
     </style>
 </head>
 <body>
@@ -268,9 +323,11 @@
                     <p>单词数</p>
                 </div>
             </div>
+            <div class="button-group">
             <button class="btn btn-primary" onclick="submitResult()">提交成绩</button>
             <button class="btn btn-secondary" onclick="resetTest()">重新开始</button>
             <a href="/" class="btn btn-secondary">返回首页</a>
+            </div>
         </div>
     </div>
 
