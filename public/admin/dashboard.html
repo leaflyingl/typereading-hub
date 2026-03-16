@@ -557,18 +557,41 @@
       <div class="card">
         <h3 style="margin-bottom: 20px;">🏆 打字排行榜</h3>
         
-        <!-- 标签切换 -->
-        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
-          <button class="btn btn-secondary" id="adminClassTab" onclick="switchRankTab('class')" style="border-radius: 20px;">
-            📚 班级榜 TOP 10
-          </button>
-          <button class="btn btn-secondary" id="adminAllTab" onclick="switchRankTab('all')" style="border-radius: 20px;">
-            🌍 总榜 TOP 20
-          </button>
+        <!-- 筛选区域 -->
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; align-items: center;">
+          <!-- 班级/分组选择 -->
+          <div style="flex: 1; min-width: 200px;">
+            <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">选择班级或分组</label>
+            <select id="rankTargetSelect" class="form-control" onchange="onRankTargetChange()" style="width: 100%;">
+              <option value="">-- 请选择 --</option>
+              <optgroup label="📚 班级" id="rankClassOptions">
+                <option value="all-classes">全部班级</option>
+              </optgroup>
+              <optgroup label="📂 分组" id="rankGroupOptions">
+                <option value="all-groups">全部分组</option>
+              </optgroup>
+            </select>
+          </div>
+          
+          <!-- 榜单类型 -->
+          <div>
+            <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">榜单类型</label>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" id="btnClassRank" onclick="switchRankType('class')" style="border-radius: 20px; padding: 8px 16px; font-size: 13px;">
+                班级榜
+              </button>
+              <button class="btn btn-secondary" id="btnGroupRank" onclick="switchRankType('group')" style="border-radius: 20px; padding: 8px 16px; font-size: 13px;">
+                组榜
+              </button>
+              <button class="btn btn-secondary" id="btnAllRank" onclick="switchRankType('all')" style="border-radius: 20px; padding: 8px 16px; font-size: 13px;">
+                总榜
+              </button>
+            </div>
+          </div>
         </div>
         
-        <!-- 当前班级信息 -->
-        <div style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;" id="adminClassInfo"></div>
+        <!-- 当前选择信息 -->
+        <div style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;" id="rankInfo">请选择班级或分组</div>
         
         <div id="rank-list">正在加载排行榜...</div>
       </div>
@@ -1099,7 +1122,7 @@
       if (tab === 'classes') loadClasses();
       if (tab === 'groups') loadGroups();
       if (tab === 'content') loadContentList();
-      if (tab === 'rank') loadRank();
+      if (tab === 'rank') initRank();
       if (tab === 'finance') loadFinanceData();
     }
     
@@ -1873,28 +1896,135 @@ async function deleteClass(className) {
     }
 
     // ========== 排行榜 ==========
-    let adminRankType = 'class'; // 默认班级榜
+    let rankType = 'class'; // 当前榜单类型：class/group/all
+    let rankTarget = ''; // 当前选择的班级或分组
+    let allClasses = []; // 缓存班级列表
+    let allGroups = []; // 缓存分组列表
     
-    async function loadRank() {
+    // 初始化排行榜
+    async function initRank() {
+      await loadRankOptions();
+      switchRankType('class');
+    }
+    
+    // 加载班级和分组选项
+    async function loadRankOptions() {
       try {
-        // 获取当前教师信息（用于班级榜）
+        // 加载班级
+        const classRes = await fetch('/api/admin/classes');
+        const classData = await classRes.json();
+        if (classData.success && classData.classes) {
+          allClasses = classData.classes;
+          const classOptGroup = document.getElementById('rankClassOptions');
+          classOptGroup.innerHTML = '<option value="all-classes">📚 全部班级</option>';
+          classData.classes.forEach(c => {
+            classOptGroup.innerHTML += '<option value="class:' + escapeHtml(c.name) + '">📚 ' + escapeHtml(c.name) + '</option>';
+          });
+        }
+        
+        // 加载分组
+        const groupRes = await fetch('/api/admin/groups/list', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        const groupData = await groupRes.json();
+        if (groupData.success && groupData.groups) {
+          allGroups = groupData.groups;
+          const groupOptGroup = document.getElementById('rankGroupOptions');
+          groupOptGroup.innerHTML = '<option value="all-groups">📂 全部分组</option>';
+          groupData.groups.forEach(g => {
+            groupOptGroup.innerHTML += '<option value="group:' + escapeHtml(g.name) + '">📂 ' + escapeHtml(g.name) + '</option>';
+          });
+        }
+      } catch (e) {
+        console.error('加载选项失败:', e);
+      }
+    }
+    
+    // 切换榜单类型
+    function switchRankType(type) {
+      rankType = type;
+      
+      // 更新按钮样式
+      document.getElementById('btnClassRank').className = type === 'class' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('btnGroupRank').className = type === 'group' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('btnAllRank').className = type === 'all' ? 'btn btn-primary' : 'btn btn-secondary';
+      
+      // 自动选择合适的选项
+      const select = document.getElementById('rankTargetSelect');
+      if (type === 'all') {
+        select.value = '';
+        document.getElementById('rankInfo').textContent = '全部学生排行 TOP 20';
+        loadRank();
+      } else if (type === 'class' && !select.value.startsWith('class:')) {
+        // 默认选择第一个班级
+        if (allClasses.length > 0) {
+          select.value = 'class:' + allClasses[0].name;
+          onRankTargetChange();
+        }
+      } else if (type === 'group' && !select.value.startsWith('group:')) {
+        // 默认选择第一个分组
+        if (allGroups.length > 0) {
+          select.value = 'group:' + allGroups[0].name;
+          onRankTargetChange();
+        }
+      } else {
+        loadRank();
+      }
+    }
+    
+    // 选择变更
+    function onRankTargetChange() {
+      const select = document.getElementById('rankTargetSelect');
+      const value = select.value;
+      
+      if (!value) {
+        document.getElementById('rankInfo').textContent = '请选择班级或分组';
+        return;
+      }
+      
+      if (value === 'all-classes') {
+        rankType = 'class';
+        rankTarget = '';
+        document.getElementById('rankInfo').textContent = '全部班级排行 TOP 20';
+      } else if (value === 'all-groups') {
+        rankType = 'group';
+        rankTarget = '';
+        document.getElementById('rankInfo').textContent = '全部分组排行 TOP 20';
+      } else if (value.startsWith('class:')) {
+        rankType = 'class';
+        rankTarget = value.substring(6);
+        document.getElementById('rankInfo').textContent = '班级：' + rankTarget + ' TOP 10';
+      } else if (value.startsWith('group:')) {
+        rankType = 'group';
+        rankTarget = value.substring(6);
+        document.getElementById('rankInfo').textContent = '分组：' + rankTarget + ' TOP 10';
+      }
+      
+      // 同步按钮状态
+      document.getElementById('btnClassRank').className = rankType === 'class' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('btnGroupRank').className = rankType === 'group' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('btnAllRank').className = rankType === 'all' ? 'btn btn-primary' : 'btn btn-secondary';
+      
+      loadRank();
+    }
+    
+    // 加载排行榜
+    async function loadRank() {
+      const listDiv = document.getElementById('rank-list');
+      listDiv.innerHTML = '<p style="text-align: center; color: #999;">加载中...</p>';
+      
+      try {
         const params = {
-          type: adminRankType,
-          limit: adminRankType === 'class' ? 10 : 20
+          type: rankType,
+          limit: rankType === 'all' ? 20 : 10
         };
         
-        // 如果是班级榜，尝试获取第一个班级
-        if (adminRankType === 'class') {
-          const classRes = await fetch('/api/admin/classes');
-          const classData = await classRes.json();
-          if (classData.success && classData.classes && classData.classes.length > 0) {
-            params.className = classData.classes[0].name;
-            document.getElementById('adminClassInfo').textContent = '当前班级：' + params.className;
-          } else {
-            document.getElementById('adminClassInfo').textContent = '暂无班级数据';
-          }
-        } else {
-          document.getElementById('adminClassInfo').textContent = '全部学生排行';
+        // 添加班级或分组筛选
+        if (rankType === 'class' && rankTarget) {
+          params.className = rankTarget;
+        } else if (rankType === 'group' && rankTarget) {
+          params.groupName = rankTarget;
         }
         
         const res = await fetch('/api/rank/typing', {
@@ -1905,13 +2035,44 @@ async function deleteClass(className) {
         
         const result = await res.json();
         if (result.success) renderRank(result.rank);
-        else document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
+        else listDiv.innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
         
       } catch (e) {
         console.error('加载排行榜失败:', e);
-        document.getElementById('rank-list').innerHTML = '<p style="color: red; text-align: center;">加载失败</p>';
+        listDiv.innerHTML = '<p style="color: red; text-align: center;">加载失败，请检查网络</p>';
       }
     }
+    
+    // 渲染排行榜
+    function renderRank(rank) {
+      const listDiv = document.getElementById('rank-list');
+      
+      if (!rank || rank.length === 0) {
+        listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无数据，快来成为第一个吧！</p>';
+        return;
+      }
+      
+      const medals = ['🥇', '🥈', '🥉'];
+      
+      let html = '<table class="data-table"><thead><tr><th style="width: 60px;">排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
+      
+      rank.forEach((r, i) => {
+        const medal = medals[i] || (i + 1);
+        const displayRank = i < 3 ? '<span style="font-size: 24px;">' + medal + '</span>' : (i + 1);
+        
+        html += '<tr>' +
+          '<td style="text-align: center;">' + displayRank + '</td>' +
+          '<td>' + escapeHtml(r.realName || r.nickname || '-') + '</td>' +
+          '<td>' + escapeHtml(r.className || '-') + '</td>' +
+          '<td style="color: #667eea; font-weight: bold; font-size: 16px;">' + (r.wpm || 0) + '</td>' +
+          '<td style="color: #52c41a;">' + (r.accuracy || 0) + '%</td>' +
+        '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      listDiv.innerHTML = html;
+    }
+
     
     function switchRankTab(type) {
       adminRankType = type;
