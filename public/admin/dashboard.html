@@ -1889,16 +1889,25 @@ async function deleteClass(className) {
     }
 
     // ========== 排行榜 ==========
-    let adminRankType = 'class';      // 当前榜单类型：class/group/all
-    let adminRankTarget = '';         // 当前选择的班级或分组名称
-    let adminSortField = 'wpm';       // 当前排序字段：wpm/accuracy
-    let adminRankData = [];           // 当前排行榜数据缓存
-    let allRankClasses = [];          // 缓存班级列表
-    let allRankGroups = [];           // 缓存分组列表
+    let adminRankType = 'class';
+    let adminRankTarget = '';
+    let adminSortField = 'wpm';
+    let adminRankData = [];
+    let allRankClasses = [];
+    let allRankGroups = [];
 
-    // 初始化排行榜
+    // HTML转义函数
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     async function initRank() {
-      // 恢复保存的状态
       const savedType = localStorage.getItem('adminRankType');
       const savedTarget = localStorage.getItem('adminRankTarget');
       const savedSort = localStorage.getItem('adminRankSortField');
@@ -1907,15 +1916,12 @@ async function deleteClass(className) {
         adminSortField = savedSort;
       }
       
-      // 加载班级和分组选项
       await loadRankOptions();
       
-      // 恢复之前的选择
       if (savedType && ['class', 'group', 'all'].includes(savedType)) {
         adminRankType = savedType;
       }
       
-      // 更新按钮样式
       updateRankTabButtons();
       
       const select = document.getElementById('rankTargetSelect');
@@ -1927,29 +1933,23 @@ async function deleteClass(className) {
       } else {
         select.style.display = 'block';
         
-        // 恢复之前的选择或设置默认值
         if (savedTarget && select.querySelector('option[value="' + savedTarget + '"]')) {
           select.value = savedTarget;
           onRankTargetChange();
+        } else if (adminRankType === 'class' && allRankClasses.length > 0) {
+          select.value = 'class:' + allRankClasses[0].name;
+          onRankTargetChange();
+        } else if (adminRankType === 'group' && allRankGroups.length > 0) {
+          select.value = 'group:' + allRankGroups[0].name;
+          onRankTargetChange();
         } else {
-          // 根据类型设置默认值
-          if (adminRankType === 'class' && allRankClasses.length > 0) {
-            select.value = 'class:' + allRankClasses[0].name;
-            onRankTargetChange();
-          } else if (adminRankType === 'group' && allRankGroups.length > 0) {
-            select.value = 'group:' + allRankGroups[0].name;
-            onRankTargetChange();
-          } else {
-            loadRank();
-          }
+          loadRank();
         }
       }
     }
 
-    // 加载班级和分组选项
     async function loadRankOptions() {
       try {
-        // 加载班级
         const classRes = await fetch('/api/admin/classes');
         const classData = await classRes.json();
         if (classData.success && classData.classes) {
@@ -1961,7 +1961,6 @@ async function deleteClass(className) {
           });
         }
 
-        // 加载分组
         const groupRes = await fetch('/api/admin/groups/list', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'}
@@ -1980,24 +1979,17 @@ async function deleteClass(className) {
       }
     }
 
-    // 更新标签按钮样式
     function updateRankTabButtons() {
       document.getElementById('adminClassTab').className = adminRankType === 'class' ? 'btn btn-primary' : 'btn btn-secondary';
       document.getElementById('adminGroupTab').className = adminRankType === 'group' ? 'btn btn-primary' : 'btn btn-secondary';
       document.getElementById('adminAllTab').className = adminRankType === 'all' ? 'btn btn-primary' : 'btn btn-secondary';
     }
 
-    // 切换榜单类型
     function switchRankTab(type) {
       adminRankType = type;
-      
-      // 更新按钮样式
+      localStorage.setItem('adminRankType', type);
       updateRankTabButtons();
       
-      // 保存状态
-      localStorage.setItem('adminRankType', type);
-      
-      // 根据类型设置下拉菜单
       const select = document.getElementById('rankTargetSelect');
       
       if (type === 'all') {
@@ -2008,7 +2000,6 @@ async function deleteClass(className) {
       } else {
         select.style.display = 'block';
         
-        // 根据类型选中第一个选项
         if (type === 'class' && allRankClasses.length > 0) {
           select.value = 'class:' + allRankClasses[0].name;
         } else if (type === 'group' && allRankGroups.length > 0) {
@@ -2019,12 +2010,10 @@ async function deleteClass(className) {
       }
     }
 
-    // 下拉选择变更
     function onRankTargetChange() {
       const select = document.getElementById('rankTargetSelect');
       const value = select.value;
       
-      // 保存状态
       localStorage.setItem('adminRankTarget', value);
       
       if (!value) {
@@ -2032,7 +2021,6 @@ async function deleteClass(className) {
         return;
       }
       
-      // 根据选择的值确定类型和目标
       if (value === 'all-classes') {
         adminRankType = 'class';
         adminRankTarget = '';
@@ -2051,20 +2039,16 @@ async function deleteClass(className) {
         document.getElementById('adminRankInfo').textContent = '分组：' + adminRankTarget + ' TOP 10';
       }
       
-      // 更新按钮样式（确保与当前类型一致）
       updateRankTabButtons();
-      
       loadRank();
     }
 
-    // 点击表头排序
     function sortRankBy(field) {
       adminSortField = field;
       localStorage.setItem('adminRankSortField', field);
       renderRank(adminRankData);
     }
 
-    // 加载排行榜
     async function loadRank() {
       const listDiv = document.getElementById('rank-list');
       listDiv.innerHTML = '<p style="text-align: center; color: #999;">加载中...</p>';
@@ -2075,14 +2059,11 @@ async function deleteClass(className) {
           limit: adminRankType === 'all' ? 20 : 10
         };
         
-        // 只有非"全部"模式才添加具体目标
         if (adminRankType === 'class' && adminRankTarget) {
           params.className = adminRankTarget;
         } else if (adminRankType === 'group' && adminRankTarget) {
           params.groupName = adminRankTarget;
         }
-        
-        console.log('请求参数:', params);  // 调试用
         
         const res = await fetch('/api/rank/typing', {
           method: 'POST',
@@ -2091,7 +2072,6 @@ async function deleteClass(className) {
         });
         
         const result = await res.json();
-        console.log('返回结果:', result);  // 调试用
         
         if (result.success && result.rank && result.rank.length > 0) {
           adminRankData = result.rank;
@@ -2106,7 +2086,6 @@ async function deleteClass(className) {
       }
     }
 
-    // 渲染排行榜（支持排序）
     function renderRank(rank) {
       const listDiv = document.getElementById('rank-list');
       
@@ -2117,7 +2096,6 @@ async function deleteClass(className) {
       
       const medals = ['🥇', '🥈', '🥉'];
       
-      // 按当前字段降序排序
       let sortedList = [...rank];
       sortedList.sort(function(a, b) {
         return (b[adminSortField] || 0) - (a[adminSortField] || 0);
