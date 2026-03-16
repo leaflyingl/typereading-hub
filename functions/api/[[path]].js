@@ -1397,10 +1397,11 @@ if (path === "content/typing") {
   });
 }
 
-    /* ========================= 排行榜（支持班级榜/总榜）========================== */
+    /* ========================= 排行榜（支持班级榜/组榜/总榜）========================== */
     if (path === "rank/typing") {
-      const { type, className, limit } = await request.json();
+      const { type, className, groupName, limit } = await request.json();
       
+      // 获取所有打字记录
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const results = [];
 
@@ -1419,6 +1420,29 @@ if (path === "content/typing") {
         if (type === 'class' && className) {
           if (user.className !== className) continue;
         }
+        
+        // 组榜筛选
+        if (type === 'group' && groupName) {
+          // 查找该分组包含的班级
+          const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
+          let targetGroup = null;
+          
+          for (const gKey of groupKeys) {
+            const gData = await env.TYPEREADING_KV.get(gKey.name);
+            if (gData) {
+              const group = JSON.parse(gData);
+              if (group.name === groupName) {
+                targetGroup = group;
+                break;
+              }
+            }
+          }
+          
+          if (!targetGroup) continue; // 分组不存在
+          
+          const groupClasses = targetGroup.classNames || targetGroup.classes || [];
+          if (!groupClasses.includes(user.className)) continue;
+        }
 
         results.push({
           nickname: record.nickname,
@@ -1433,8 +1457,8 @@ if (path === "content/typing") {
       // 按 WPM 降序排列
       results.sort((a, b) => b.wpm - a.wpm);
       
-      // 根据类型确定返回数量：班级榜默认10，总榜默认20
-      const defaultLimit = type === 'class' ? 10 : 20;
+      // 根据类型确定返回数量：班级榜/组榜默认10，总榜默认20
+      const defaultLimit = (type === 'class' || type === 'group') ? 10 : 20;
       const finalLimit = limit || defaultLimit;
       
       const ranked = results.slice(0, finalLimit).map((item, index) => ({
@@ -1449,7 +1473,6 @@ if (path === "content/typing") {
         total: results.length
       });
     }
-
 
     /* ========================= 新增：阅读历史与问答系统 API ========================== */
 
