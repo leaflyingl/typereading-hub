@@ -1446,7 +1446,7 @@ if (path === "content/typing") {
 
         results.push({
           nickname: record.nickname,
-          realName: user.realName || record.nickname,
+          realName: user.nickname || record.nickname,
           className: user.className || "未分班",
           wpm: record.wpm || 0,
           accuracy: record.accuracy || 0,
