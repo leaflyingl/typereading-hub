@@ -552,7 +552,7 @@
       </div>
     </div>
 
-    <!-- 排行榜 -->
+     <!-- 排行榜 -->
     <div id="rank-tab" class="tab-content">
       <div class="card">
         <h3 style="margin-bottom: 20px;">🏆 打字排行榜</h3>
@@ -560,15 +560,31 @@
         <!-- 标签切换 -->
         <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
           <button class="btn btn-secondary" id="adminClassTab" onclick="switchRankTab('class')" style="border-radius: 20px;">
-            📚 班级榜 TOP 10
+            📚 班级榜
+          </button>
+          <button class="btn btn-secondary" id="adminGroupTab" onclick="switchRankTab('group')" style="border-radius: 20px;">
+            📂 组榜
           </button>
           <button class="btn btn-secondary" id="adminAllTab" onclick="switchRankTab('all')" style="border-radius: 20px;">
-            🌍 总榜 TOP 20
+            🌍 总榜
           </button>
         </div>
         
-        <!-- 当前班级信息 -->
-        <div style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;" id="adminClassInfo"></div>
+        <!-- 下拉选择 -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+          <select id="rankTargetSelect" class="filter-select" onchange="onRankTargetChange()" style="min-width: 200px;">
+            <option value="">请选择...</option>
+            <optgroup label="📚 班级" id="rankClassOptions">
+              <option value="all-classes">全部班级</option>
+            </optgroup>
+            <optgroup label="📂 分组" id="rankGroupOptions">
+              <option value="all-groups">全部分组</option>
+            </optgroup>
+          </select>
+        </div>
+        
+        <!-- 当前选择信息 -->
+        <div style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;" id="adminRankInfo"></div>
         
         <div id="rank-list">正在加载排行榜...</div>
       </div>
