@@ -523,10 +523,10 @@ body {
 
   <script>
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    
-    if (!currentUser.nickname) {
-      window.location.href = '/register/';
-    }
+    const isLoggedIn = currentUser && currentUser.nickname;
+    const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
+    const canAnswer = isLoggedIn && membership.type === 'premium' && !(membership.expiresAt && new
+    Date().toISOString().split('T')[0] > membership.expiresAt);
 
     // 全局变量保存当前文章信息
     let currentArticleId = null;
@@ -649,7 +649,7 @@ function getTodayString() {
             <div class="article-content">${content.content}</div>
             <div class="word-count">字数：${content.wordCount || content.content.length}</div>
           </div>
-          <button class="checkin-btn" onclick="handleCheckin('${content.title.replace(/'/g, "\\'")}', ${content.wordCount || content.content.length})">
+          <button class="checkin-btn" onclick="handleCheckin('${content.title.replace(/'/g, "\\'")}', ${content.wordCount || content.content.length})" disabled>
             完成阅读，立即打卡
           </button>
         </div>
@@ -661,6 +661,11 @@ function getTodayString() {
 
     // 关键修复：使用保存的 articleId
     async function handleCheckin(title, wordCount) {
+    if (!isLoggedIn) {
+    showToast('请先登录后再打卡', 'error');
+    window.location.href = '/register/';
+    return;  }
+      
       const btn = document.querySelector('.checkin-btn');
       btn.disabled = true;
       btn.textContent = '打卡中...';
@@ -711,6 +716,7 @@ function getTodayString() {
       
       container.innerHTML = questions.map((q, index) => {
         const lockedClass = canAnswer ? '' : 'locked';
+        const disabledAttr = canAnswer ? '' : 'disabled';
         
         return `
         <div class="question-item ${lockedClass}">
@@ -742,7 +748,11 @@ function getTodayString() {
             <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
               提交答案
             </button>
-          ` : ''}
+          ` : '
+            <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
+            提交答案
+            </button>
+            '}
           
           <div id="status-${q.id}"></div>
         </div>
