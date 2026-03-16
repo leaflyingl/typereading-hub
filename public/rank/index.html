@@ -203,15 +203,19 @@
         <div class="card">
             <h1>🏆 打字排行榜</h1>
             
-            <!-- 标签切换 -->
+             <!-- 标签切换 -->
             <div class="tab-container">
                 <button class="tab" id="classTab" onclick="switchTab('class')">
                     📚 班级榜
+                </button>
+                <button class="tab" id="groupTab" onclick="switchTab('group')">
+                    📂 组榜
                 </button>
                 <button class="tab" id="allTab" onclick="switchTab('all')">
                     🌍 总榜
                 </button>
             </div>
+
             
             <!-- 当前班级信息 -->
             <div class="class-info" id="classInfo"></div>
@@ -232,6 +236,7 @@
         let currentUser = null;
         let currentData = [];
         let sortField = 'wpm';
+        let userGroupName = '';  // 用户所在分组名称
         
         // 页面加载时恢复标签状态
         function init() {
@@ -239,9 +244,9 @@
             const tabFromUrl = urlParams.get('tab');
             const tabFromStorage = localStorage.getItem('rankTab');
             
-            if (tabFromUrl && ['class', 'all'].includes(tabFromUrl)) {
+            if (tabFromUrl && ['class', 'group', 'all'].includes(tabFromUrl)) {
                 currentTab = tabFromUrl;
-            } else if (tabFromStorage && ['class', 'all'].includes(tabFromStorage)) {
+            } else if (tabFromStorage && ['class', 'group', 'all'].includes(tabFromStorage)) {
                 currentTab = tabFromStorage;
             }
             
@@ -266,6 +271,31 @@
             return null;
         }
         
+        // 获取用户所在分组
+        async function getUserGroupName(className) {
+            if (!className) return '';
+            
+            try {
+                const res = await fetch('/api/admin/groups/list', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await res.json();
+                
+                if (data.success && data.groups) {
+                    for (const group of data.groups) {
+                        const classes = group.classNames || group.classes || [];
+                        if (classes.includes(className)) {
+                            return group.name;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('获取分组失败:', e);
+            }
+            return '';
+        }
+        
         function switchTab(type) {
             currentTab = type;
             sortField = 'wpm';
@@ -278,6 +308,7 @@
         
         function updateTabUI() {
             document.getElementById('classTab').classList.toggle('active', currentTab === 'class');
+            document.getElementById('groupTab').classList.toggle('active', currentTab === 'group');
             document.getElementById('allTab').classList.toggle('active', currentTab === 'all');
         }
         
@@ -304,7 +335,7 @@
             
             const params = {
                 type: currentTab,
-                limit: currentTab === 'class' ? 10 : 20
+                limit: currentTab === 'all' ? 20 : 10
             };
             
             if (currentTab === 'class' && currentUser && currentUser.className) {
@@ -312,6 +343,19 @@
                 classInfoDiv.textContent = '当前班级：' + currentUser.className;
             } else if (currentTab === 'class') {
                 classInfoDiv.textContent = '您暂未分配班级';
+            } else if (currentTab === 'group') {
+                // 获取用户所在分组
+                if (currentUser && currentUser.className) {
+                    userGroupName = await getUserGroupName(currentUser.className);
+                    if (userGroupName) {
+                        params.groupName = userGroupName;
+                        classInfoDiv.textContent = '当前分组：' + userGroupName;
+                    } else {
+                        classInfoDiv.textContent = '您暂未分配分组';
+                    }
+                } else {
+                    classInfoDiv.textContent = '您暂未分配班级';
+                }
             } else {
                 classInfoDiv.textContent = '全部学生排行';
             }
@@ -360,11 +404,14 @@
                 const isTop3 = i < 3;
                 const topClass = isTop3 ? 'top-' + (i + 1) : '';
                 
+                // 组榜和总榜显示班级标签
+                const showClassTag = currentTab === 'group' || currentTab === 'all';
+                
                 html += '<tr class="' + topClass + '">' +
                     '<td class="rank-cell"><span class="rank-medal">' + medal + '</span></td>' +
                     '<td class="name-cell">' +
                         '<div>' + escapeHtml(r.realName || r.nickname) + '</div>' +
-                        (currentTab === 'all' ? '<span class="class-tag">' + escapeHtml(r.className || '未分班') + '</span>' : '') +
+                        (showClassTag ? '<span class="class-tag">' + escapeHtml(r.className || '未分班') + '</span>' : '') +
                     '</td>' +
                     '<td class="wpm">' + (r.wpm || 0) + '</td>' +
                     '<td class="accuracy">' + (r.accuracy || 0) + '%</td>' +
@@ -388,5 +435,6 @@
         // 页面加载时初始化
         init();
     </script>
+
 </body>
 </html>
