@@ -1115,7 +1115,7 @@
       if (tab === 'classes') loadClasses();
       if (tab === 'groups') loadGroups();
       if (tab === 'content') loadContentList();
-      if (tab === 'rank') loadRank();
+      if (tab === 'rank') initRank();  // 改为 initRank
       if (tab === 'finance') loadFinanceData();
     }
     
@@ -1889,28 +1889,176 @@ async function deleteClass(className) {
     }
 
     // ========== 排行榜 ==========
-    let adminRankType = 'class'; // 默认班级榜
-    
-    async function loadRank() {
+    let adminRankType = 'class';      // 当前榜单类型：class/group/all
+    let adminRankTarget = '';         // 当前选择的班级或分组名称
+    let adminSortField = 'wpm';       // 当前排序字段：wpm/accuracy
+    let adminRankData = [];           // 当前排行榜数据缓存
+    let allRankClasses = [];          // 缓存班级列表
+    let allRankGroups = [];           // 缓存分组列表
+
+    // 初始化排行榜
+    async function initRank() {
+      // 恢复保存的状态
+      const savedType = localStorage.getItem('adminRankType');
+      const savedTarget = localStorage.getItem('adminRankTarget');
+      const savedSort = localStorage.getItem('adminRankSortField');
+      
+      if (savedSort && ['wpm', 'accuracy'].includes(savedSort)) {
+        adminSortField = savedSort;
+      }
+      
+      // 加载班级和分组选项
+      await loadRankOptions();
+      
+      // 恢复之前的选择
+      if (savedType && ['class', 'group', 'all'].includes(savedType)) {
+        adminRankType = savedType;
+      }
+      
+      const select = document.getElementById('rankTargetSelect');
+      if (savedTarget && select.querySelector('option[value="' + savedTarget + '"]')) {
+        select.value = savedTarget;
+        onRankTargetChange();
+      } else {
+        // 默认选中第一个班级
+        switchRankTab(adminRankType);
+      }
+    }
+
+    // 加载班级和分组选项
+    async function loadRankOptions() {
       try {
-        // 获取当前教师信息（用于班级榜）
+        // 加载班级
+        const classRes = await fetch('/api/admin/classes');
+        const classData = await classRes.json();
+        if (classData.success && classData.classes) {
+          allRankClasses = classData.classes;
+          const classOptGroup = document.getElementById('rankClassOptions');
+          classOptGroup.innerHTML = '<option value="all-classes">📚 全部班级</option>';
+          classData.classes.forEach(c => {
+            classOptGroup.innerHTML += '<option value="class:' + escapeHtml(c.name) + '">📚 ' + escapeHtml(c.name) + '</option>';
+          });
+        }
+
+        // 加载分组
+        const groupRes = await fetch('/api/admin/groups/list', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+        const groupData = await groupRes.json();
+        if (groupData.success && groupData.groups) {
+          allRankGroups = groupData.groups;
+          const groupOptGroup = document.getElementById('rankGroupOptions');
+          groupOptGroup.innerHTML = '<option value="all-groups">📂 全部分组</option>';
+          groupData.groups.forEach(g => {
+            groupOptGroup.innerHTML += '<option value="group:' + escapeHtml(g.name) + '">📂 ' + escapeHtml(g.name) + '</option>';
+          });
+        }
+      } catch (e) {
+        console.error('加载选项失败:', e);
+      }
+    }
+
+    // 切换榜单类型
+    function switchRankTab(type) {
+      adminRankType = type;
+      
+      // 更新按钮样式
+      document.getElementById('adminClassTab').className = type === 'class' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('adminGroupTab').className = type === 'group' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('adminAllTab').className = type === 'all' ? 'btn btn-primary' : 'btn btn-secondary';
+      
+      // 保存状态
+      localStorage.setItem('adminRankType', type);
+      
+      // 根据类型设置下拉菜单
+      const select = document.getElementById('rankTargetSelect');
+      
+      if (type === 'all') {
+        select.value = '';
+        select.style.display = 'none';
+        document.getElementById('adminRankInfo').textContent = '全部学生排行 TOP 20';
+        loadRank();
+      } else {
+        select.style.display = 'block';
+        
+        if (type === 'class') {
+          // 选中第一个班级或全部班级
+          if (allRankClasses.length > 0) {
+            select.value = 'class:' + allRankClasses[0].name;
+            onRankTargetChange();
+          }
+        } else if (type === 'group') {
+          // 选中第一个分组或全部分组
+          if (allRankGroups.length > 0) {
+            select.value = 'group:' + allRankGroups[0].name;
+            onRankTargetChange();
+          }
+        }
+      }
+    }
+
+    // 下拉选择变更
+    function onRankTargetChange() {
+      const select = document.getElementById('rankTargetSelect');
+      const value = select.value;
+      
+      // 保存状态
+      localStorage.setItem('adminRankTarget', value);
+      
+      if (!value) {
+        document.getElementById('adminRankInfo').textContent = '请选择班级或分组';
+        return;
+      }
+      
+      if (value === 'all-classes') {
+        adminRankType = 'class';
+        adminRankTarget = '';
+        document.getElementById('adminRankInfo').textContent = '全部班级排行 TOP 10';
+      } else if (value === 'all-groups') {
+        adminRankType = 'group';
+        adminRankTarget = '';
+        document.getElementById('adminRankInfo').textContent = '全部分组排行 TOP 10';
+      } else if (value.startsWith('class:')) {
+        adminRankType = 'class';
+        adminRankTarget = value.substring(6);
+        document.getElementById('adminRankInfo').textContent = '班级：' + adminRankTarget + ' TOP 10';
+      } else if (value.startsWith('group:')) {
+        adminRankType = 'group';
+        adminRankTarget = value.substring(6);
+        document.getElementById('adminRankInfo').textContent = '分组：' + adminRankTarget + ' TOP 10';
+      }
+      
+      // 更新按钮样式
+      document.getElementById('adminClassTab').className = adminRankType === 'class' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('adminGroupTab').className = adminRankType === 'group' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('adminAllTab').className = adminRankType === 'all' ? 'btn btn-primary' : 'btn btn-secondary';
+      
+      loadRank();
+    }
+
+    // 点击表头排序
+    function sortRankBy(field) {
+      adminSortField = field;
+      localStorage.setItem('adminRankSortField', field);
+      renderRank(adminRankData);
+    }
+
+    // 加载排行榜
+    async function loadRank() {
+      const listDiv = document.getElementById('rank-list');
+      listDiv.innerHTML = '<p style="text-align: center; color: #999;">加载中...</p>';
+      
+      try {
         const params = {
           type: adminRankType,
-          limit: adminRankType === 'class' ? 10 : 20
+          limit: adminRankType === 'all' ? 20 : 10
         };
         
-        // 如果是班级榜，尝试获取第一个班级
-        if (adminRankType === 'class') {
-          const classRes = await fetch('/api/admin/classes');
-          const classData = await classRes.json();
-          if (classData.success && classData.classes && classData.classes.length > 0) {
-            params.className = classData.classes[0].name;
-            document.getElementById('adminClassInfo').textContent = '当前班级：' + params.className;
-          } else {
-            document.getElementById('adminClassInfo').textContent = '暂无班级数据';
-          }
-        } else {
-          document.getElementById('adminClassInfo').textContent = '全部学生排行';
+        if (adminRankType === 'class' && adminRankTarget) {
+          params.className = adminRankTarget;
+        } else if (adminRankType === 'group' && adminRankTarget) {
+          params.groupName = adminRankTarget;
         }
         
         const res = await fetch('/api/rank/typing', {
@@ -1920,61 +2068,61 @@ async function deleteClass(className) {
         });
         
         const result = await res.json();
-        if (result.success) renderRank(result.rank);
-        else document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
+        if (result.success && result.rank && result.rank.length > 0) {
+          adminRankData = result.rank;
+          renderRank(adminRankData);
+        } else {
+          listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无数据</p>';
+        }
         
       } catch (e) {
         console.error('加载排行榜失败:', e);
-        document.getElementById('rank-list').innerHTML = '<p style="color: red; text-align: center;">加载失败</p>';
+        listDiv.innerHTML = '<p style="color: red; text-align: center;">加载失败</p>';
       }
     }
-    
-    function switchRankTab(type) {
-      adminRankType = type;
-      
-      // 更新按钮样式
-      document.getElementById('adminClassTab').className = type === 'class' 
-        ? 'btn btn-primary' 
-        : 'btn btn-secondary';
-      document.getElementById('adminAllTab').className = type === 'all' 
-        ? 'btn btn-primary' 
-        : 'btn btn-secondary';
-      
-      loadRank();
-    }
-    
+
+    // 渲染排行榜（支持排序）
     function renderRank(rank) {
+      const listDiv = document.getElementById('rank-list');
+      
       if (!rank || rank.length === 0) {
-        document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
+        listDiv.innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
         return;
       }
       
       const medals = ['🥇', '🥈', '🥉'];
       
-      let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
+      // 按当前字段降序排序
+      let sortedList = [...rank];
+      sortedList.sort(function(a, b) {
+        return (b[adminSortField] || 0) - (a[adminSortField] || 0);
+      });
       
-      rank.forEach((r, i) => {
+      let html = '<table class="data-table"><thead><tr>' +
+        '<th style="width: 60px;">排名</th>' +
+        '<th>姓名</th>' +
+        '<th>班级</th>' +
+        '<th style="cursor: pointer; ' + (adminSortField === 'wpm' ? 'color: #667eea;' : '') + '" onclick="sortRankBy(\'wpm\')">速度(WPM) ' + (adminSortField === 'wpm' ? '▼' : '') + '</th>' +
+        '<th style="cursor: pointer; ' + (adminSortField === 'accuracy' ? 'color: #667eea;' : '') + '" onclick="sortRankBy(\'accuracy\')">准确率 ' + (adminSortField === 'accuracy' ? '▼' : '') + '</th>' +
+        '</tr></thead><tbody>';
+      
+      sortedList.forEach(function(r, i) {
         const medal = medals[i] || (i + 1);
-        const displayRank = i < 3 ? medal : (i + 1);
+        const displayRank = i < 3 ? '<span style="font-size: 24px;">' + medal + '</span>' : (i + 1);
         
         html += '<tr>' +
-          '<td style="font-weight: bold; font-size: 18px;">' + displayRank + '</td>' +
+          '<td style="text-align: center; font-weight: bold;">' + displayRank + '</td>' +
           '<td>' + escapeHtml(r.realName || r.nickname || '-') + '</td>' +
           '<td>' + escapeHtml(r.className || '-') + '</td>' +
-          '<td style="color: #667eea; font-weight: bold;">' + (r.wpm || 0) + '</td>' +
+          '<td style="color: #667eea; font-weight: bold; font-size: 16px;">' + (r.wpm || 0) + '</td>' +
           '<td style="color: #52c41a;">' + (r.accuracy || 0) + '%</td>' +
         '</tr>';
       });
       
       html += '</tbody></table>';
-      document.getElementById('rank-list').innerHTML = html;
+      listDiv.innerHTML = html;
     }
-    
-    // 初始化排行榜标签样式
-    function initRankTab() {
-      document.getElementById('adminClassTab').className = 'btn btn-primary';
-      document.getElementById('adminAllTab').className = 'btn btn-secondary';
-    }
+
 
     // ========== 问题管理相关变量和函数 ==========
 let currentQuestions = []; // 当前编辑的问题列表
