@@ -1397,28 +1397,12 @@ if (path === "content/typing") {
   });
 }
 
-    /* ========================= 排行榜（支持班级榜/组榜/总榜）========================== */
+    /* ========================= 排行榜（支持班级榜/总榜）========================== */
     if (path === "rank/typing") {
-      const { type, className, groupName, limit } = await request.json();
+      const { type, className, limit } = await request.json();
       
       const { keys } = await env.TYPEREADING_KV.list({ prefix: "typing:" });
       const results = [];
-
-      // 如果选择分组，先获取该分组下的班级列表
-      let groupClasses = [];
-      if (type === 'group' && groupName) {
-        const { keys: groupKeys } = await env.TYPEREADING_KV.list({ prefix: "group:" });
-        for (const key of groupKeys) {
-          const data = await env.TYPEREADING_KV.get(key.name);
-          if (data) {
-            const group = JSON.parse(data);
-            if (group.name === groupName) {
-              groupClasses = group.classes || group.classNames || [];
-              break;
-            }
-          }
-        }
-      }
 
       for (const key of keys) {
         const data = await env.TYPEREADING_KV.get(key.name);
@@ -1431,38 +1415,41 @@ if (path === "content/typing") {
 
         const user = JSON.parse(userData);
         
-        // 根据类型筛选
-        let includeUser = true;
-        
+        // 班级榜筛选
         if (type === 'class' && className) {
-          includeUser = user.className === className;
-        } else if (type === 'group' && groupName) {
-          includeUser = groupClasses.includes(user.className || '');
+          if (user.className !== className) continue;
         }
-        // type === 'all' 时不筛选
 
-        if (includeUser) {
-          results.push({
-            nickname: record.nickname,
-            realName: user.realName || record.nickname,
-            className: user.className || "",
-            wpm: record.wpm || 0,
-            accuracy: record.accuracy || 0,
-            timestamp: record.timestamp
-          });
-        }
+        results.push({
+          nickname: record.nickname,
+          realName: user.realName || record.nickname,
+          className: user.className || "未分班",
+          wpm: record.wpm || 0,
+          accuracy: record.accuracy || 0,
+          timestamp: record.timestamp
+        });
       }
 
+      // 按 WPM 降序排列
       results.sort((a, b) => b.wpm - a.wpm);
       
-      const finalLimit = limit || (type === 'all' ? 20 : 10);
+      // 根据类型确定返回数量：班级榜默认10，总榜默认20
+      const defaultLimit = type === 'class' ? 10 : 20;
+      const finalLimit = limit || defaultLimit;
+      
       const ranked = results.slice(0, finalLimit).map((item, index) => ({
         rank: index + 1,
         ...item
       }));
-      
-      return json({ success: true, rank: ranked });
+
+      return json({ 
+        success: true, 
+        rank: ranked,
+        type: type || 'all',
+        total: results.length
+      });
     }
+
 
     /* ========================= 新增：阅读历史与问答系统 API ========================== */
 
