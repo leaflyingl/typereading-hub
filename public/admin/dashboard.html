@@ -555,11 +555,25 @@
     <!-- 排行榜 -->
     <div id="rank-tab" class="tab-content">
       <div class="card">
-        <h3 style="margin-bottom: 20px;">打字排行榜 TOP 20</h3>
+        <h3 style="margin-bottom: 20px;">🏆 打字排行榜</h3>
+        
+        <!-- 标签切换 -->
+        <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+          <button class="btn btn-secondary" id="adminClassTab" onclick="switchRankTab('class')" style="border-radius: 20px;">
+            📚 班级榜 TOP 10
+          </button>
+          <button class="btn btn-secondary" id="adminAllTab" onclick="switchRankTab('all')" style="border-radius: 20px;">
+            🌍 总榜 TOP 20
+          </button>
+        </div>
+        
+        <!-- 当前班级信息 -->
+        <div style="text-align: center; color: #666; font-size: 13px; margin-bottom: 15px;" id="adminClassInfo"></div>
+        
         <div id="rank-list">正在加载排行榜...</div>
       </div>
     </div>
-  </div>
+
 
       <!-- 财务管理 -->
     <div id="finance-tab" class="tab-content">
@@ -1859,27 +1873,91 @@ async function deleteClass(className) {
     }
 
     // ========== 排行榜 ==========
+    let adminRankType = 'class'; // 默认班级榜
+    
     async function loadRank() {
       try {
-        const res = await fetch('/api/rank/typing');
+        // 获取当前教师信息（用于班级榜）
+        const params = {
+          type: adminRankType,
+          limit: adminRankType === 'class' ? 10 : 20
+        };
+        
+        // 如果是班级榜，尝试获取第一个班级
+        if (adminRankType === 'class') {
+          const classRes = await fetch('/api/admin/classes');
+          const classData = await classRes.json();
+          if (classData.success && classData.classes && classData.classes.length > 0) {
+            params.className = classData.classes[0].name;
+            document.getElementById('adminClassInfo').textContent = '当前班级：' + params.className;
+          } else {
+            document.getElementById('adminClassInfo').textContent = '暂无班级数据';
+          }
+        } else {
+          document.getElementById('adminClassInfo').textContent = '全部学生排行';
+        }
+        
+        const res = await fetch('/api/rank/typing', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(params)
+        });
+        
         const result = await res.json();
         if (result.success) renderRank(result.rank);
+        else document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
+        
       } catch (e) {
-        document.getElementById('rank-list').innerHTML = '<p style="color: red;">加载失败</p>';
+        console.error('加载排行榜失败:', e);
+        document.getElementById('rank-list').innerHTML = '<p style="color: red; text-align: center;">加载失败</p>';
       }
     }
-
+    
+    function switchRankTab(type) {
+      adminRankType = type;
+      
+      // 更新按钮样式
+      document.getElementById('adminClassTab').className = type === 'class' 
+        ? 'btn btn-primary' 
+        : 'btn btn-secondary';
+      document.getElementById('adminAllTab').className = type === 'all' 
+        ? 'btn btn-primary' 
+        : 'btn btn-secondary';
+      
+      loadRank();
+    }
+    
     function renderRank(rank) {
       if (!rank || rank.length === 0) {
         document.getElementById('rank-list').innerHTML = '<p style="text-align: center; color: #999;">暂无数据</p>';
         return;
       }
+      
+      const medals = ['🥇', '🥈', '🥉'];
+      
       let html = '<table class="data-table"><thead><tr><th>排名</th><th>姓名</th><th>班级</th><th>速度(WPM)</th><th>准确率</th></tr></thead><tbody>';
+      
       rank.forEach((r, i) => {
-        html += '<tr><td>' + (i + 1) + '</td><td>' + (r.realName || '-') + '</td><td>' + (r.className || '-') + '</td><td>' + r.wpm + '</td><td>' + r.accuracy + '%</td></tr>';
+        const medal = medals[i] || (i + 1);
+        const displayRank = i < 3 ? medal : (i + 1);
+        
+        html += '<tr>' +
+          '<td style="font-weight: bold; font-size: 18px;">' + displayRank + '</td>' +
+          '<td>' + escapeHtml(r.realName || r.nickname || '-') + '</td>' +
+          '<td>' + escapeHtml(r.className || '-') + '</td>' +
+          '<td style="color: #667eea; font-weight: bold;">' + (r.wpm || 0) + '</td>' +
+          '<td style="color: #52c41a;">' + (r.accuracy || 0) + '%</td>' +
+        '</tr>';
       });
+      
       html += '</tbody></table>';
       document.getElementById('rank-list').innerHTML = html;
+    }
+    
+    // 初始化排行榜标签样式
+    function initRankTab() {
+      document.getElementById('adminClassTab').className = 'btn btn-primary';
+      document.getElementById('adminAllTab').className = 'btn btn-secondary';
     }
 
     // ========== 问题管理相关变量和函数 ==========
