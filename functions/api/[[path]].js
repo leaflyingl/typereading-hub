@@ -1336,6 +1336,45 @@ if (path === "content/typing") {
     });
   }
 
+// ===== 未登录用户：获取所有公开内容 =====
+if (!nickname) {
+  const contents = [];
+  const { keys: itemKeys } = await env.TYPEREADING_KV.list({ prefix: "content:item:" });
+
+  for (const key of itemKeys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (!data) continue;
+
+    const content = JSON.parse(data);
+    const isActive = content.isActive !== false;
+    const useForTyping = content.useForTyping === true;
+
+    if (!isActive || !useForTyping) continue;
+
+    // 未登录用户只能看公开内容
+    if (content.targetType === "all" || !content.targetType) {
+      contents.push({
+        id: content.id,
+        title: content.title || "未命名",
+        content: content.content,
+        wordCount: content.wordCount || content.content.length,
+        difficulty: content.difficulty || "medium",
+        updatedAt: content.updatedAt || content.createdAt
+      });
+    }
+  }
+
+  // 按最新排序，取第一篇
+  contents.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const selectedContent = contents.length > 0 ? contents[0] : null;
+
+  return json({ 
+    success: true, 
+    content: selectedContent,
+    membership: "anonymous"
+  });
+}
+
   // ===== 高级会员：每次获取当前最新内容 =====
   let groupNames = [];
   if (className) {
