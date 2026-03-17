@@ -396,7 +396,8 @@
                 return Object.assign({}, item, { rank: index + 1 });
             });
             
-            let html = '<table><thead><tr><th style="width: 60px;">排名</th><th>姓名</th><th style="width: 100px; cursor: pointer;" class="' + (sortField === 'wpm' ? 'active-sort' : '') + '" onclick="sortBy(\'wpm\')">WPM</th><th style="width: 100px; cursor: pointer;" class="' + (sortField === 'accuracy' ? 'active-sort' : '') + '" onclick="sortBy(\'accuracy\')">准确率</th></tr></thead><tbody>';
+           let html =tabletheadtrth style="width: 60px;">排名th>姓名th style="width: 80px;">班级th style="width: 100px; cursor: pointer;" class="' + (sortField === 'wpm' ? 'active-sort' : '') + '" onclick="sortBy(\'wpm\')">WPMth style="width: 100px; cursor: pointer;" class="' + (sortField === 'accuracy' ? 'active-sort' : '') + '" onclick="sortBy(\'accuracy\')">准确率trtheadtbody>';
+
             
             for (let i = 0; i < sortedList.length; i++) {
                 const r = sortedList[i];
