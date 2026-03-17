@@ -335,7 +335,7 @@
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         const isLoggedIn = currentUser && currentUser.nickname;
 	    const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
-	    const canType = isLoggedIn && membership.type !== 'anonymous';
+	    const canType = true;
         
         let targetText = '';
         let startTime = null;
@@ -364,7 +364,7 @@
                 if (result.success && result.content) {
                     targetText = result.content.content;
                     document.getElementById('targetText').textContent = targetText;
-                    document.getElementById('inputText').disabled = !canType;
+                    document.getElementById('inputText').disabled = !isLoggedIn;
 	                if (canType) {
 	                document.getElementById('inputText').focus();
 	                }
@@ -506,7 +506,7 @@
         }
         
         function resetTest() {
-            if (!canType) {
+            if (!isLoggedIn) {
                 showToast('请先登录后再练习', 'error');
                 return;
                 }
