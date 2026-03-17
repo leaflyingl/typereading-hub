@@ -664,7 +664,7 @@ function renderContent(content) {
     async function handleCheckin(title, wordCount) {
     if (!isLoggedIn) {
     showToast('请先登录后再打卡', 'error');
-    window.location.href = '/register/';
+    
     return;  }
       
       const btn = document.querySelector('.checkin-btn');
