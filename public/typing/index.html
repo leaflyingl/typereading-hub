@@ -357,7 +357,9 @@
                 const response = await fetch('/api/content/typing', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ className: currentUser.className || '' })
+                    body: JSON.stringify({
+						nickname: currentUser?.nickname || null,
+						className: currentUser.className || '' })
                 });
                 const result = await response.json();
                 
