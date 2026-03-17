@@ -620,6 +620,8 @@ function checkLogin() {
 
         function goTo(url) {
             const currentUser = localStorage.getItem('currentUser');
+            // 允许未登录用户访问阅读、打字和排行榜页面
+            const allowedWithoutLogin = ['/register/', '/profile/', '/reading/', '/typing/', '/rank/'];
             if (!currentUser && url !== '/register/' && url !== '/profile/') {
                 alert('请先登录后再使用此功能');
                 location.href = '/register/';
