@@ -232,19 +232,17 @@
             textarea:disabled { background: #2a2a3a; }
             .keystroke-info { background: #1a2744; border-color: #2a3a5a; }
         }
-/* ==================== 按钮布局优化 ==================== */
 
-/* 按钮容器 */
+/* ==================== 按钮布局优化 ==================== */
 .button-group {
     display: flex;
-    flex-direction: row; /* 默认横向排列 */
+    flex-direction: row;
     gap: 10px;
     margin-top: 20px;
     flex-wrap: wrap;
     justify-content: center;
 }
 
-/* 移动端：垂直排列 */
 @media (max-width: 480px) {
     .button-group {
         flex-direction: column;
@@ -267,7 +265,6 @@
     }
 }
 
-/* 平板端：横向排列，但按钮更大 */
 @media (min-width: 481px) and (max-width: 768px) {
     .button-group {
         gap: 12px;
@@ -280,13 +277,11 @@
     }
 }
 
-/* 桌面端：保持现有样式 */
 @media (min-width: 769px) {
     .button-group {
         gap: 15px;
     }
 }
-
     </style>
 </head>
 <body>
@@ -297,7 +292,6 @@
             <div class="text-display" id="targetText">加载中...</div>
             <textarea id="inputText" placeholder="在此输入上面的文字..." disabled></textarea>
             
-            <!-- 按键统计信息 -->
             <div class="keystroke-info" id="keystrokeInfo" style="display: none;">
                 <span>总按键: <span class="num" id="totalKeys">0</span></span>
                 <span>正确: <span class="num" id="correctKeys">0</span></span>
@@ -324,9 +318,9 @@
                 </div>
             </div>
             <div class="button-group">
-            <button class="btn btn-primary" onclick="submitResult()">提交成绩</button>
-            <button class="btn btn-primary" onclick="resetTest()">重新开始</button>
-            <a href="/" class="btn" style="background: white; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">返回首页</a>
+                <button class="btn btn-primary" onclick="submitResult()">提交成绩</button>
+                <button class="btn btn-primary" onclick="resetTest()">重新开始</button>
+                <a href="/" class="btn" style="background: white; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">返回首页</a>
             </div>
         </div>
     </div>
@@ -335,52 +329,66 @@
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         const isLoggedIn = currentUser && currentUser.nickname;
         const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
-        const canType = true; // 允许加载内容
+        const canType = true;
 
-// ...
-
-async function loadTypingContent() {
-    try {
-        const response = await fetch('/api/content/typing', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nickname: currentUser?.nickname || null,
-                className: currentUser?.className || ''  // ← 修复这里
-            })
-        });
-        const result = await response.json();
+        let targetText = '';
+        let startTime = null;
+        let timerInterval = null;
         
-        if (result.success && result.content) {
-            targetText = result.content.content;
-            document.getElementById('targetText').textContent = targetText;
-            document.getElementById('inputText').disabled = !isLoggedIn; // 未登录禁用输入
-            if (isLoggedIn) {  // ← 只有登录才聚焦
-                document.getElementById('inputText').focus();
+        let keystrokeStats = {
+            total: 0,
+            correct: 0,
+            errors: 0,
+            backspaces: 0
+        };
+        
+        let lastInput = '';
+        
+        async function loadTypingContent() {
+            try {
+                const response = await fetch('/api/content/typing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nickname: currentUser?.nickname || null,
+                        className: currentUser?.className || ''
+                    })
+                });
+                const result = await response.json();
+                
+                if (result.success && result.content) {
+                    targetText = result.content.content;
+                    document.getElementById('targetText').textContent = targetText;
+                    document.getElementById('inputText').disabled = !isLoggedIn;
+                    if (isLoggedIn) {
+                        document.getElementById('inputText').focus();
+                    }
+                } else {
+                    document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
+                }
+            } catch (err) {
+                console.error('加载内容失败:', err);
+                document.getElementById('targetText').textContent = '加载失败，请刷新重试';
             }
-        } else {
-            document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
         }
-    } catch (err) {
-        console.error('加载内容失败:', err);
-        document.getElementById('targetText').textContent = '加载失败，请刷新重试';
-    }
-}
-
         
-        // 监听键盘事件，统计按键
         document.addEventListener('DOMContentLoaded', function() {
             const inputText = document.getElementById('inputText');
             
+            // 未登录用户点击输入框时提示登录
+            inputText.addEventListener('click', function() {
+                if (!isLoggedIn) {
+                    alert('请先登录后再使用此功能');
+                }
+            });
+            
             inputText.addEventListener('keydown', function(e) {
-                // 开始计时
                 if (!startTime && !inputText.disabled) {
                     startTime = Date.now();
                     timerInterval = setInterval(updateTime, 100);
                     document.getElementById('keystrokeInfo').style.display = 'block';
                 }
                 
-                // 统计退格键
                 if (e.key === 'Backspace') {
                     keystrokeStats.backspaces++;
                     keystrokeStats.total++;
@@ -391,7 +399,6 @@ async function loadTypingContent() {
             inputText.addEventListener('input', function(e) {
                 const currentInput = inputText.value;
                 
-                // 检测新增字符
                 if (currentInput.length > lastInput.length) {
                     const newChar = currentInput[currentInput.length - 1];
                     const targetChar = targetText[currentInput.length - 1];
@@ -408,8 +415,6 @@ async function loadTypingContent() {
                 }
                 
                 lastInput = currentInput;
-                
-                // 更新其他统计
                 updateStats(currentInput);
             });
         });
@@ -422,23 +427,18 @@ async function loadTypingContent() {
         }
         
         function updateStats(input) {
-            // 计算单词数
             const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
             document.getElementById('wordCount').textContent = wordCount;
             
-            // 计算新的正确率：材料字符数 / 实际按键次数
             const targetLength = targetText.length;
             let accuracy = 100;
             
             if (keystrokeStats.total > 0) {
-                // 正确率 = 材料字符数 / 实际按键次数
-                // 但用户可能没打完，所以用已输入的正确字符数 / 总按键次数
                 accuracy = Math.round((keystrokeStats.correct / keystrokeStats.total) * 100);
             }
             
             document.getElementById('accuracy').textContent = accuracy + '%';
             
-            // 计算WPM
             if (startTime) {
                 const elapsed = (Date.now() - startTime) / 1000 / 60;
                 const words = input.length / 5;
@@ -456,10 +456,11 @@ async function loadTypingContent() {
         
         async function submitResult() {
             if (!isLoggedIn) {
-                showToast('请先登录后再提交成绩', 'error');
+                alert('请先登录后再提交成绩');
                 window.location.href = '/register/';
                 return;
-                }
+            }
+            
             const input = document.getElementById('inputText').value;
             if (input.length < 10) {
                 alert('请至少输入一段文字');
@@ -482,7 +483,6 @@ async function loadTypingContent() {
                         duration,
                         wordCount,
                         content: input,
-                        // 新增：传递按键统计
                         keystrokes: keystrokeStats,
                         targetLength: targetText.length
                     })
@@ -498,9 +498,10 @@ async function loadTypingContent() {
         
         function resetTest() {
             if (!isLoggedIn) {
-                showToast('请先登录后再练习', 'error');
+                alert('请先登录后再练习');
                 return;
-                }
+            }
+            
             document.getElementById('inputText').value = '';
             document.getElementById('wpm').textContent = '0';
             document.getElementById('accuracy').textContent = '100%';
@@ -508,7 +509,6 @@ async function loadTypingContent() {
             document.getElementById('wordCount').textContent = '0';
             document.getElementById('keystrokeInfo').style.display = 'none';
             
-            // 重置统计
             keystrokeStats = { total: 0, correct: 0, errors: 0, backspaces: 0 };
             lastInput = '';
             startTime = null;
