@@ -334,50 +334,39 @@
     <script>
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
         const isLoggedIn = currentUser && currentUser.nickname;
-	    const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
-	    const canType = true;
+        const membership = isLoggedIn ? (currentUser.membership || { type: 'basic' }) : { type: 'anonymous' };
+        const canType = true; // 允许加载内容
+
+// ...
+
+async function loadTypingContent() {
+    try {
+        const response = await fetch('/api/content/typing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nickname: currentUser?.nickname || null,
+                className: currentUser?.className || ''  // ← 修复这里
+            })
+        });
+        const result = await response.json();
         
-        let targetText = '';
-        let startTime = null;
-        let timerInterval = null;
-        
-        // 新增：按键统计
-        let keystrokeStats = {
-            total: 0,        // 总按键次数
-            correct: 0,      // 正确按键（匹配目标文本）
-            errors: 0,       // 错误按键
-            backspaces: 0    // 退格次数
-        };
-        
-        // 记录上一次输入内容，用于检测退格
-        let lastInput = '';
-        
-        async function loadTypingContent() {
-            try {
-                const response = await fetch('/api/content/typing', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-						nickname: currentUser?.nickname || null,
-						className: currentUser.className || '' })
-                });
-                const result = await response.json();
-                
-                if (result.success && result.content) {
-                    targetText = result.content.content;
-                    document.getElementById('targetText').textContent = targetText;
-                    document.getElementById('inputText').disabled = !isLoggedIn;
-	                if (canType) {
-	                document.getElementById('inputText').focus();
-	                }
-                } else {
-                    document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
-                }
-            } catch (err) {
-                console.error('加载内容失败:', err);
-                document.getElementById('targetText').textContent = '加载失败，请刷新重试';
+        if (result.success && result.content) {
+            targetText = result.content.content;
+            document.getElementById('targetText').textContent = targetText;
+            document.getElementById('inputText').disabled = !isLoggedIn; // 未登录禁用输入
+            if (isLoggedIn) {  // ← 只有登录才聚焦
+                document.getElementById('inputText').focus();
             }
+        } else {
+            document.getElementById('targetText').textContent = '暂无适合您班级的打字内容';
         }
+    } catch (err) {
+        console.error('加载内容失败:', err);
+        document.getElementById('targetText').textContent = '加载失败，请刷新重试';
+    }
+}
+
         
         // 监听键盘事件，统计按键
         document.addEventListener('DOMContentLoaded', function() {
