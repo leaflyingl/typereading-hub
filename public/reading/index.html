@@ -625,35 +625,37 @@ function renderCheckedIn(record) {
   }
 }
 
-    // 修复：渲染文章内容，正确传递参数
+// 修改 renderContent 函数 - 移除打卡按钮的 onclick 绑定，改为在 init 中控制
 function renderContent(content) {
   const contentArea = document.getElementById('content-area');
   
   if (!content) {
-    contentArea.innerHTML = `
-      <div class="card no-content">
-        <div class="no-content-icon">📚</div>
-        <h3>暂无阅读内容</h3>
-        <p>请联系老师添加阅读材料</p>
-      </div>
-    `;
+    renderNoContent();
     return;
   }
 
   // 保存文章ID
   currentArticleId = content.id;
+  
   contentArea.innerHTML = `
     <div class="card">
       <div class="article-card">
-        <div class="article-title">${content.title}</div>
-        <div class="article-content">${content.content}</div>
-        <div class="word-count">字数：${content.wordCount || content.content.length}</div>
+        <div class="article-title">` + content.title + `</div>
+        <div class="article-content">` + content.content + `</div>
+        <div class="word-count">字数：` + (content.wordCount || content.content.length) + `</div>
       </div>
-      <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount || content.content.length})">
+      <button class="checkin-btn" id="checkinBtn">
         完成阅读，立即打卡
       </button>
     </div>
   `;
+  
+  // 绑定点击事件
+  document.getElementById('checkinBtn').addEventListener('click', () => {
+    handleCheckin(content.title, content.wordCount || content.content.length);
+  });
+}
+
   
   // 新增：加载课后练习问题
   loadQuestions(content.id);
@@ -704,7 +706,7 @@ function renderContent(content) {
       }
     }
 
-  // 修复：渲染问题列表，正确显示问题内容
+// 修复：渲染问题列表，正确显示问题内容
 function renderQuestions(questions) {
   const container = document.getElementById('questions-list');
   
@@ -719,52 +721,52 @@ function renderQuestions(questions) {
     const lockedClass = canAnswer ? '' : 'locked';
     const disabledAttr = canAnswer ? '' : 'disabled';
     
-   return `
-<div class="question-item ${lockedClass}">
- div class="question-header">
-    ${index + 1}. ${q.question}
-   span class="question-type">${getQuestionTypeName(q.type)}</span>
- div>
+    return `
+<div class="question-item ` + lockedClass + `">
+  <div class="question-header">
+    ` + (index + 1) + `. ` + q.question + `
+    <span class="question-type">` + getQuestionTypeName(q.type) + `</span>
+  </div>
   
-  ${q.type === 'choice' ? `
-   div class="options-list">
-      ${q.options.map((opt, optIndex) => `
-       label class="option-label">
-         input type="radio" name="q-${q.id}" value="${opt}" ${disabledAttr}>
-         span>${String.fromCharCode(65 + optIndex)}. ${optspan>
-       label>
-      `).join('')}
-   div>
-  ` : ''}
+  ` + (q.type === 'choice' && q.options ? `
+    <div class="options-list">
+      ` + q.options.map((opt, i) => `
+        <label class="option-label">
+          <input type="radio" name="q-` + q.id + `" value="` + opt + `" ` + disabledAttr + `>
+          <span>` + opt + `</span>
+        </label>
+      `).join('') + `
+    </div>
+  ` : '') + `
   
- textarea 
+  <textarea 
     class="answer-textarea" 
-    id="answer-${q.id}" 
+    id="answer-` + q.id + `" 
     placeholder="请输入您的答案..."
-    ${disabledAttr}
+    ` + disabledAttr + `
   ></textarea>
   
-  ${canAnswer ? `
-   button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
+  ` + (canAnswer ? `
+    <button class="submit-answer-btn" onclick="submitAnswer('` + q.id + `')" id="btn-` + q.id + `">
       提交答案
-   button>
+    </button>
   ` : `
-   button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
+    <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
       提交答案
-   button>
-  `}
+    </button>
+  `) + `
   
- div id="status-${q.id}div>
+  <div id="status-` + q.id + `"></div>
 </div>
 `}).join('');
   
   // 添加会员限制提示（普通会员）
   if (!canAnswer) {
     container.innerHTML += `
-     div class="membership-lock">
-       p>🔒 您是${isPremium && isExpired ? '已过期' : '普通'}会员，可查看题目但无法作答</p>
-       p style="font-size: 12px; color: #999;">请联系老师开通高级会员，获得完整学习体验</p>
-     div>
+      <div class="membership-lock">
+        <p>🔒 您是会员，可查看题目但无法作答</p>
+        <p style="font-size: 12px; color: #999;">请联系老师开通高级会员，获得完整学习体验</p>
+      </div>
     `;
   }
   
