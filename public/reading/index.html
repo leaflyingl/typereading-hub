@@ -608,8 +608,8 @@ function renderCheckedIn(record) {
     <p>文章：《${record.articleTitle || '未知文章'}》</p>
     <div class="stats-grid">
       <div class="stat-item">
-        <div class="stat-value">${record.wordCount || 0}</div>
-        <div class="stat-label">阅读字数</div>
+        <div class="stat-value">` + (record.wordCount || 0) + `</div>
+        <div class="stat-label">阅读单词数</div>
       </div>
       <div class="stat-item">
         <div class="stat-value">1</div>
@@ -642,7 +642,7 @@ function renderContent(content) {
       <div class="article-card">
         <div class="article-title">` + content.title + `</div>
         <div class="article-content">` + content.content + `</div>
-        <div class="word-count">字数：` + (content.wordCount || content.content.length) + `</div>
+        <div class="word-count">单词数：` + (content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length) + `</div>
       </div>
       <button class="checkin-btn" id="checkinBtn">
         完成阅读，立即打卡
@@ -653,7 +653,7 @@ function renderContent(content) {
   // 绑定点击事件
   const checkinBtn = document.getElementById('checkinBtn');
   document.getElementById('checkinBtn').addEventListener('click', () => {
-    handleCheckin(content.title, content.wordCount || content.content.length);
+    handleCheckin(content.title, content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length);
   });
 
   
