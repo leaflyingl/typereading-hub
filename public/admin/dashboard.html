@@ -1839,7 +1839,7 @@ async function deleteClass(className) {
     id: currentEditingContentId, // ✅ 改为currentEditingContentId
     title: document.getElementById('content-title').value.trim(),
     content: document.getElementById('content-text').value.trim(),
-    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(document.getElementById('content-text').value)
+    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(document.getElementById('content-text').value),
     difficulty: document.getElementById('content-difficulty').value,
     useForReading: useForReading,
     useForTyping: useForTyping,
@@ -2150,6 +2150,13 @@ function updateWordCount() {
   document.getElementById('char-count').textContent = text.length;
 }
 
+
+// 计算单词数（按空格分隔）
+function calculateWordCount(text) {
+  if (!text) return 0;
+  return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+}
+
 // 加载已有问题
 async function loadExistingQuestions(contentId) {
   try {
@@ -2317,7 +2324,7 @@ async function saveContentWithQuestions() {
     id: currentEditingContentId,  // ✅ 修复：使用 currentEditingContentId
     title: title,
     content: content,
-    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(content)
+    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(content),
     difficulty: document.getElementById('content-difficulty').value,
     useForReading: document.getElementById('content-use-reading').checked,
     useForTyping: document.getElementById('content-use-typing').checked,
