@@ -711,10 +711,11 @@ function renderQuestions(questions) {
   
   // 获取当前用户会员状态
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const isLoggedIn = currentUser && currentUser.nickname;
   const membership = currentUser.membership || { type: 'basic' };
   const isPremium = membership.type === 'premium';
   const isExpired = isPremium && membership.expiresAt && new Date().toISOString().split('T')[0] > membership.expiresAt;
-  const canAnswer = isPremium && !isExpired;
+  const canAnswer = isLoggedIn && isPremium && !isExpired;
   
   container.innerHTML = questions.map((q, index) => {
     const lockedClass = canAnswer ? '' : 'locked';
@@ -759,11 +760,16 @@ function renderQuestions(questions) {
 </div>
 `}).join('');
   
-  // 添加会员限制提示（普通会员）
+  // 添加会员限制提示
   if (!canAnswer) {
+    // 修复：未登录用户显示不同提示
+    const tipText = isLoggedIn 
+      ? '🔒 您是普通会员，可查看题目但无法作答'
+      : '🔒 课后练习仅限高级会员使用';
+    
     container.innerHTML += `
       <div class="membership-lock">
-        <p>🔒 您是会员，可查看题目但无法作答</p>
+        <p>` + tipText + `</p>
         <p style="font-size: 12px; color: #999;">请联系老师开通高级会员，获得完整学习体验</p>
       </div>
     `;
@@ -774,6 +780,7 @@ function renderQuestions(questions) {
     questions.forEach(q => checkAnswerStatus(q.id));
   }
 }
+
 
 
     function getQuestionTypeName(type) {
