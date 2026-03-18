@@ -665,8 +665,7 @@ function renderContent(content) {
     // 关键修复：使用保存的 articleId
     async function handleCheckin(title, wordCount) {
     if (!isLoggedIn) {
-    showToast('请先登录后再打卡', 'error');
-    
+    alert('请先登录后再使用此功能');    
     return;  }
       
       const btn = document.querySelector('.checkin-btn');
