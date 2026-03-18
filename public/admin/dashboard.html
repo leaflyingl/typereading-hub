@@ -1839,7 +1839,7 @@ async function deleteClass(className) {
     id: currentEditingContentId, // ✅ 改为currentEditingContentId
     title: document.getElementById('content-title').value.trim(),
     content: document.getElementById('content-text').value.trim(),
-    wordCount: document.getElementById('content-wordcount').value || document.getElementById('content-text').value.length,
+    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(document.getElementById('content-text').value)
     difficulty: document.getElementById('content-difficulty').value,
     useForReading: useForReading,
     useForTyping: useForTyping,
@@ -2317,7 +2317,7 @@ async function saveContentWithQuestions() {
     id: currentEditingContentId,  // ✅ 修复：使用 currentEditingContentId
     title: title,
     content: content,
-    wordCount: document.getElementById('content-wordcount').value || content.length,
+    wordCount: document.getElementById('content-wordcount').value || calculateWordCount(content)
     difficulty: document.getElementById('content-difficulty').value,
     useForReading: document.getElementById('content-use-reading').checked,
     useForTyping: document.getElementById('content-use-typing').checked,
