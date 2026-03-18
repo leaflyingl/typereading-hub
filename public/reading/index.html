@@ -651,6 +651,7 @@ function renderContent(content) {
   `;
   
   // 绑定点击事件
+  const checkinBtn = document.getElementById('checkinBtn');
   document.getElementById('checkinBtn').addEventListener('click', () => {
     handleCheckin(content.title, content.wordCount || content.content.length);
   });
@@ -906,34 +907,6 @@ async function init() {
     // 没有可用内容
     renderNoContent();
   }
-}
-
-// 修改 renderContent 函数 - 移除打卡按钮的 onclick 绑定，改为在 init 中控制
-function renderContent(content) {
-  const contentArea = document.getElementById('content-area');
-  
-  if (!content) {
-    renderNoContent();
-    return;
-  }
-
-  contentArea.innerHTML = `
-    <div class="card">
-      <div class="article-card">
-        <div class="article-title">${content.title}</div>
-        <div class="article-content">${content.content}</div>
-        <div class="word-count">字数：${content.wordCount || content.content.length}</div>
-      </div>
-      <button class="checkin-btn" onclick="handleCheckin('${content.title}', ${content.wordCount || content.content.length})" ${isLoggedIn ? '' : 'disabled'}>
-      ${isLoggedIn ? '完成阅读，立即打卡' : '请先登录后打卡'}
-      </button>
-    </div>
-  `;
-  
-  // 绑定点击事件
-  document.getElementById('checkinBtn').addEventListener('click', () => {
-    handleCheckin(content.title, content.wordCount || content.content.length);
-  });
 }
 
 // 新增：没有内容时的显示
