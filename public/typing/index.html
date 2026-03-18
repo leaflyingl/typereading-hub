@@ -377,7 +377,7 @@
             
             // 未登录用户点击输入框时提示登录
             // 替换原来的 click 监听
-            inputText.addEventListener('mousedown', function(e) {
+            inputText.addEventListener('pointerdown', function(e) {
             if (!isLoggedIn && inputText.disabled) {
             e.preventDefault();
             alert('请先登录后再使用此功能');
