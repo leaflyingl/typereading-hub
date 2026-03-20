@@ -1177,23 +1177,30 @@
       }
     }
 
-    function switchTab(tab, element) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      
-      element.classList.add('active');
-      document.getElementById(tab + '-tab').classList.add('active');
-      
-      window.location.hash = tab;
-      
-      if (tab === 'students') loadStudents();
-      if (tab === 'classes') loadClasses();
-      if (tab === 'groups') loadGroups();
-      if (tab === 'content') loadContentList();
-      if (tab === 'rank') initRank();  // 改为 initRank
-      if (tab === 'finance') loadFinanceData();
-      if (tab === 'resources') loadResourcesAdmin();
+function switchTab(tab, element) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    
+    element.classList.add('active');
+    const tabContent = document.getElementById(tab + '-tab');
+    if (tabContent) {
+        tabContent.classList.add('active');
     }
+    
+    window.location.hash = tab;
+    
+    if (tab === 'students') loadStudents();
+    if (tab === 'classes') loadClasses();
+    if (tab === 'groups') loadGroups();
+    if (tab === 'content') loadContentList();
+    if (tab === 'rank') initRank();
+    if (tab === 'finance') loadFinanceData();
+    if (tab === 'resources') {
+        console.log('切换到资源管理标签，调用 loadResourcesAdmin');
+        loadResourcesAdmin();
+    }
+}
+
     
     // ========== 学生管理 ==========
     async function loadStudents() {
@@ -3173,6 +3180,16 @@ async function deleteLeaveRecord(leaveKey) {
       loadGroups();
       restoreTabState();
     }
+    // 如果当前 URL hash 是 resources，自动加载
+    if (window.location.hash === '#resources') {
+      setTimeout(() => {
+        const resourceTab = document.querySelector('.tab[onclick="switchTab(\'resources\', this)"]'); 
+    if (resourceTab) {
+      switchTab('resources', resourceTab);
+      }
+      }, 100);
+    }
+    }
 
     // 切换学生激活状态
     async function toggleStudentActive(nickname, newStatus) {
@@ -3219,6 +3236,11 @@ const RESOURCE_CATEGORIES = {
 
 // 加载资源列表（管理员）
 async function loadResourcesAdmin() {
+    const container = document.getElementById('resources-list-admin');
+    if (container) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">加载中...</p>';
+    }
+    
     try {
         const category = document.getElementById('resources-category-filter').value;
         
@@ -3230,19 +3252,34 @@ async function loadResourcesAdmin() {
         
         const result = await response.json();
         
-                if (result.success) {
+        console.log('资源管理 API 返回:', result);
+        
+        if (result.success) {
             allResources = result.resources || [];
             renderResourcesAdmin();
         } else {
-            document.getElementById('resources-list-admin').innerHTML = 
-                '<p style="color: red;">加载失败</p>';
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #ff4d4f;">
+                        <p>❌ 加载失败</p>
+                        <p style="font-size: 14px; margin-top: 10px;">${result.message || '未知错误'}</p>
+                    </div>
+                `;
+            }
         }
     } catch (error) {
         console.error('加载资源失败:', error);
-        document.getElementById('resources-list-admin').innerHTML = 
-            '<p style="color: red;">网络错误</p>';
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ff4d4f;">
+                    <p>❌ 网络错误</p>
+                    <p style="font-size: 14px; margin-top: 10px;">${error.message}</p>
+                </div>
+            `;
+        }
     }
 }
+
 
 // 渲染资源列表
 function renderResourcesAdmin() {
@@ -3253,40 +3290,70 @@ function renderResourcesAdmin() {
         return;
     }
     
+    console.log('renderResourcesAdmin 被调用，资源数量:', allResources.length);
+    
     if (allResources.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无资源，请点击"添加资源"创建</p>';
+        // 显示空状态提示
+        container.innerHTML = `
+            <div style="text-align: center; padding: 60px 20px; color: #999;">
+                <div style="font-size: 48px; margin-bottom: 20px;">📂</div>
+                <h3 style="margin-bottom: 10px; color: #666;">暂无资源</h3>
+                <p>点击"添加资源"按钮创建第一个资源吧</p>
+                <button class="btn btn-primary" onclick="showResourceModal()" style="margin-top: 20px;">
+                    ➕ 添加资源
+                </button>
+            </div>
+        `;
         return;
     }
     
-    var html = '<table class="data-table"><thead><tr>' +
-        '<th>标题</th><th>分类</th><th>链接</th><th>状态</th><th>创建时间</th><th>操作</th>' +
-        '</tr></thead><tbody>';
+    // 渲染资源列表
+    let html = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>分类</th>
+                    <th>链接</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
-    for (var i = 0; i < allResources.length; i++) {
-        var resource = allResources[i];
-        var cat = RESOURCE_CATEGORIES[resource.category] || RESOURCE_CATEGORIES['other'];
-        var statusClass = resource.isActive !== false ? 'tag-active' : 'tag-inactive';
-        var statusText = resource.isActive !== false ? '启用' : '禁用';
-        var date = formatDate(resource.createdAt);
-        var hasLink = resource.link ? '✅' : '❌';
-        var desc = resource.description ? resource.description.substring(0, 50) : '';
+    allResources.forEach(resource => {
+        const cat = RESOURCE_CATEGORIES[resource.category] || RESOURCE_CATEGORIES['other'];
+        const statusClass = resource.isActive !== false ? 'tag-active' : 'tag-inactive';
+        const statusText = resource.isActive !== false ? '启用' : '禁用';
+        const date = formatDate(resource.createdAt);
+        const hasLink = resource.link ? '✅' : '❌';
+        const desc = resource.description ? resource.description.substring(0, 50) : '';
         
-        html += '<tr>' +
-            '<td><strong>' + escapeHtml(resource.title) + '</strong>' +
-            (desc ? '<br><small style="color: #999;">' + escapeHtml(desc) + '</small>' : '') + '</td>' +
-            '<td><span class="tag ' + cat.class + '">' + cat.label + '</span></td>' +
-            '<td>' + hasLink + '</td>' +
-            '<td><span class="tag ' + statusClass + '">' + statusText + '</span></td>' +
-            '<td>' + date + '</td>' +
-            '<td>' +
-            '<button class="btn btn-small btn-secondary" onclick="editResource(\'' + resource.id + '\')">编辑</button> ' +
-            '<button class="btn btn-small ' + statusClass + '" onclick="toggleResource(\'' + resource.id + '\')">' + statusText + '</button> ' +
-            '<button class="btn btn-small btn-danger" onclick="deleteResource(\'' + resource.id + '\')">删除</button>' +
-            '</td>' +
-            '</tr>';
-    }
+        html += `
+            <tr>
+                <td>
+                    <strong>${escapeHtml(resource.title)}</strong>
+                    ${desc ? `<br><small style="color: #999;">${escapeHtml(desc)}</small>` : ''}
+                </td>
+                <td><span class="tag ${cat.class}">${cat.label}</span></td>
+                <td>${hasLink}</td>
+                <td><span class="tag ${statusClass}">${statusText}</span></td>
+                <td>${date}</td>
+                <td>
+                    <button class="btn btn-small btn-secondary" onclick="editResource('${resource.id}')">编辑</button>
+                    <button class="btn btn-small ${statusClass}" onclick="toggleResource('${resource.id}')">${statusText}</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteResource('${resource.id}')">删除</button>
+                </td>
+            </tr>
+        `;
+    });
     
-    html += '</tbody></table>';
+    html += `
+            </tbody>
+        </table>
+    `;
     container.innerHTML = html;
 }
 
