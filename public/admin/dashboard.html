@@ -1158,6 +1158,8 @@
     let selectedStudents = new Set();
     let editingContentId = null;
     let editingGroupId = null;
+    let allResources = [];        //-- 新增
+    let editingResourceId = null; //-- 新增
 
     function logout() {
       localStorage.removeItem('teacherLoggedIn');
@@ -3204,10 +3206,6 @@ async function deleteLeaveRecord(leaveKey) {
       }
 
     // ========== 资源管理 ==========
-
-// 资源管理相关变量
-let allResources = [];
-let editingResourceId = null;
 
 // 分类映射
 const RESOURCE_CATEGORIES = {
