@@ -3277,16 +3277,16 @@ function renderResourcesAdmin() {
         
         html += `
             <tr>
-                <td><strong>${resource.title}</strong></td>
+                <td><strong>${escapeHtml(resource.title)}</strong></td>
                 <td><span class="tag ${cat.class}">${cat.label}</span></td>
                 <td>${hasLink}</td>
                 <td><span class="tag ${statusClass}">${statusText}</span></td>
                 <td>${date}</td>
                 <td>
                     <button class="btn btn-small btn-secondary" onclick="editResource('${resource.id}')">编辑</button>
-                    <button class="btn btn-small ${resource.isActive !== false ? 'btn-secondary' : 'btn-primary'}" 
+                    <button class="btn btn-small ${statusClass}" 
                             onclick="toggleResource('${resource.id}')">
-                        ${resource.isActive !== false ? '禁用' : '启用'}
+                        ${statusText}
                     </button>
                     <button class="btn btn-small btn-danger" onclick="deleteResource('${resource.id}')">删除</button>
                 </td>
