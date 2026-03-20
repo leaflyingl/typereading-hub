@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资源分享 - TypingReading Hub</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --card-bg: rgba(255,255,255,0.95);
+            --text-primary: #333;
+            --text-secondary: #666;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        html { font-size: 16px; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 15px;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+        }
+
+        /* 头部导航 */
+        .header {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .back-btn:active {
+            background: #f0f5ff;
+        }
+
+        /* 搜索和筛选区域 */
+        .filter-section {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            color: #999;
+        }
+
+        .category-filter {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .category-btn {
+            padding: 6px 12px;
+            border: 1px solid #e8e8e8;
+            border-radius: 20px;
+            background: white;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .category-btn:active {
+            transform: scale(0.98);
+        }
+
+        .category-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* 资源卡片 */
+        .resource-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .resource-card:active {
+            transform: scale(0.99);
+        }
+
+        .resource-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .resource-icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .resource-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .resource-category {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            background: #f0f5ff;
+            color: var(--primary);
+        }
+
+        .resource-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 12px;
+        }
+
+        .resource-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .resource-link:active {
+            transform: scale(0.98);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            background: var(--card-bg);
+            padding: 60px 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .empty-icon {
+            font-size: 56px;
+            margin-bottom: 15px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 加载状态 */
+        .loading {
+            background: var(--card-bg);
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: var(--text-secondary);
+            box-shadow: var(--shadow);
+        }
+
+        /* 结果统计 */
+        .result-info {
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        /* 搜索高亮 */
+        .highlight {
+            background: #fff3cd;
+            padding: 1px 2px;
+            border-radius: 2px;
+        }
+
+        /* ==================== 响应式适配 ==================== */
+
+        @media (min-width: 768px) {
+            body { padding: 25px; }
+            .container { max-width: 800px; }
+            .header {
+                padding: 20px 30px;
+                border-radius: 16px;
+                margin-bottom: 30px;
+            }
+            .header h1 { font-size: 24px; }
+            .filter-section {
+                padding: 20px;
+                border-radius: 16px;
+                margin-bottom: 25px;
+            }
+            .search-input { padding: 14px 18px 14px 45px; font-size: 16px; }
+            .category-btn { padding: 8px 16px; font-size: 14px; }
+            .resource-card {
+                padding: 25px;
+                border-radius: 16px;
+                margin-bottom: 20px;
+            }
+            .resource-title { font-size: 19px; }
+            .resource-description { font-size: 15px; }
+        }
+
+        @media (max-height: 500px) and (orientation: landscape) {
+            body { padding: 10px; }
+            .header { padding: 12px 20px; margin-bottom: 10px; }
+            .filter-section { padding: 10px; margin-bottom: 10px; }
+            .resource-card { padding: 15px; margin-bottom: 10px; }
+        }
+
+        /* 暗黑模式 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --card-bg: rgba(40, 40, 50, 0.95);
+                --text-primary: #f0f0f0;
+                --text-secondary: #aaa;
+            }
+            body {
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            }
+            .search-input {
+                background: #323248;
+                border-color: #3a3a50;
+                color: #f0f0f0;
+            }
+            .search-input::placeholder {
+                color: #888;
+            }
+            .category-btn {
+                background: #323248;
+                border-color: #3a3a50;
+                color: #aaa;
+            }
+            .category-btn.active {
+                background: var(--primary);
+                color: white;
+            }
+            .resource-category {
+                background: #2a3a5a;
+                color: #7eb8ff;
+            }
+            .back-btn:active {
+                background: #2a3a5a;
+            }
+            .highlight {
+                background: #5a4a20;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📎 资源分享</h1>
+            <a href="/" class="back-btn">← 返回首页</a>
+        </div>
+
+        <!-- 搜索和筛选 -->
+        <div class="filter-section">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput"
+                    placeholder="搜索资源标题或描述..."
+                    oninput="handleSearch()"
+                >
+            </div>
+            <div class="category-filter" id="categoryFilter">
+                <!-- 分类按钮由 JS 动态生成 -->
+            </div>
+        </div>
+
+        <!-- 结果统计 -->
+        <div class="result-info" id="resultInfo" style="display: none;">
+            找到 <span id="resultCount">0</span> 个资源
+        </div>
+
+        <!-- 资源列表 -->
+        <div id="resourcesList">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 资源分享页面脚本 ==========
+
+        // 资源分类定义
+        const CATEGORIES = [
+            { value: 'all', label: '全部', icon: '📚' },
+            { value: 'reading', label: '阅读资料', icon: '📖' },
+            { value: 'listening', label: '听力材料', icon: '🎧' },
+            { value: 'vocabulary', label: '词汇积累', icon: '📝' },
+            { value: 'grammar', label: '语法学习', icon: '📚' },
+            { value: 'tools', label: '学习工具', icon: '🛠️' },
+            { value: 'other', label: '其他资源', icon: '📦' }
+        ];
+
+        // 全局变量
+        let allResources = [];
+        let currentCategory = 'all';
+        let currentSearchKeyword = '';
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderCategoryButtons();
+            loadResources();
+        });
+
+        // 渲染分类按钮
+        function renderCategoryButtons() {
+            const container = document.getElementById('categoryFilter');
+            container.innerHTML = CATEGORIES.map(cat => `
+                <button 
+                    class="category-btn ${cat.value === 'all' ? 'active' : ''}"
+                    onclick="selectCategory('${cat.value}')"
+                    data-category="${cat.value}"
+                >
+                    ${cat.icon} ${cat.label}
+                </button>
+            `).join('');
+        }
+
+        // 选择分类
+        function selectCategory(category) {
+            currentCategory = category;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.category === category);
+            });
+            
+            // 重新筛选
+            filterResources();
+        }
+
+        // 处理搜索输入
+        let searchTimeout = null;
+        function handleSearch() {
+            // 防抖处理
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            
+            searchTimeout = setTimeout(() => {
+                currentSearchKeyword = document.getElementById('searchInput').value.trim();
+                filterResources();
+            }, 300);
+        }
+
+        // 加载资源
+        async function loadResources() {
+            try {
+                const response = await fetch('/api/resources/list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    allResources = result.resources || [];
+                    filterResources();
+                } else {
+                    showEmptyState('加载失败，请刷新重试');
+                }
+            } catch (error) {
+                console.error('加载资源失败:', error);
+                showEmptyState('加载失败，请刷新重试');
+            }
+        }
+
+        // 筛选资源
+        function filterResources() {
+            let filtered = [...allResources];
+            
+            // 按分类筛选
+            if (currentCategory !== 'all') {
+                filtered = filtered.filter(r => r.category === currentCategory);
+            }
+            
+            // 按关键词筛选
+            if (currentSearchKeyword) {
+                const keyword = currentSearchKeyword.toLowerCase();
+                filtered = filtered.filter(r => {
+                    const titleMatch = r.title.toLowerCase().includes(keyword);
+                    const descMatch = r.description && r.description.toLowerCase().includes(keyword);
+                    return titleMatch || descMatch;
+                });
+            }
+            
+            // 渲染结果
+            renderResources(filtered);
+        }
+
+        // 渲染资源列表
+        function renderResources(resources) {
+            const container = document.getElementById('resourcesList');
+            const resultInfo = document.getElementById('resultInfo');
+            const resultCount = document.getElementById('resultCount');
+            
+            if (resources.length === 0) {
+                // 空状态
+                if (currentSearchKeyword || currentCategory !== 'all') {
+                    resultInfo.style.display = 'block';
+                    resultCount.textContent = '0';
+                    showEmptyState('未找到匹配的资源', '尝试更换筛选条件或关键词');
+                } else {
+                    resultInfo.style.display = 'none';
+                    showEmptyState('暂无资源', '请联系老师添加学习资源');
+                }
+                return;
+            }
+            
+            // 显示结果统计
+            resultInfo.style.display = 'block';
+            resultCount.textContent = resources.length;
+            
+            // 渲染资源卡片
+            container.innerHTML = resources.map(resource => {
+                const category = CATEGORIES.find(c => c.value === resource.category) || CATEGORIES[6];
+                
+                return `
+                    <div class="resource-card">
+                        <div class="resource-header">
+                            <span class="resource-icon">${category.icon}</span>
+                            <div style="flex: 1;">
+                                <div class="resource-title">
+                                    ${highlightKeyword(resource.title, currentSearchKeyword)}
+                                </div>
+                                <span class="resource-category">${category.icon} ${category.label}</span>
+                            </div>
+                        </div>
+                        ${resource.description ? `
+                            <div class="resource-description">
+                                ${highlightKeyword(resource.description, currentSearchKeyword)}
+                            </div>
+                        ` : ''}
+                        ${resource.link ? `
+                            <a href="${escapeHtml(resource.link)}" class="resource-link" target="_blank" rel="noopener">
+                                🔗 访问链接
+                            </a>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 显示空状态
+        function showEmptyState(title, desc) {
+            const container = document.getElementById('resourcesList');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📂</div>
+                    <div class="empty-title">${title}</div>
+                    <div class="empty-desc">${desc || ''}</div>
+                </div>
+            `;
+        }
+
+        // 高亮关键词
+        function highlightKeyword(text, keyword) {
+            if (!keyword || !text) return escapeHtml(text || '');
+            
+            const escaped = escapeHtml(text);
+            const regex = new RegExp(`(${escapeRegex(keyword)})`, 'gi');
+            return escaped.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        // HTML 转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 转义正则特殊字符
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+    </script>
+</body>
+</html>
