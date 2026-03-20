@@ -3249,23 +3249,23 @@ function renderResourcesAdmin() {
     const container = document.getElementById('resources-list-admin');
     
     if (allResources.length === 0) {
-        container.innerHTML =p style="text-align: center; color: #999; padding: 40px;">暂无资源</p>';
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无资源</p>';
         return;
     }
     
     let html = `
-       table class="data-table">
-           thead>
-               tr>
-                   th>标题</th>
-                   th>分类</th>
-                   th>链接</th>
-                   th>状态</th>
-                   th>创建时间</th>
-                   th>操作</th>
-               tr>
-           thead>
-           tbody>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>标题</th>
+                    <th>分类</th>
+                    <th>链接</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
     
     allResources.forEach(resource => {
@@ -3276,28 +3276,28 @@ function renderResourcesAdmin() {
         const hasLink = resource.link ? '✅' : '❌';
         
         html += `
-           tr>
-               td>
-                   strong>${escapeHtml(resource.title)}</strong>
-                    ${resource.description ?brsmall style="color: #666;">${escapeHtml(resource.description.substring(0, 50))}${resource.description.length > 50 ? '...' : ''small>` : ''}
-               td>
-               tdspan class="tag ${cat.class}">${cat.labelspantd>
-               td>${hasLinktd>
-               tdspan class="tag ${statusClass}">${statusTextspantd>
-               td>${datetd>
-               td>
-                   button class="btn btn-small btn-secondary" onclick="editResource('${escapeHtml(resource.id)}')">编辑</button>
-                   button class="btn btn-small ${resource.isActive !== false ? 'btn-secondary' : 'btn-primary'}" 
-                            onclick="toggleResource('${escapeHtml(resource.id)}')">
+            <tr>
+                <td><strong>${resource.title}</strong></td>
+                <td><span class="tag ${cat.class}">${cat.label}</span></td>
+                <td>${hasLink}</td>
+                <td><span class="tag ${statusClass}">${statusText}</span></td>
+                <td>${date}</td>
+                <td>
+                    <button class="btn btn-small btn-secondary" onclick="editResource('${resource.id}')">编辑</button>
+                    <button class="btn btn-small ${resource.isActive !== false ? 'btn-secondary' : 'btn-primary'}" 
+                            onclick="toggleResource('${resource.id}')">
                         ${resource.isActive !== false ? '禁用' : '启用'}
-                   button>
-                   button class="btn btn-small btn-danger" onclick="deleteResource('${escapeHtml(resource.id)}')">删除</button>
-               td>
-           tr>
+                    </button>
+                    <button class="btn btn-small btn-danger" onclick="deleteResource('${resource.id}')">删除</button>
+                </td>
+            </tr>
         `;
     });
     
-    html +=tbodytable>';
+    html += `
+            </tbody>
+        </table>
+    `;
     container.innerHTML = html;
 }
 
