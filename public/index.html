@@ -541,6 +541,13 @@ body {
                 <h3>排行榜</h3>
                 <p>查看打字成绩排名</p>
             </div>
+             <!-- 新增：资源分享卡片 - 开始 -->
+            <div class="feature-card" onclick="goTo('/resources/')">
+            <div class="feature-icon">📎</div>
+            <h3>资源分享</h3>
+            <p>学习资料与资源分享</p>
+            </div>
+            <!-- 新增：资源分享卡片 - 结束 -->
         </div>
         
         <div class="admin-link">
@@ -621,7 +628,7 @@ function checkLogin() {
         function goTo(url) {
             const currentUser = localStorage.getItem('currentUser');
             // 允许未登录用户访问阅读、打字和排行榜页面
-            const allowedWithoutLogin = ['/register/', '/profile/', '/reading/', '/typing/'];
+            const allowedWithoutLogin = ['/register/', '/profile/', '/reading/', '/typing/', '/resources/'];
             if (!currentUser && !allowedWithoutLogin.includes(url)) {
                 alert('请先登录后再使用此功能');
                 location.href = '/register/';
