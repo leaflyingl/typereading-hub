@@ -611,31 +611,29 @@
       </div>
 
     <!-- 资源管理 -->
-<div id="resources-tab" class="tab-content">
-   div class="card">
-       h3 style="margin-bottom: 20px;">📎 资源管理</h3>
-        
-       div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-           button class="btn btn-primary" onclick="showResourceModal()">
-                ➕ 添加资源
-           button>
-           select id="resources-category-filter" class="filter-select" onchange="loadResourcesAdmin()">
-               option value="">全部分类</option>
-               option value="reading">📖 阅读资料</option>
-               option value="listening">🎧 听力材料</option>
-               option value="vocabulary">📝 词汇积累</option>
-               option value="grammar">📚 语法学习</option>
-               option value="tools">🛠️ 学习工具</option>
-               option value="other">📦 其他资源</option>
-           select>
-           button class="btn btn-secondary" onclick="loadResourcesAdmin()">
-                🔄 刷新
-           button>
-       div>
-        
-       div id="resources-list-admin">正在加载资源数据div>
-   div>
-</div>
+    <div id="resources-tab" class="tab-content">
+      <div class="card">
+        <h3 style="margin-bottom: 20px;">📎 资源管理</h3>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="showResourceModal()">
+            ➕ 添加资源
+          </button>
+          <select id="resources-category-filter" class="filter-select" onchange="loadResourcesAdmin()">
+            <option value="">全部分类</option>
+            <option value="reading">📖 阅读资料</option>
+            <option value="listening">🎧 听力材料</option>
+            <option value="vocabulary">📝 词汇积累</option>
+            <option value="grammar">📚 语法学习</option>
+            <option value="tools">🛠️ 学习工具</option>
+            <option value="other">📦 其他资源</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadResourcesAdmin()">
+            🔄 刷新
+          </button>
+        </div>
+        <div id="resources-list-admin">正在加载资源数据...</div>
+      </div>
+    </div>
 
       <!-- 数据导出按钮 -->
     <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -1103,53 +1101,53 @@
   </div>
 
   <!-- 资源管理弹窗 -->
-<div id="resource-modal" class="modal">
-   div class="modal-content" style="max-width: 600px;">
-       div class="modal-header">
-           h3 id="resource-modal-title">添加资源</h3>
-           span class="close-btn" onclick="closeResourceModal()">&timesspan>
-       div>
-        
-       div class="form-group">
-           label>标题span style="color: #ff4d4f;">*</spanlabel>
-           input type="text" id="resource-title" class="form-control" placeholder="请输入资源标题">
-       div>
-        
-       div class="form-group">
-           label>描述</label>
-           textarea id="resource-description" class="form-control" rows="3" placeholder="请输入资源描述（可选）textarea>
-       div>
-        
-       div class="form-group">
-           label>链接地址</label>
-           input type="url" id="resource-link" class="form-control" placeholder="https://example.com/resource">
-       div>
-        
-       div class="form-group">
-           label>分类</label>
-           select id="resource-category" class="form-control">
-               option value="reading">📖 阅读资料</option>
-               option value="listening">🎧 听力材料</option>
-               option value="vocabulary">📝 词汇积累</option>
-               option value="grammar">📚 语法学习</option>
-               option value="tools">🛠️ 学习工具</option>
-               option value="other" selected>📦 其他资源</option>
-           select>
-       div>
-        
-       div class="form-group">
-           label>
-               input type="checkbox" id="resource-active" checked> 
-                立即启用
-           label>
-       div>
-        
-       div class="modal-footer">
-           button class="btn btn-secondary" onclick="closeResourceModal()">取消</button>
-           button class="btn btn-primary" onclick="saveResource()">保存</button>
-       div>
-   div>
-</div>
+  <div id="resource-modal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="resource-modal-title">添加资源</h3>
+        <span class="close-btn" onclick="closeResourceModal()">&times;</span>
+      </div>
+      
+      <div class="form-group">
+        <label>标题<span style="color: #ff4d4f;">*</span></label>
+        <input type="text" id="resource-title" class="form-control" placeholder="请输入资源标题">
+      </div>
+      
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="resource-description" class="form-control" rows="3" placeholder="请输入资源描述（可选）"></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>链接地址</label>
+        <input type="url" id="resource-link" class="form-control" placeholder="https://example.com/resource">
+      </div>
+      
+      <div class="form-group">
+        <label>分类</label>
+        <select id="resource-category" class="form-control">
+          <option value="reading">📖 阅读资料</option>
+          <option value="listening">🎧 听力材料</option>
+          <option value="vocabulary">📝 词汇积累</option>
+          <option value="grammar">📚 语法学习</option>
+          <option value="tools">🛠️ 学习工具</option>
+          <option value="other">📦 其他资源</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="resource-active" checked> 
+          立即启用
+        </label>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeResourceModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveResource()">保存</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     let allStudents = [];
