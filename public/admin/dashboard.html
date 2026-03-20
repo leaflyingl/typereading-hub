@@ -3180,17 +3180,7 @@ async function deleteLeaveRecord(leaveKey) {
       loadGroups();
       restoreTabState();
     }
-    // 如果当前 URL hash 是 resources，自动加载
-    if (window.location.hash === '#resources') {
-      setTimeout(() => {
-        const resourceTab = document.querySelector('.tab[onclick="switchTab(\'resources\', this)"]'); 
-    if (resourceTab) {
-      switchTab('resources', resourceTab);
-      }
-      }, 100);
-    }
-    }
-
+   
     // 切换学生激活状态
     async function toggleStudentActive(nickname, newStatus) {
       const action = newStatus ? "启用" : "停用";
