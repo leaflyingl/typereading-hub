@@ -2311,7 +2311,166 @@ if (path === "admin/export/transactions") {
      }
   });
  }
-    
+
+/* ========================= 资源分享管理 API ========================== */
+
+/* ---------------- 获取资源列表 ---------------- */
+if (path === "resources/list") {
+  const { category } = await request.json().catch(() => ({}));
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "resource:" });
+  const resources = [];
+  
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const resource = JSON.parse(data);
+      if (resource.isActive !== false) {
+        if (category && category !== 'all' && resource.category !== category) {
+          continue;
+        }
+        resources.push(resource);
+      }
+    }
+  }
+  
+  resources.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  return json({ 
+    success: true, 
+    resources,
+    total: resources.length
+  });
+}
+
+/* ---------------- 获取所有资源（管理员用） ---------------- */
+if (path === "admin/resources/list") {
+  const { category } = await request.json().catch(() => ({}));
+  
+  const { keys } = await env.TYPEREADING_KV.list({ prefix: "resource:" });
+  const resources = [];
+  
+  for (const key of keys) {
+    const data = await env.TYPEREADING_KV.get(key.name);
+    if (data) {
+      const resource = JSON.parse(data);
+      if (category && category !== 'all' && resource.category !== category) {
+        continue;
+      }
+      resources.push(resource);
+    }
+  }
+  
+  resources.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  return json({ success: true, resources });
+}
+
+/* ---------------- 添加资源 ---------------- */
+if (path === "admin/resource/add") {
+  const { title, description, link, category, isActive } = await request.json();
+  
+  if (!title || !title.trim()) {
+    return json({ success: false, message: "标题不能为空" });
+  }
+  
+  const resourceId = "resource:" + Date.now();
+  
+  const resourceData = {
+    id: resourceId,
+    title: title.trim(),
+    description: description ? description.trim() : "",
+    link: link ? link.trim() : "",
+    category: category || "other",
+    isActive: isActive !== false,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  await env.TYPEREADING_KV.put(resourceId, JSON.stringify(resourceData));
+  
+  return json({ 
+    success: true, 
+    message: "资源添加成功",
+    resource: resourceData 
+  });
+}
+
+/* ---------------- 更新资源 ---------------- */
+if (path === "admin/resource/update") {
+  const { id, title, description, link, category, isActive } = await request.json();
+  
+  if (!id) {
+    return json({ success: false, message: "资源ID不能为空" });
+  }
+  
+  const existingData = await env.TYPEREADING_KV.get(id);
+  if (!existingData) {
+    return json({ success: false, message: "资源不存在" });
+  }
+  
+  const resource = JSON.parse(existingData);
+  
+  if (title) resource.title = title.trim();
+  if (description !== undefined) resource.description = description.trim();
+  if (link !== undefined) resource.link = link.trim();
+  if (category) resource.category = category;
+  if (isActive !== undefined) resource.isActive = isActive;
+  resource.updatedAt = new Date().toISOString();
+  
+  await env.TYPEREADING_KV.put(id, JSON.stringify(resource));
+  
+  return json({ 
+    success: true, 
+    message: "资源更新成功",
+    resource 
+  });
+}
+
+/* ---------------- 删除资源 ---------------- */
+if (path === "admin/resource/delete") {
+  const { id } = await request.json();
+  
+  if (!id) {
+    return json({ success: false, message: "资源ID不能为空" });
+  }
+  
+  const existingData = await env.TYPEREADING_KV.get(id);
+  if (!existingData) {
+    return json({ success: false, message: "资源不存在" });
+  }
+  
+  await env.TYPEREADING_KV.delete(id);
+  
+  return json({ success: true, message: "资源删除成功" });
+}
+
+/* ---------------- 切换资源启用状态 ---------------- */
+if (path === "admin/resource/toggle") {
+  const { id } = await request.json();
+  
+  if (!id) {
+    return json({ success: false, message: "资源ID不能为空" });
+  }
+  
+  const existingData = await env.TYPEREADING_KV.get(id);
+  if (!existingData) {
+    return json({ success: false, message: "资源不存在" });
+  }
+  
+  const resource = JSON.parse(existingData);
+  resource.isActive = !resource.isActive;
+  resource.updatedAt = new Date().toISOString();
+  
+  await env.TYPEREADING_KV.put(id, JSON.stringify(resource));
+  
+  return json({ 
+    success: true, 
+    message: resource.isActive ? "资源已启用" : "资源已禁用",
+    isActive: resource.isActive 
+  });
+}
+
 return json({ success: false, message: "接口不存在：" + path });  // ✅ 这是默认返回，必须放在最后
 } catch (err) {
   console.error("API Error:", err);
