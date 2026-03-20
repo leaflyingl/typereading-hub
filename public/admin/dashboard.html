@@ -1158,8 +1158,6 @@
     let selectedStudents = new Set();
     let editingContentId = null;
     let editingGroupId = null;
-    let allResources = [];        //-- 新增
-    let editingResourceId = null; //-- 新增
 
     function logout() {
       localStorage.removeItem('teacherLoggedIn');
@@ -3207,6 +3205,10 @@ async function deleteLeaveRecord(leaveKey) {
 
     // ========== 资源管理 ==========
 
+// 资源管理相关变量
+let allResources = [];
+let editingResourceId = null;
+
 // 分类映射
 const RESOURCE_CATEGORIES = {
     'reading': { label: '📖 阅读资料', class: 'tag-reading' },
@@ -3230,17 +3232,17 @@ async function loadResourcesAdmin() {
         
         const result = await response.json();
         
-        if (result.success) {
+                if (result.success) {
             allResources = result.resources || [];
             renderResourcesAdmin();
         } else {
             document.getElementById('resources-list-admin').innerHTML = 
-               p style="color: red;">加载失败</p>';
+                '<p style="color: red;">加载失败</p>';
         }
     } catch (error) {
         console.error('加载资源失败:', error);
         document.getElementById('resources-list-admin').innerHTML = 
-           p style="color: red;">网络错误</p>';
+            '<p style="color: red;">网络错误</p>';
     }
 }
 
@@ -3277,7 +3279,11 @@ function renderResourcesAdmin() {
         
         html += `
             <tr>
-                <td><strong>${escapeHtml(resource.title)}</strong></td>
+                <td>
+                    <strong>${escapeHtml(resource.title)}</strong>
+                    <br>
+                    <small style="color: #999;">${escapeHtml(resource.description || '')}</small>
+                </td>
                 <td><span class="tag ${cat.class}">${cat.label}</span></td>
                 <td>${hasLink}</td>
                 <td><span class="tag ${statusClass}">${statusText}</span></td>
@@ -3286,7 +3292,7 @@ function renderResourcesAdmin() {
                     <button class="btn btn-small btn-secondary" onclick="editResource('${resource.id}')">编辑</button>
                     <button class="btn btn-small ${statusClass}" 
                             onclick="toggleResource('${resource.id}')">
-                        ${statusText}
+                        ${resource.isActive !== false ? '禁用' : '启用'}
                     </button>
                     <button class="btn btn-small btn-danger" onclick="deleteResource('${resource.id}')">删除</button>
                 </td>
