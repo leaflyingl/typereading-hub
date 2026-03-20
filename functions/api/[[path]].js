@@ -2354,6 +2354,7 @@ if (path === "admin/resources/list") {
     const data = await env.TYPEREADING_KV.get(key.name);
     if (data) {
       const resource = JSON.parse(data);
+      // 修复：分类过滤逻辑
       if (category && category !== 'all' && resource.category !== category) {
         continue;
       }
@@ -2362,7 +2363,6 @@ if (path === "admin/resources/list") {
   }
   
   resources.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  
   return json({ success: true, resources });
 }
 
