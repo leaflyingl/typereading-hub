@@ -429,6 +429,7 @@
     <div class="tab" onclick="switchTab('content', this)">📝 内容管理</div>
     <div class="tab" onclick="switchTab('finance', this)">💰 财务管理</div>
     <div class="tab" onclick="switchTab('rank', this)">🏆 排行榜</div>
+    <div class="tab" onclick="switchTab('resources', this)">📎 资源管理</div>
   </div>
 
   <div class="container">
@@ -608,6 +609,33 @@
           <div class="finance-stat-label">总实收</div>
         </div>
       </div>
+
+    <!-- 资源管理 -->
+<div id="resources-tab" class="tab-content">
+   div class="card">
+       h3 style="margin-bottom: 20px;">📎 资源管理</h3>
+        
+       div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+           button class="btn btn-primary" onclick="showResourceModal()">
+                ➕ 添加资源
+           button>
+           select id="resources-category-filter" class="filter-select" onchange="loadResourcesAdmin()">
+               option value="">全部分类</option>
+               option value="reading">📖 阅读资料</option>
+               option value="listening">🎧 听力材料</option>
+               option value="vocabulary">📝 词汇积累</option>
+               option value="grammar">📚 语法学习</option>
+               option value="tools">🛠️ 学习工具</option>
+               option value="other">📦 其他资源</option>
+           select>
+           button class="btn btn-secondary" onclick="loadResourcesAdmin()">
+                🔄 刷新
+           button>
+       div>
+        
+       div id="resources-list-admin">正在加载资源数据div>
+   div>
+</div>
 
       <!-- 数据导出按钮 -->
     <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -1074,6 +1102,55 @@
     </div>
   </div>
 
+  <!-- 资源管理弹窗 -->
+<div id="resource-modal" class="modal">
+   div class="modal-content" style="max-width: 600px;">
+       div class="modal-header">
+           h3 id="resource-modal-title">添加资源</h3>
+           span class="close-btn" onclick="closeResourceModal()">&timesspan>
+       div>
+        
+       div class="form-group">
+           label>标题span style="color: #ff4d4f;">*</spanlabel>
+           input type="text" id="resource-title" class="form-control" placeholder="请输入资源标题">
+       div>
+        
+       div class="form-group">
+           label>描述</label>
+           textarea id="resource-description" class="form-control" rows="3" placeholder="请输入资源描述（可选）textarea>
+       div>
+        
+       div class="form-group">
+           label>链接地址</label>
+           input type="url" id="resource-link" class="form-control" placeholder="https://example.com/resource">
+       div>
+        
+       div class="form-group">
+           label>分类</label>
+           select id="resource-category" class="form-control">
+               option value="reading">📖 阅读资料</option>
+               option value="listening">🎧 听力材料</option>
+               option value="vocabulary">📝 词汇积累</option>
+               option value="grammar">📚 语法学习</option>
+               option value="tools">🛠️ 学习工具</option>
+               option value="other" selected>📦 其他资源</option>
+           select>
+       div>
+        
+       div class="form-group">
+           label>
+               input type="checkbox" id="resource-active" checked> 
+                立即启用
+           label>
+       div>
+        
+       div class="modal-footer">
+           button class="btn btn-secondary" onclick="closeResourceModal()">取消</button>
+           button class="btn btn-primary" onclick="saveResource()">保存</button>
+       div>
+   div>
+</div>
+
   <script>
     let allStudents = [];
     let allClasses = [];
@@ -1117,6 +1194,7 @@
       if (tab === 'content') loadContentList();
       if (tab === 'rank') initRank();  // 改为 initRank
       if (tab === 'finance') loadFinanceData();
+      if (tab === 'resources') loadResourcesAdmin();
     }
     
     // ========== 学生管理 ==========
@@ -3124,7 +3202,249 @@ async function deleteLeaveRecord(leaveKey) {
       } catch (e) {
         alert('网络错误');
       }
+
+    // ========== 资源管理 ==========
+
+// 资源管理相关变量
+let allResources = [];
+let editingResourceId = null;
+
+// 分类映射
+const RESOURCE_CATEGORIES = {
+    'reading': { label: '📖 阅读资料', class: 'tag-reading' },
+    'listening': { label: '🎧 听力材料', class: 'tag-listening' },
+    'vocabulary': { label: '📝 词汇积累', class: 'tag-vocabulary' },
+    'grammar': { label: '📚 语法学习', class: 'tag-grammar' },
+    'tools': { label: '🛠️ 学习工具', class: 'tag-tools' },
+    'other': { label: '📦 其他资源', class: 'tag-other' }
+};
+
+// 加载资源列表（管理员）
+async function loadResourcesAdmin() {
+    try {
+        const category = document.getElementById('resources-category-filter').value;
+        
+        const response = await fetch('/api/admin/resources/list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ category })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            allResources = result.resources || [];
+            renderResourcesAdmin();
+        } else {
+            document.getElementById('resources-list-admin').innerHTML = 
+               p style="color: red;">加载失败</p>';
+        }
+    } catch (error) {
+        console.error('加载资源失败:', error);
+        document.getElementById('resources-list-admin').innerHTML = 
+           p style="color: red;">网络错误</p>';
     }
+}
+
+// 渲染资源列表
+function renderResourcesAdmin() {
+    const container = document.getElementById('resources-list-admin');
+    
+    if (allResources.length === 0) {
+        container.innerHTML =p style="text-align: center; color: #999; padding: 40px;">暂无资源</p>';
+        return;
+    }
+    
+    let html = `
+       table class="data-table">
+           thead>
+               tr>
+                   th>标题</th>
+                   th>分类</th>
+                   th>链接</th>
+                   th>状态</th>
+                   th>创建时间</th>
+                   th>操作</th>
+               tr>
+           thead>
+           tbody>
+    `;
+    
+    allResources.forEach(resource => {
+        const cat = RESOURCE_CATEGORIES[resource.category] || RESOURCE_CATEGORIES['other'];
+        const statusClass = resource.isActive !== false ? 'tag-active' : 'tag-inactive';
+        const statusText = resource.isActive !== false ? '启用' : '禁用';
+        const date = formatDate(resource.createdAt);
+        const hasLink = resource.link ? '✅' : '❌';
+        
+        html += `
+           tr>
+               td>
+                   strong>${escapeHtml(resource.title)}</strong>
+                    ${resource.description ?brsmall style="color: #666;">${escapeHtml(resource.description.substring(0, 50))}${resource.description.length > 50 ? '...' : ''small>` : ''}
+               td>
+               tdspan class="tag ${cat.class}">${cat.labelspantd>
+               td>${hasLinktd>
+               tdspan class="tag ${statusClass}">${statusTextspantd>
+               td>${datetd>
+               td>
+                   button class="btn btn-small btn-secondary" onclick="editResource('${escapeHtml(resource.id)}')">编辑</button>
+                   button class="btn btn-small ${resource.isActive !== false ? 'btn-secondary' : 'btn-primary'}" 
+                            onclick="toggleResource('${escapeHtml(resource.id)}')">
+                        ${resource.isActive !== false ? '禁用' : '启用'}
+                   button>
+                   button class="btn btn-small btn-danger" onclick="deleteResource('${escapeHtml(resource.id)}')">删除</button>
+               td>
+           tr>
+        `;
+    });
+    
+    html +=tbodytable>';
+    container.innerHTML = html;
+}
+
+// 显示添加资源弹窗
+function showResourceModal() {
+    editingResourceId = null;
+    document.getElementById('resource-modal-title').textContent = '添加资源';
+    document.getElementById('resource-title').value = '';
+    document.getElementById('resource-description').value = '';
+    document.getElementById('resource-link').value = '';
+    document.getElementById('resource-category').value = 'other';
+    document.getElementById('resource-active').checked = true;
+    document.getElementById('resource-modal').style.display = 'flex';
+}
+
+// 编辑资源
+function editResource(id) {
+    const resource = allResources.find(r => r.id === id);
+    if (!resource) return;
+    
+    editingResourceId = id;
+    document.getElementById('resource-modal-title').textContent = '编辑资源';
+    document.getElementById('resource-title').value = resource.title;
+    document.getElementById('resource-description').value = resource.description || '';
+    document.getElementById('resource-link').value = resource.link || '';
+    document.getElementById('resource-category').value = resource.category || 'other';
+    document.getElementById('resource-active').checked = resource.isActive !== false;
+    document.getElementById('resource-modal').style.display = 'flex';
+}
+
+// 关闭资源弹窗
+function closeResourceModal() {
+    document.getElementById('resource-modal').style.display = 'none';
+    editingResourceId = null;
+}
+
+// 保存资源
+async function saveResource() {
+    const title = document.getElementById('resource-title').value.trim();
+    const description = document.getElementById('resource-description').value.trim();
+    const link = document.getElementById('resource-link').value.trim();
+    const category = document.getElementById('resource-category').value;
+    const isActive = document.getElementById('resource-active').checked;
+    
+    if (!title) {
+        alert('标题不能为空');
+        return;
+    }
+    
+    try {
+        const url = editingResourceId ? '/api/admin/resource/update' : '/api/admin/resource/add';
+        const body = editingResourceId ? {
+            id: editingResourceId,
+            title,
+            description,
+            link,
+            category,
+            isActive
+        } : {
+            title,
+            description,
+            link,
+            category,
+            isActive
+        };
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            closeResourceModal();
+            loadResourcesAdmin();
+        } else {
+            alert(result.message || '保存失败');
+        }
+    } catch (error) {
+        console.error('保存资源失败:', error);
+        alert('网络错误');
+    }
+}
+
+// 切换资源状态
+async function toggleResource(id) {
+    if (!confirm('确定要切换此资源的启用状态吗？')) return;
+    
+    try {
+        const response = await fetch('/api/admin/resource/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            loadResourcesAdmin();
+        } else {
+            alert(result.message || '操作失败');
+        }
+    } catch (error) {
+        console.error('切换资源状态失败:', error);
+        alert('网络错误');
+    }
+}
+
+// 删除资源
+async function deleteResource(id) {
+    if (!confirm('确定要删除此资源吗？此操作不可撤销。')) return;
+    
+    try {
+        const response = await fetch('/api/admin/resource/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            loadResourcesAdmin();
+        } else {
+            alert(result.message || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除资源失败:', error);
+        alert('网络错误');
+    }
+}
+
+// HTML 转义函数
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+   }
 
     init();
   </script>
