@@ -3281,8 +3281,7 @@ function renderResourcesAdmin() {
             <tr>
                 <td>
                     <strong>${escapeHtml(resource.title)}</strong>
-                    <br>
-                    <small style="color: #999;">${escapeHtml(resource.description || '')}</small>
+                    ${resource.description ? `<br><small style="color: #999;">${escapeHtml(resource.description.substring(0, 50))}${resource.description.length > 50 ? '...' : ''}</small>` : ''}
                 </td>
                 <td><span class="tag ${cat.class}">${cat.label}</span></td>
                 <td>${hasLink}</td>
