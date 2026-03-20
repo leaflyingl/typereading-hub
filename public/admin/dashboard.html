@@ -3280,20 +3280,21 @@ function renderResourcesAdmin() {
         html += `
             <tr>
                 <td>
-                    <strong>${escapeHtml(resource.title)}</strong>
-                    ${resource.description ? `<br><small style="color: #999;">${escapeHtml(resource.description.substring(0, 50))}${resource.description.length > 50 ? '...' : ''}</small>` : ''}
+                    <strong></strong>
+                    <br>
+                    <small style="color: #999;"></small>
                 </td>
-                <td><span class="tag ${cat.class}">${cat.label}</span></td>
-                <td>${hasLink}</td>
-                <td><span class="tag ${statusClass}">${statusText}</span></td>
-                <td>${date}</td>
+                <td><span class="tag "></span></td>
+                <td></td>
+                <td><span class="tag "></span></td>
+                <td></td>
                 <td>
-                    <button class="btn btn-small btn-secondary" onclick="editResource('${resource.id}')">编辑</button>
-                    <button class="btn btn-small ${statusClass}" 
-                            onclick="toggleResource('${resource.id}')">
-                        ${resource.isActive !== false ? '禁用' : '启用'}
+                    <button class="btn btn-small btn-secondary" onclick="editResource('')">编辑</button>
+                    <button class="btn btn-small " 
+                            onclick="toggleResource('')">
+                        
                     </button>
-                    <button class="btn btn-small btn-danger" onclick="deleteResource('${resource.id}')">删除</button>
+                    <button class="btn btn-small btn-danger" onclick="deleteResource('')">删除</button>
                 </td>
             </tr>
         `;
