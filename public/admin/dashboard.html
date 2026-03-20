@@ -3250,60 +3250,45 @@ async function loadResourcesAdmin() {
 function renderResourcesAdmin() {
     const container = document.getElementById('resources-list-admin');
     
-    if (allResources.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无资源</p>';
+    if (!container) {
+        console.error('找不到 resources-list-admin 元素');
         return;
     }
     
-    let html = `
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>标题</th>
-                    <th>分类</th>
-                    <th>链接</th>
-                    <th>状态</th>
-                    <th>创建时间</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
+    if (allResources.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">暂无资源，请点击"添加资源"创建</p>';
+        return;
+    }
     
-    allResources.forEach(resource => {
-        const cat = RESOURCE_CATEGORIES[resource.category] || RESOURCE_CATEGORIES['other'];
-        const statusClass = resource.isActive !== false ? 'tag-active' : 'tag-inactive';
-        const statusText = resource.isActive !== false ? '启用' : '禁用';
-        const date = formatDate(resource.createdAt);
-        const hasLink = resource.link ? '✅' : '❌';
+    var html = '<table class="data-table"><thead><tr>' +
+        '<th>标题</th><th>分类</th><th>链接</th><th>状态</th><th>创建时间</th><th>操作</th>' +
+        '</tr></thead><tbody>';
+    
+    for (var i = 0; i < allResources.length; i++) {
+        var resource = allResources[i];
+        var cat = RESOURCE_CATEGORIES[resource.category] || RESOURCE_CATEGORIES['other'];
+        var statusClass = resource.isActive !== false ? 'tag-active' : 'tag-inactive';
+        var statusText = resource.isActive !== false ? '启用' : '禁用';
+        var date = formatDate(resource.createdAt);
+        var hasLink = resource.link ? '✅' : '❌';
+        var desc = resource.description ? resource.description.substring(0, 50) : '';
         
-        html += `
-            <tr>
-                <td>
-                    <strong></strong>
-                    <br>
-                    <small style="color: #999;"></small>
-                </td>
-                <td><span class="tag "></span></td>
-                <td></td>
-                <td><span class="tag "></span></td>
-                <td></td>
-                <td>
-                    <button class="btn btn-small btn-secondary" onclick="editResource('')">编辑</button>
-                    <button class="btn btn-small " 
-                            onclick="toggleResource('')">
-                        
-                    </button>
-                    <button class="btn btn-small btn-danger" onclick="deleteResource('')">删除</button>
-                </td>
-            </tr>
-        `;
-    });
+        html += '<tr>' +
+            '<td><strong>' + escapeHtml(resource.title) + '</strong>' +
+            (desc ? '<br><small style="color: #999;">' + escapeHtml(desc) + '</small>' : '') + '</td>' +
+            '<td><span class="tag ' + cat.class + '">' + cat.label + '</span></td>' +
+            '<td>' + hasLink + '</td>' +
+            '<td><span class="tag ' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' + date + '</td>' +
+            '<td>' +
+            '<button class="btn btn-small btn-secondary" onclick="editResource(\'' + resource.id + '\')">编辑</button> ' +
+            '<button class="btn btn-small ' + statusClass + '" onclick="toggleResource(\'' + resource.id + '\')">' + statusText + '</button> ' +
+            '<button class="btn btn-small btn-danger" onclick="deleteResource(\'' + resource.id + '\')">删除</button>' +
+            '</td>' +
+            '</tr>';
+    }
     
-    html += `
-            </tbody>
-        </table>
-    `;
+    html += '</tbody></table>';
     container.innerHTML = html;
 }
 
