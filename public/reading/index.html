@@ -362,7 +362,7 @@ body {
 
 .answer-status.pending {
   background: #fff7e6;
-  color: #fa8c16;
+  color: #faad14;
 }
 
         /* 会员限制提示 */
@@ -392,6 +392,83 @@ body {
       background: #f5f5f5;
       cursor: not-allowed;
     }
+
+/* ==================== 计时器样式（新增）==================== */
+.timer-section {
+  background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.timer-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.timer-icon {
+  font-size: 24px;
+}
+
+.timer-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: normal;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.timer-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-height: 40px;
+}
+
+.timer-btn.pause {
+  background: #faad14;
+  color: white;
+}
+
+.timer-btn.pause:hover {
+  background: #d48806;
+}
+
+.timer-btn.resume {
+  background: var(--primary);
+  color: white;
+}
+
+.timer-btn.resume:hover {
+  background: var(--primary-dark);
+}
+
+.timer-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.timer-btn.hidden {
+  display: none;
+}
 
 /* ==================== Pad 适配 ==================== */
 
@@ -445,6 +522,19 @@ body {
   .qna-title {
     font-size: 20px;
   }
+  
+  /* 计时器桌面样式 */
+  .timer-section {
+    padding: 20px 30px;
+  }
+  
+  .timer-display {
+    font-size: 24px;
+  }
+  
+  .timer-icon {
+    font-size: 32px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -478,6 +568,14 @@ body {
     font-size: 15px;
     line-height: 1.7;
   }
+  
+  .timer-section {
+    padding: 12px 15px;
+  }
+  
+  .timer-display {
+    font-size: 16px;
+  }
 }
 
 /* 暗黑模式 */
@@ -501,6 +599,11 @@ body {
   
   .article-content {
     color: #c8c8d0;
+  }
+  
+  .timer-section {
+    background: linear-gradient(135deg, #1a2744 0%, #16213e 100%);
+    border-color: var(--primary);
   }
 }
   </style>
@@ -531,23 +634,145 @@ body {
     let currentArticleId = null;
     let currentQuestions = [];
 
+    // ==================== 阅读计时器对象（新增）====================
+    let readingTimer = {
+      startTime: null,
+      elapsedTime: 0,
+      isRunning: false,
+      isPaused: false,
+      hasStarted: false,
+      intervalId: null,
+
+      // 开始计时（页面加载后自动开始）
+      start() {
+        if (this.hasStarted) return;
+        
+        this.startTime = Date.now();
+        this.isRunning = true;
+        this.hasStarted = true;
+        this.showTimerSection();
+        this.tick();
+        
+        this.intervalId = setInterval(() => this.tick(), 1000);
+      },
+
+      // 暂停/继续切换
+      togglePause() {
+        if (!this.hasStarted) return;
+        
+        if (this.isPaused) {
+          this.startTime = Date.now() - (this.elapsedTime * 1000);
+          this.isPaused = false;
+          this.isRunning = true;
+          this.updatePauseButton(false);
+        } else {
+          this.isPaused = true;
+          this.isRunning = false;
+          this.updatePauseButton(true);
+        }
+      },
+
+      tick() {
+        if (!this.isRunning || this.isPaused) return;
+        
+        const now = Date.now();
+        this.elapsedTime = Math.floor((now - this.startTime) / 1000);
+        this.updateDisplay();
+      },
+
+      // 停止计时（打卡时调用）
+      stop() {
+        this.isRunning = false;
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+          this.intervalId = null;
+        }
+        return this.elapsedTime;
+      },
+
+      // 重置
+      reset() {
+        this.stop();
+        this.startTime = null;
+        this.elapsedTime = 0;
+        this.isRunning = false;
+        this.isPaused = false;
+        this.hasStarted = false;
+        this.hideTimerSection();
+        this.updateDisplay();
+        this.updatePauseButton(false);
+      },
+
+      showTimerSection() {
+        const timerSection = document.getElementById('timerSection');
+        if (timerSection) timerSection.style.display = 'flex';
+      },
+
+      hideTimerSection() {
+        const timerSection = document.getElementById('timerSection');
+        if (timerSection) timerSection.style.display = 'none';
+      },
+
+      updateDisplay() {
+        const minutes = Math.floor(this.elapsedTime / 60);
+        const seconds = this.elapsedTime % 60;
+        const timeStr = 
+          String(minutes).padStart(2, '0') + ':' + 
+          String(seconds).padStart(2, '0');
+        
+        const timerText = document.getElementById('timerText');
+        const timerStatus = document.getElementById('timerStatus');
+        
+        if (timerText) timerText.textContent = timeStr;
+        
+        if (timerStatus) {
+          if (this.isPaused) {
+            timerStatus.textContent = '(已暂停)';
+          } else if (this.isRunning) {
+            timerStatus.textContent = '(阅读中)';
+          } else {
+            timerStatus.textContent = '';
+          }
+        }
+      },
+
+      updatePauseButton(isPaused) {
+        const pauseBtn = document.getElementById('pauseBtn');
+        const resumeBtn = document.getElementById('resumeBtn');
+        
+        if (pauseBtn && resumeBtn) {
+          if (isPaused) {
+            pauseBtn.classList.add('hidden');
+            resumeBtn.classList.remove('hidden');
+          } else {
+            pauseBtn.classList.remove('hidden');
+            resumeBtn.classList.add('hidden');
+          }
+        }
+      }
+    };
+
+    // 全局暴露暂停切换函数
+    window.togglePause = function() {
+      readingTimer.togglePause();
+    };
+
     function showToast(message, type = 'success') {
       const toast = document.createElement('div');
-      toast.className = `toast ${type}`;
+      toast.className = `toast `;
       toast.textContent = message;
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 3000);
     }
 
-function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return year + "-" + month + "-" + day;  // ✅ 请确认这行
-  }
+    function getTodayString() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return year + "-" + month + "-" + day;
+    }
 
-    // 关键修复：检查打卡状态时传递客户端日期
     async function checkTodayStatus() {
       try {
         const response = await fetch('/api/checkin/status', {
@@ -555,7 +780,7 @@ function getTodayString() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             nickname: currentUser.nickname,
-            date: getTodayString() // 关键：传递本地日期
+            date: getTodayString()
           })
         });
         return await response.json();
@@ -578,18 +803,22 @@ function getTodayString() {
       }
     }
 
-    // 关键修复：打卡时传递 articleId 和 date
+    // 修改：打卡时增加阅读时长
     async function doCheckin(articleId, articleTitle, wordCount) {
       try {
+        // 停止计时并获取阅读时长
+        const duration = readingTimer.stop();
+        
         const response = await fetch('/api/checkin/reading', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             nickname: currentUser.nickname,
-            articleId: articleId,        // 传递文章ID
+            articleId: articleId,
             articleTitle: articleTitle,
             wordCount: wordCount,
-            date: getTodayString()        // 传递本地日期
+            duration: duration,           // 新增：阅读时长（秒）
+            date: getTodayString()
           })
         });
         return await response.json();
@@ -599,80 +828,96 @@ function getTodayString() {
       }
     }
 
-    // 修复：渲染已打卡状态，正确显示文章信息
-function renderCheckedIn(record) {
-  document.getElementById('content-area').innerHTML = `
-  <div class="card checked-in">
-    <div class="checked-in-icon">✅</div>
-    <h2>今日已完成阅读打卡</h2>
-    <p>文章：《${record.articleTitle || '未知文章'}》</p>
-    <div class="stats-grid">
-      <div class="stat-item">
-        <div class="stat-value">` + (record.wordCount || 0) + `</div>
-        <div class="stat-label">阅读单词数</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-value">1</div>
-        <div class="stat-label">打卡次数</div>
-      </div>
-    </div>
-  </div>
-`;
+    function renderCheckedIn(record) {
+      // 已打卡状态不显示计时器
+      readingTimer.reset();
+      
+      document.getElementById('content-area').innerHTML = `
+        <div class="card checked-in">
+          <div class="checked-in-icon">✅</div>
+          <h2>今日已完成阅读打卡</h2>
+          <p>文章：《${record.articleTitle || ''}》</p>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">${record.wordCount || 0}</div>
+              <div class="stat-label">阅读单词数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">${record.duration ? Math.floor(record.duration / 60) + ':' + String(record.duration % 60).padStart(2, '0') : '0:00'}</div>
+              <div class="stat-label">阅读时长</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">1</div>
+              <div class="stat-label">打卡次数</div>
+            </div>
+          </div>
+        </div>
+      `;
 
-  // 已打卡也加载问题（显示已提交状态）
-  if (currentArticleId) {
-    loadQuestions(currentArticleId);
-  }
-}
+      if (currentArticleId) {
+        loadQuestions(currentArticleId);
+      }
+    }
 
-// 修改 renderContent 函数 - 移除打卡按钮的 onclick 绑定，改为在 init 中控制
-function renderContent(content) {
-  const contentArea = document.getElementById('content-area');
-  
-  if (!content) {
-    renderNoContent();
-    return;
-  }
+    function renderContent(content) {
+      const contentArea = document.getElementById('content-area');
+      
+      if (!content) {
+        renderNoContent();
+        return;
+      }
 
-  // 保存文章ID
-  currentArticleId = content.id;
-  
-  contentArea.innerHTML = `
-    <div class="card">
-      <div class="article-card">
-        <div class="article-title">` + content.title + `</div>
-        <div class="article-content">` + content.content + `</div>
-        <div class="word-count">单词数：` + (content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length) + `</div>
-      </div>
-      <button class="checkin-btn" id="checkinBtn">
-        完成阅读，立即打卡
-      </button>
-    </div>
-  `;
-  
-  // 绑定点击事件
-  const checkinBtn = document.getElementById('checkinBtn');
-  document.getElementById('checkinBtn').addEventListener('click', () => {
-    handleCheckin(content.title, content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length);
-  });
+      currentArticleId = content.id;
+      
+      contentArea.innerHTML = `
+        <div class="card">
+          <!-- 新增：计时器区域 -->
+          <div class="timer-section" id="timerSection" style="display: none;">
+            <div class="timer-display">
+              <span class="timer-icon">⏱️</span>
+              <span id="timerText">00:00</span>
+              <span class="timer-status" id="timerStatus"></span>
+            </div>
+            <div class="timer-controls">
+              <button class="timer-btn pause" id="pauseBtn" onclick="togglePause()">⏸️ 暂停</button>
+              <button class="timer-btn resume hidden" id="resumeBtn" onclick="togglePause()">▶️ 继续</button>
+            </div>
+          </div>
+          
+          <div class="article-card">
+            <div class="article-title">${content.title}</div>
+            <div class="article-content">${content.content}</div>
+            <div class="word-count">单词数：${content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length}</div>
+          </div>
+          <button class="checkin-btn" id="checkinBtn">
+            完成阅读，立即打卡
+          </button>
+        </div>
+      `;
+      
+      const checkinBtn = document.getElementById('checkinBtn');
+      checkinBtn.addEventListener('click', () => {
+        handleCheckin(content.title, content.wordCount || content.content.trim().split(/\s+/).filter(w => w.length > 0).length);
+      });
 
-  
-  // 新增：加载课后练习问题
-  loadQuestions(content.id);
-}
+      // 页面加载后自动开始计时
+      if (isLoggedIn) {
+        setTimeout(() => readingTimer.start(), 500);
+      }
+      
+      loadQuestions(content.id);
+    }
 
-
-    // 关键修复：使用保存的 articleId
     async function handleCheckin(title, wordCount) {
-    if (!isLoggedIn) {
-    alert('请先登录后再使用此功能');    
-    return;  }
+      if (!isLoggedIn) {
+        alert('请先登录后再使用此功能');    
+        return;
+      }
       
       const btn = document.querySelector('.checkin-btn');
       btn.disabled = true;
       btn.textContent = '打卡中...';
 
-      // 使用全局保存的 articleId
       const result = await doCheckin(currentArticleId, title, wordCount);
       
       if (result.success) {
@@ -685,7 +930,6 @@ function renderContent(content) {
       }
     }
 
-    // 新增：加载课后练习问题
     async function loadQuestions(contentId) {
       try {
         const res = await fetch('/api/content/questions', {
@@ -705,233 +949,159 @@ function renderContent(content) {
       }
     }
 
-// 修复：渲染问题列表，正确显示问题内容
-function renderQuestions(questions) {
-  const container = document.getElementById('questions-list');
-  
-  // 获取当前用户会员状态
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const isLoggedIn = currentUser && currentUser.nickname;
-  const membership = currentUser.membership || { type: 'basic' };
-  const isPremium = membership.type === 'premium';
-  const isExpired = isPremium && membership.expiresAt && new Date().toISOString().split('T')[0] > membership.expiresAt;
-  const canAnswer = isLoggedIn && isPremium && !isExpired;
-  
-  container.innerHTML = questions.map((q, index) => {
-    const lockedClass = canAnswer ? '' : 'locked';
-    const disabledAttr = canAnswer ? '' : 'disabled';
-    
-    return `
-<div class="question-item ` + lockedClass + `">
-  <div class="question-header">
-    ` + (index + 1) + `. ` + q.question + `
-    <span class="question-type">` + getQuestionTypeName(q.type) + `</span>
-  </div>
-  
-  ` + (q.type === 'choice' && q.options ? `
-    <div class="options-list">
-      ` + q.options.map((opt, i) => `
-        <label class="option-label">
-          <input type="radio" name="q-` + q.id + `" value="` + opt + `" ` + disabledAttr + `>
-          <span>` + opt + `</span>
-        </label>
-      `).join('') + `
-    </div>
-  ` : '') + `
-  
-  <textarea 
-    class="answer-textarea" 
-    id="answer-` + q.id + `" 
-    placeholder="请输入您的答案..."
-    ` + disabledAttr + `
-  ></textarea>
-  
-  ` + (canAnswer ? `
-    <button class="submit-answer-btn" onclick="submitAnswer('` + q.id + `')" id="btn-` + q.id + `">
-      提交答案
-    </button>
-  ` : `
-    <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
-      提交答案
-    </button>
-  `) + `
-  
-  <div id="status-` + q.id + `"></div>
-</div>
-`}).join('');
-  
-  // 添加会员限制提示
-  if (!canAnswer) {
-    // 修复：未登录用户显示不同提示
-    const tipText = isLoggedIn 
-      ? '🔒 您是普通会员，可查看题目但无法作答'
-      : '🔒 课后练习仅限高级会员使用';
-    
-    container.innerHTML += `
-      <div class="membership-lock">
-        <p>` + tipText + `</p>
-        <p style="font-size: 12px; color: #999;">请联系老师开通高级会员，获得完整学习体验</p>
-      </div>
-    `;
-  }
-  
-  // 已提交状态检查（仅高级会员）
-  if (canAnswer) {
-    questions.forEach(q => checkAnswerStatus(q.id));
-  }
-}
-
-
+    function renderQuestions(questions) {
+      const container = document.getElementById('questions-list');
+      
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      const isLoggedIn = currentUser && currentUser.nickname;
+      const membership = currentUser.membership || { type: 'basic' };
+      const isPremium = membership.type === 'premium';
+      const isExpired = isPremium && membership.expiresAt && new Date().toISOString().split('T')[0] > membership.expiresAt;
+      const canAnswer = isLoggedIn && isPremium && !isExpired;
+      
+      container.innerHTML = questions.map((q, index) => {
+        const lockedClass = canAnswer ? '' : 'locked';
+        const disabledAttr = canAnswer ? '' : 'disabled';
+        
+        return `
+          <div class="question-item ${lockedClass}">
+            <div class="question-header">
+              ${index + 1}. ${q.question}
+              <span class="question-type">${getQuestionTypeName(q.type)}</span>
+            </div>
+            
+            ${q.type === 'choice' && q.options ? `
+              <div class="options-list">
+                ${q.options.map((opt, i) => `
+                  <label class="option-label">
+                    <input type="radio" name="q-${q.id}" value="${opt}" ${disabledAttr}>
+                    <span>${opt}</span>
+                  </label>
+                `).join('')}
+              </div>
+            ` : ''}
+            
+            <textarea 
+              class="answer-textarea" 
+              id="answer-${q.id}" 
+              placeholder="请输入您的答案..."
+              ${disabledAttr}
+            ></textarea>
+            
+            ${canAnswer ? `
+              <button class="submit-answer-btn" onclick="submitAnswer('${q.id}')" id="btn-${q.id}">
+                提交答案
+              </button>
+            ` : `
+              <button class="submit-answer-btn" disabled style="background: #ccc; cursor: not-allowed;">
+                提交答案
+              </button>
+              <div class="membership-lock">
+                <p>🔒 此功能仅限高级会员使用</p>
+                <button class="btn btn-primary" onclick="location.href='/profile/'">升级会员</button>
+              </div>
+            `}
+            
+            <div class="answer-status" id="status-${q.id}" style="display: none;"></div>
+          </div>
+        `;
+      }).join('');
+    }
 
     function getQuestionTypeName(type) {
-      const map = { short_answer: '简答', sentence: '造句', choice: '选择' };
-      return map[type] || '问答';
+      const typeMap = {
+        'choice': '选择题',
+        'fillblank': '填空题',
+        'shortanswer': '简答题',
+        'essay': '论述题'
+      };
+      return typeMap[type] || '问答题';
     }
 
-    // 修复：检查答案状态，正确获取元素
-    async function checkAnswerStatus(questionId) {
-      try {
-        const res = await fetch('/api/question/my-answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionId, nickname: currentUser.nickname })
-        });
-        const result = await res.json();
-        
-        if (result.success && result.answered) {
-          const textarea = document.getElementById(`answer-${questionId}`);
-          const btn = document.getElementById(`btn-${questionId}`);
-          const statusDiv = document.getElementById(`status-${questionId}`);
-          
-          if (textarea) {
-            textarea.value = result.answer.answer;
-            textarea.disabled = true;
-          }
-          if (btn) {
-            btn.disabled = true;
-            btn.textContent = '已提交';
-          }
-          
-          if (statusDiv) {
-            if (result.answer.score !== null) {
-              statusDiv.innerHTML = `
-                <div class="answer-status submitted">
-                  ✓ 已评分：<strong>${result.answer.score}分</strong>
-                  ${result.answer.feedback ? `<br>评语：${result.answer.feedback}` : ''}
-                </div>
-              `;
-            } else {
-              statusDiv.innerHTML = `
-                <div class="answer-status pending">
-                  ⏳ 待教师评分
-                </div>
-              `;
-            }
-          }
-        }
-      } catch (e) {
-        console.error('检查状态失败', e);
-      }
-    }
-
-    // 修复：提交答案，正确获取元素
     async function submitAnswer(questionId) {
       const textarea = document.getElementById(`answer-${questionId}`);
-      let answer = textarea ? textarea.value.trim() : '';
+      const btn = document.getElementById(`btn-${questionId}`);
+      const statusDiv = document.getElementById(`status-${questionId}`);
       
-      // 如果是选择题，获取选中的选项
-      const radioSelected = document.querySelector(`input[name="q-${questionId}"]:checked`);
-      if (radioSelected) {
-        answer = radioSelected.value + (answer ? '\n' + answer : '');
-      }
-      
+      const answer = textarea.value.trim();
       if (!answer) {
         alert('请输入答案');
         return;
       }
       
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+      
       try {
-        const res = await fetch('/api/question/submit', {
+        const res = await fetch('/api/questions/answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contentId: currentArticleId,
             questionId: questionId,
             nickname: currentUser.nickname,
-            answer: answer
+            answer: answer,
+            submittedAt: new Date().toISOString()
           })
         });
+        
         const result = await res.json();
         
         if (result.success) {
-          showToast('提交成功！');
-          checkAnswerStatus(questionId);
+          statusDiv.className = 'answer-status submitted';
+          statusDiv.textContent = '✅ 答案已提交';
+          statusDiv.style.display = 'block';
+          textarea.disabled = true;
+          btn.textContent = '已提交';
         } else {
+          btn.disabled = false;
+          btn.textContent = '提交答案';
           alert(result.message || '提交失败');
         }
       } catch (e) {
-        alert('提交失败，请重试');
+        btn.disabled = false;
+        btn.textContent = '提交答案';
+        alert('网络错误');
       }
     }
 
-    // 修改 init 函数逻辑 - 始终加载最新内容，根据打卡状态控制按钮
-async function init() {
-  // 1. 先获取最新内容（始终显示最新文章）
-  const contentResult = await getTodayContent();
-  
-  if (contentResult.success && contentResult.content) {
-    const content = contentResult.content;
-    currentArticleId = content.id;
-    
-    // 渲染内容（不管是否已打卡都显示内容）
-    renderContent(content);
-    
-    // 2. 检查今日打卡状态，控制按钮
-    const statusResult = await checkTodayStatus();
-    if (statusResult.success && statusResult.hasCheckedIn) {
-      // 已打卡：修改按钮为"已完成"状态
-      const btn = document.querySelector('.checkin-btn');
-      if (btn) {
-        btn.textContent = '✓ 今日已完成阅读打卡';
-        btn.disabled = true;
-        btn.style.background = '#52c41a'; // 绿色表示已完成
-        btn.style.cursor = 'default';
+    function renderNoContent() {
+      document.getElementById('content-area').innerHTML = `
+        <div class="card no-content">
+          <div class="no-content-icon">📭</div>
+          <h3>暂无阅读内容</h3>
+          <p>请稍后再试，或联系老师添加内容</p>
+        </div>
+      `;
+    }
+
+    // 页面初始化
+    async function init() {
+      if (!isLoggedIn) {
+        const contentArea = document.getElementById('content-area');
+        contentArea.innerHTML = `
+          <div class="card" style="text-align: center; padding: 50px 20px;">
+            <div style="font-size: 48px; margin-bottom: 15px;">🔒</div>
+            <h3 style="margin-bottom: 10px;">请先登录</h3>
+            <p style="color: #666; margin-bottom: 20px;">登录后即可开始阅读打卡</p>
+            <a href="/register/" class="btn btn-primary">去登录</a>
+          </div>
+        `;
+        return;
       }
+
+      const status = await checkTodayStatus();
       
-      // 可选：显示之前打卡的记录信息
-      if (statusResult.record) {
-        const infoDiv = document.createElement('div');
-        infoDiv.style.cssText = 'margin-top:15px;padding:10px;background:#f6ffed;border-radius:6px;color:#52c41a;font-size:14px;text-align:center;';
-        infoDiv.innerHTML = `您今日已打卡《${statusResult.record.articleTitle || '文章'}》，可以阅读新材料但不可重复打卡`;
-        document.querySelector('.article-card').appendChild(infoDiv);
+      if (status.success && status.hasCheckedIn) {
+        renderCheckedIn(status.record);
+      } else {
+        const content = await getTodayContent();
+        if (content.success && content.content) {
+          renderContent(content.content);
+        } else {
+          renderNoContent();
+        }
       }
     }
-    // 3. 加载课后练习（如果有）
-    loadQuestions(content.id);
-  } else {
-    // 没有可用内容
-    renderNoContent();
-  }
-}
-
-// 新增：没有内容时的显示
-function renderNoContent() {
-  document.getElementById('content-area').innerHTML = `
-    <div class="card no-content">
-      <div class="no-content-icon">📚</div>
-      <h3>暂无阅读内容</h3>
-      <p>请联系老师添加阅读材料</p>
-    </div>
-  `;
-}
-
-// 修改 renderCheckedIn 函数（现在只在特殊情况下使用，比如想专门查看打卡记录）
-function renderCheckedIn(record) {
-  // 这个函数现在可以保留，用于可能需要的"查看今日打卡详情"功能
-  // 但主流程不再默认使用它
-  console.log('今日已打卡记录:', record);
-}
-
 
     init();
   </script>
