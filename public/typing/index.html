@@ -36,40 +36,39 @@
         }
         
         /* 头部导航 */
-.header {
-  background: var(--card-bg);
-  border-radius: 12px;
-  padding: 15px 20px;
-  margin-bottom: 15px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
+        .header {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
 
-.header h1 {
-  color: var(--text);
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 0; /* 覆盖原有的 margin-bottom: 20px */
-}
+        .header h1 {
+            color: var(--text);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0;
+        }
 
-.back-btn {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 15px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
+        .back-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
 
-.back-btn:active {
-  background: #f0f5ff;
-}
-
+        .back-btn:active {
+            background: #f0f5ff;
+        }
         
         .card {
             background: var(--card-bg);
@@ -135,6 +134,83 @@
         textarea:disabled {
             background: #f5f5f5;
             color: #999;
+        }
+
+        /* ==================== 计时器样式（新增）==================== */
+        .timer-section {
+            background: linear-gradient(135deg, #f0f5ff 0%, #e6f7ff 100%);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .timer-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .timer-icon {
+            font-size: 24px;
+        }
+
+        .timer-status {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: normal;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .timer-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-height: 40px;
+        }
+
+        .timer-btn.pause {
+            background: #faad14;
+            color: white;
+        }
+
+        .timer-btn.pause:hover {
+            background: #d48806;
+        }
+
+        .timer-btn.resume {
+            background: var(--primary);
+            color: white;
+        }
+
+        .timer-btn.resume:hover {
+            background: var(--primary-dark);
+        }
+
+        .timer-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .timer-btn.hidden {
+            display: none;
         }
         
         .stats {
@@ -225,18 +301,25 @@
             .stat-box p { font-size: 14px; }
             .btn { padding: 16px 32px; font-size: 16px; margin-right: 15px; }
             .header {
-            padding: 20px 30px;
-            border-radius: 16px;
-            margin-bottom: 25px;
+                padding: 20px 30px;
+                border-radius: 16px;
+                margin-bottom: 25px;
             }
-  
-           .header h1 {
-           font-size: 24px;
+            .header h1 {
+                font-size: 24px;
+            }
+            /* 计时器桌面样式 */
+            .timer-section {
+                padding: 20px 30px;
+            }
+            .timer-display {
+                font-size: 24px;
+            }
+            .timer-icon {
+                font-size: 32px;
             }
         }
 
-        }
-        
         @media (min-width: 1024px) {
             .container { max-width: 900px; }
             .stats { grid-template-columns: repeat(4, 1fr); }
@@ -251,6 +334,12 @@
             .stats { gap: 8px; }
             .stat-box { padding: 10px 5px; }
             .stat-box h3 { font-size: 18px; }
+            .timer-section {
+                padding: 12px 15px;
+            }
+            .timer-display {
+                font-size: 16px;
+            }
         }
         
         @media (prefers-color-scheme: dark) {
@@ -266,70 +355,94 @@
             textarea:disabled { background: #2a2a3a; }
             .keystroke-info { background: #1a2744; border-color: #2a3a5a; }
             .back-btn:active {
-            background: #2a3a5a;
+                background: #2a3a5a;
             }
-         }
+            .timer-section {
+                background: linear-gradient(135deg, #1a2744 0%, #16213e 100%);
+                border-color: var(--primary);
+            }
         }
 
-/* ==================== 按钮布局优化 ==================== */
-.button-group {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
+        /* 按钮布局优化 */
+        .button-group {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
 
-@media (max-width: 480px) {
-    .button-group {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 0 5px;
-        gap: 8px;
-    }
-    
-    .button-group .btn {
-        width: 100%;
-        margin-right: 0;
-        margin-bottom: 8px;
-        padding: 16px 20px;
-        font-size: 16px;
-        border-radius: 12px;
-    }
-    
-    .button-group .btn:last-child {
-        margin-bottom: 0;
-    }
-}
+        @media (max-width: 480px) {
+            .button-group {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 0 5px;
+                gap: 8px;
+            }
+            .button-group .btn {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 8px;
+                padding: 16px 20px;
+                font-size: 16px;
+                border-radius: 12px;
+            }
+            .button-group .btn:last-child {
+                margin-bottom: 0;
+            }
+            .timer-section {
+                flex-direction: column;
+                text-align: center;
+            }
+            .timer-controls {
+                width: 100%;
+            }
+            .timer-btn {
+                flex: 1;
+            }
+        }
 
-@media (min-width: 481px) and (max-width: 768px) {
-    .button-group {
-        gap: 12px;
-    }
-    
-    .button-group .btn {
-        padding: 14px 20px;
-        font-size: 15px;
-        min-width: 140px;
-    }
-}
+        @media (min-width: 481px) and (max-width: 768px) {
+            .button-group {
+                gap: 12px;
+            }
+            .button-group .btn {
+                padding: 14px 20px;
+                font-size: 15px;
+                min-width: 140px;
+            }
+        }
 
-@media (min-width: 769px) {
-    .button-group {
-        gap: 15px;
-    }
-}
+        @media (min-width: 769px) {
+            .button-group {
+                gap: 15px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-    <div class="header">
-        <h1>⌨️ 打字练习</h1>
-        <a href="/" class="back-btn">← 返回首页</a>
-    </div>
-    <div class="card">
+        <div class="header">
+            <h1>⌨️ 打字练习</h1>
+            <a href="/" class="back-btn">← 返回首页</a>
+        </div>
+        <div class="card">
             <div class="text-display" id="targetText">加载中...</div>
+            
+            <!-- 新增：计时器区域 -->
+            <div class="timer-section" id="timerSection" style="display: none;">
+                <div class="timer-display">
+                    <span class="timer-icon">⏱️</span>
+                    <span id="timerText">00:00</span>
+                    <span class="timer-status" id="timerStatus"></span>
+                </div>
+                <div class="timer-controls">
+                    <button class="timer-btn pause" id="pauseBtn" onclick="togglePause()">⏸️ 暂停</button>
+                    <button class="timer-btn resume hidden" id="resumeBtn" onclick="togglePause()">▶️ 继续</button>
+                </div>
+            </div>
+            
             <textarea id="inputText" placeholder="在此输入上面的文字..." disabled></textarea>
             
             <div class="keystroke-info" id="keystrokeInfo" style="display: none;">
@@ -372,8 +485,131 @@
         const canType = true;
 
         let targetText = '';
-        let startTime = null;
-        let timerInterval = null;
+        
+        // ==================== 改进的计时器对象（新增）====================
+        let typingTimer = {
+            startTime: null,        // 开始时间戳
+            elapsedTime: 0,         // 已用时间（秒）
+            isRunning: false,       // 是否正在计时
+            isPaused: false,        // 是否暂停
+            hasStarted: false,      // 是否已开始过
+            intervalId: null,       // setInterval ID
+            
+            // 开始计时（第一次输入时调用）
+            start() {
+                if (this.hasStarted) return;
+                
+                this.startTime = Date.now();
+                this.isRunning = true;
+                this.hasStarted = true;
+                this.showTimerSection();
+                this.tick();
+                
+                // 每秒更新一次显示
+                this.intervalId = setInterval(() => this.tick(), 1000);
+            },
+            
+            // 暂停/继续切换
+            togglePause() {
+                if (!this.hasStarted) return;
+                
+                if (this.isPaused) {
+                    // 继续：重新计算 startTime，补偿已用时间
+                    this.startTime = Date.now() - (this.elapsedTime * 1000);
+                    this.isPaused = false;
+                    this.isRunning = true;
+                    this.updatePauseButton(false);
+                } else {
+                    // 暂停
+                    this.isPaused = true;
+                    this.isRunning = false;
+                    this.updatePauseButton(true);
+                }
+            },
+            
+            // 每秒更新
+            tick() {
+                if (!this.isRunning || this.isPaused) return;
+                
+                const now = Date.now();
+                this.elapsedTime = Math.floor((now - this.startTime) / 1000);
+                this.updateDisplay();
+            },
+            
+            // 停止计时（提交时调用）
+            stop() {
+                this.isRunning = false;
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+                return this.elapsedTime;
+            },
+            
+            // 重置
+            reset() {
+                this.stop();
+                this.startTime = null;
+                this.elapsedTime = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.hasStarted = false;
+                this.hideTimerSection();
+                this.updateDisplay();
+                this.updatePauseButton(false);
+            },
+            
+            // 显示计时器区域
+            showTimerSection() {
+                document.getElementById('timerSection').style.display = 'flex';
+            },
+            
+            // 隐藏计时器区域
+            hideTimerSection() {
+                document.getElementById('timerSection').style.display = 'none';
+            },
+            
+            // 更新显示
+            updateDisplay() {
+                const minutes = Math.floor(this.elapsedTime / 60);
+                const seconds = this.elapsedTime % 60;
+                const timeStr = 
+                    String(minutes).padStart(2, '0') + ':' + 
+                    String(seconds).padStart(2, '0');
+                
+                document.getElementById('timerText').textContent = timeStr;
+                document.getElementById('time').textContent = this.elapsedTime + 's';
+                
+                // 更新状态文字
+                const statusEl = document.getElementById('timerStatus');
+                if (this.isPaused) {
+                    statusEl.textContent = '(已暂停)';
+                } else if (this.isRunning) {
+                    statusEl.textContent = '(计时中)';
+                } else {
+                    statusEl.textContent = '';
+                }
+            },
+            
+            // 更新暂停按钮状态
+            updatePauseButton(isPaused) {
+                const pauseBtn = document.getElementById('pauseBtn');
+                const resumeBtn = document.getElementById('resumeBtn');
+                
+                if (isPaused) {
+                    pauseBtn.classList.add('hidden');
+                    resumeBtn.classList.remove('hidden');
+                } else {
+                    pauseBtn.classList.remove('hidden');
+                    resumeBtn.classList.add('hidden');
+                }
+            }
+        };
+
+        // 全局暴露暂停切换函数
+        window.togglePause = function() {
+            typingTimer.togglePause();
+        };
         
         let keystrokeStats = {
             total: 0,
@@ -416,32 +652,29 @@
             const inputText = document.getElementById('inputText');
             
             // 未登录用户点击输入框时提示登录
-            // 替换原来的 click 监听
             inputText.addEventListener('pointerdown', function(e) {
-            if (!isLoggedIn && inputText.disabled) {
-            e.preventDefault();
-            alert('请先登录后再使用此功能');
-            }
+                if (!isLoggedIn && inputText.disabled) {
+                    e.preventDefault();
+                    alert('请先登录后再使用此功能');
+                }
             });
 
-            
-            inputText.addEventListener('keydown', function(e) {
-                if (!startTime && !inputText.disabled) {
-                    startTime = Date.now();
-                    timerInterval = setInterval(updateTime, 100);
+            // 修改：第一次输入时开始计时
+            inputText.addEventListener('input', function(e) {
+                // 首次输入开始计时
+                if (!typingTimer.hasStarted && inputText.value.length > 0) {
+                    typingTimer.start();
                     document.getElementById('keystrokeInfo').style.display = 'block';
                 }
                 
-                if (e.key === 'Backspace') {
-                    keystrokeStats.backspaces++;
-                    keystrokeStats.total++;
-                    updateKeystrokeDisplay();
+                // 如果暂停中，恢复计时
+                if (typingTimer.isPaused) {
+                    typingTimer.togglePause();
                 }
-            });
-            
-            inputText.addEventListener('input', function(e) {
+                
                 const currentInput = inputText.value;
                 
+                // 统计新输入的字符
                 if (currentInput.length > lastInput.length) {
                     const newChar = currentInput[currentInput.length - 1];
                     const targetChar = targetText[currentInput.length - 1];
@@ -459,6 +692,15 @@
                 
                 lastInput = currentInput;
                 updateStats(currentInput);
+            });
+            
+            // 监听退格键
+            inputText.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace') {
+                    keystrokeStats.backspaces++;
+                    keystrokeStats.total++;
+                    updateKeystrokeDisplay();
+                }
             });
         });
         
@@ -482,18 +724,12 @@
             
             document.getElementById('accuracy').textContent = accuracy + '%';
             
-            if (startTime) {
-                const elapsed = (Date.now() - startTime) / 1000 / 60;
-                const words = input.length / 5;
-                const wpm = elapsed > 0 ? Math.round(words / elapsed) : 0;
+            // WPM 计算基于实际用时
+            if (typingTimer.elapsedTime > 0) {
+                const elapsedMinutes = typingTimer.elapsedTime / 60;
+                const words = input.length / 5; // 标准：5个字符 = 1个词
+                const wpm = elapsedMinutes > 0 ? Math.round(words / elapsedMinutes) : 0;
                 document.getElementById('wpm').textContent = wpm;
-            }
-        }
-        
-        function updateTime() {
-            if (startTime) {
-                const elapsed = Math.round((Date.now() - startTime) / 1000);
-                document.getElementById('time').textContent = elapsed + 's';
             }
         }
         
@@ -510,9 +746,11 @@
                 return;
             }
             
+            // 停止计时并获取时长
+            const duration = typingTimer.stop();
+            
             const wpm = parseInt(document.getElementById('wpm').textContent);
             const accuracy = parseInt(document.getElementById('accuracy').textContent);
-            const duration = parseInt(document.getElementById('time').textContent);
             const wordCount = input.trim().split(/\s+/).filter(w => w.length > 0).length;
             
             try {
@@ -523,20 +761,31 @@
                         nickname: currentUser.nickname,
                         wpm,
                         accuracy,
-                        duration,
+                        duration,           // 新增：打字时长（秒）
                         wordCount,
                         content: input,
                         keystrokes: keystrokeStats,
-                        targetLength: targetText.length
+                        targetLength: targetText.length,
+                        completedAt: new Date().toISOString()
                     })
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert('成绩已提交！');
+                    alert('成绩已提交！用时：' + formatDuration(duration));
                 }
             } catch(e) {
                 alert('提交失败');
             }
+        }
+        
+        // 格式化时长显示
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (mins > 0) {
+                return mins + '分' + secs + '秒';
+            }
+            return secs + '秒';
         }
         
         function resetTest() {
@@ -552,10 +801,11 @@
             document.getElementById('wordCount').textContent = '0';
             document.getElementById('keystrokeInfo').style.display = 'none';
             
+            // 重置计时器
+            typingTimer.reset();
+            
             keystrokeStats = { total: 0, correct: 0, errors: 0, backspaces: 0 };
             lastInput = '';
-            startTime = null;
-            clearInterval(timerInterval);
             
             updateKeystrokeDisplay();
             loadTypingContent();
